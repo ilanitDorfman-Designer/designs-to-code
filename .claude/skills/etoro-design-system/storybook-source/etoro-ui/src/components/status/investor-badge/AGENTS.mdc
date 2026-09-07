@@ -1,0 +1,37 @@
+---
+description: Agent guide for EtProInvestorBadge and EtPopularInvestorBadge, fixed investor status badges replacing the old colored-star indicators
+alwaysApply: false
+---
+
+# Investor Badge
+
+`EtProInvestorBadge` and `EtPopularInvestorBadge` are the new investor status badges for Pro Investors and Popular Investors.
+
+They replace the old colored-star indicators. Use these components when showing the user's investor status in profile, social, discovery, or people-related surfaces.
+
+## Usage
+
+```tsx
+import { EtPopularInvestorBadge, EtProInvestorBadge } from 'etoro-ui';
+
+<EtProInvestorBadge />
+<EtPopularInvestorBadge />
+<EtPopularInvestorBadge showLabel={false} iconSize={24} />
+```
+
+## Contract
+
+- `EtProInvestorBadge` always renders the Pro investor crown icon and `"Pro"` label in `#F1C056`.
+- `EtPopularInvestorBadge` always renders the Popular Investor crown icon and `"Popular"` label in `#9EB1DD`.
+- `showLabel` defaults to `true`. Set `showLabel={false}` for icon-only placements, for example inside `EtAvatar` badge slots.
+- `iconSize` is a pixel value and defaults to `18`.
+- The badges are non-interactive text markers. Do not wrap them in `Pressable`; place a separate button or link nearby if an action is needed.
+- The labels are fixed and not translated. These are brand/status marks, not user-provided copy.
+- Use the exported components for badges. Use the raw `pro-investor` and `popular-investor` icons only when an icon-only design explicitly calls for them.
+
+## File Map
+
+- `et-investor-badge.tsx` — JSX composition and public component exports.
+- `types.ts` — public props and internal variant/config contracts.
+- `styles.ts` — shared layout and text style constants.
+- `utils.ts` — fixed Pro/Popular config, icon size, colors, and label mapping.

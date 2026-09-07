@@ -1,0 +1,409 @@
+---
+description: Agent guide for EtToast - global toast notification system with asset/image/icon/badge types, multiple statuses, gesture-based dismiss, stacking, and smooth entry/exit animations
+alwaysApply: false
+---
+
+# EtToast Component
+
+## Purpose & Scope
+
+`EtToast` is a global toast notification system for the eToro design system. It provides:
+
+- **Multiple toast types**: Asset, Image, Asset Group, Icon, Badge
+- **Multiple statuses**: Neutral, Loader, Success, Error, Disconnect
+- **Placement**: Anchored to the top of the screen by default; pass `position: 'bottom'` on a toast to anchor it to the bottom instead. The anchor drives the enter/exit direction, the stack growth direction, and the swipe-to-dismiss direction
+- **Gesture support**: Swipe away from the anchored edge to dismiss (up for top-anchored, down for bottom-anchored), hold to pause auto-dismiss, tap the pile to expand/collapse
+- **Optional close (X)**: Pass `closable: true` to show an X that dismisses without firing `onPress` (PBD-1105; default off)
+- **Stacking**: Sonner-style stacking — toasts collapse into a peeking pile (newest in front, depth scaling); tapping the pile spreads them out so every message is readable. Ported from `expo-dynamic-toast`.
+- **Animations**: Smooth entry/exit + spring-driven stack transitions using react-native-reanimated
+
+**Does NOT handle:**
+
+- Persistent notifications (use a notification center)
+- Action buttons within toasts (consider bottom sheet for complex interactions)
+- Free-form positioning (a toast anchors to the top by default, or the bottom via `position: 'bottom'` — there is no arbitrary x/y placement)
+
+## Architecture
+
+```
+ToastProvider (wraps app, provides ToastContext)
+    └── ToastContainer (renders all toasts)
+            └── EtToast (individual toast, provides ToastInternalContext)
+                    ├── ToastMedia (orchestrates media rendering)
+                    │       ├── AssetMedia / ImageMedia / AssetGroupMedia / IconMedia / StatusMedia
+                    │       └── StatusBadge (reads status from context, hidden for badge type)
+                    └── ToastMessage (text content)
+```
+
+### File Structure
+
+```
+toast/
+├── animations/                    # All animation-related code
+│   ├── configs/
+│   │   └── spring-configs.ts      # Centralized spring configurations
+│   ├── use-entry-animation.ts     # Entry slide-up + fade-in
+│   ├── use-exit-animation.ts      # Exit slide-down + fade-out
+│   ├── use-stack-animation.ts     # Spring stack transition: offset + scale + fade
+│   ├── use-toast-animated-style.ts # Combines values into style
+│   └── index.ts
+├── gestures/                      # All gesture-related code
+│   ├── use-auto-dismiss-timer.ts  # Timer management
+│   ├── use-swipe-to-dismiss.ts    # Pan gesture for swiping
+│   ├── use-hold-to-pause.ts       # Long press gesture
+│   └── index.ts
+├── api/
+│   ├── types.ts                   # Types and dimension constants
+│   ├── context.tsx                # ToastContext (global provider)
+│   ├── toast-context.tsx          # ToastInternalContext (per-toast)
+│   └── index.ts
+├── hooks/
+│   ├── use-toast.ts               # Consumer hook
+│   ├── use-toast-controller.ts    # Orchestrates animations + gestures
+│   └── index.ts
+├── media/                         # Media type components
+│   ├── asset-media.tsx
+│   ├── image-media.tsx
+│   ├── asset-group-media.tsx
+│   ├── icon-media.tsx
+│   ├── status-media.tsx
+│   └── index.ts
+├── subcomponents/
+│   ├── status-badge.tsx           # Uses context + config map pattern
+│   ├── toast-media.tsx            # Simple orchestrator
+│   ├── toast-message.tsx
+│   ├── toast-container.tsx
+│   └── index.ts
+├── et-toast.tsx                   # Main component (very clean)
+├── et-toast.test.tsx
+└── index.ts
+```
+
+### Context Pattern
+
+The component uses two contexts:
+
+1. **ToastContext** (global) - Manages all active toasts, provides `showToast`/`dismissToast`
+2. **ToastInternalContext** (per-toast) - Shares `type` and `status` with subcomponents
+
+This allows subcomponents like `StatusBadge` to access the current status without prop drilling.
+
+## Entry Points & Contracts
+
+### `ToastProvider` (required at app root)
+
+```tsx
+<ToastProvider
+  maxToasts?: number        // default: 3 — toasts kept mounted at once
+  defaultDuration?: number  // default: 3000ms
+  visibleToasts?: number    // default: 3 — opaque toasts before deeper ones fade
+  expandByDefault?: boolean // default: false — start the stack expanded
+>
+  <App />
+</ToastProvider>
+```
+
+### `useToast` hook (consumer API)
+
+```tsx
+const { showToast, dismissToast, dismissAll, toastCount } = useToast();
+
+// Show a toast
+const toastId = showToast({
+  type: ToastType,          // 'asset' | 'image' | 'assetGroup' | 'icon' | 'badge'
+  status: ToastStatus,      // 'neutral' | 'loader' | 'success' | 'error' | 'disconnect'
+  message: string | ReactNode,
+  duration?: number,        // override default duration
+
+  // Type-specific (provide one based on type)
+  asset?: { logoUrl: string },
+  image?: { uri: string },
+  assetGroup?: { assets: Array<{ logoUrl: string }> },
+  icon?: { name: IconName },
+  // 'badge' type requires no extra config — status badge IS the media
+});
+
+// Dismiss programmatically
+dismissToast(toastId);
+dismissAll();
+```
+
+### Types
+
+| Type              | Values                                                                                       |
+| ----------------- | -------------------------------------------------------------------------------------------- |
+| `ToastType`       | `'asset'` \| `'image'` \| `'assetGroup'` \| `'icon'` \| `'badge'` \| `'custom'`              |
+| `ToastStatus`     | `'neutral'` \| `'loader'` \| `'success'` \| `'error'` \| `'disconnect'`                      |
+| `ToastBadgeStatus`| `'success'` \| `'error'` (subset of ToastStatus, used when `type: 'badge'`)                  |
+| `ToastVariant`    | `'default'` \| `'inverted'` (surface variant — default is solid carbon050 with a shadow, inverted is solid carbon900) |
+
+## Usage Patterns
+
+### Basic asset toast with success status
+
+```tsx
+showToast({
+  type: 'asset',
+  status: 'success',
+  asset: { logoUrl: 'https://cdn.etoro.com/assets/AAPL.png' },
+  message: 'Order executed for AAPL at $150.00',
+});
+```
+
+### Loading state toast
+
+```tsx
+const loadingToastId = showToast({
+  type: 'asset',
+  status: 'loader',
+  asset: { logoUrl: 'https://cdn.etoro.com/assets/TSLA.png' },
+  message: 'Processing your order...',
+  duration: 0, // Don't auto-dismiss
+});
+
+// Later, when complete
+dismissToast(loadingToastId);
+showToast({
+  type: 'asset',
+  status: 'success',
+  asset: { logoUrl: 'https://cdn.etoro.com/assets/TSLA.png' },
+  message: 'Order completed!',
+});
+```
+
+### Asset group toast
+
+```tsx
+showToast({
+  type: 'assetGroup',
+  status: 'success',
+  assetGroup: {
+    assets: [
+      { logoUrl: 'https://cdn.etoro.com/assets/SPOT.png' },
+      { logoUrl: 'https://cdn.etoro.com/assets/TSLA.png' },
+      { logoUrl: 'https://cdn.etoro.com/assets/GOOG.png' },
+    ],
+  },
+  message: 'Portfolio rebalanced successfully',
+});
+```
+
+### Icon toast
+
+```tsx
+showToast({
+  type: 'icon',
+  status: 'neutral',
+  icon: { name: 'notification' },
+  message: 'You have new messages',
+});
+```
+
+### Badge toast (status as primary media, no icon/asset)
+
+```tsx
+showToast({
+  type: 'badge',
+  status: 'success', // 'success' | 'error' only
+  message: 'Phone verified successfully',
+});
+```
+
+### Custom-media toast (caller owns the media slot)
+
+Use when the standard media types can't express the visual (e.g. a trader
+avatar that already carries its own badge). No `StatusBadge` is overlaid —
+the caller's `media` node is expected to be self-contained.
+
+```tsx
+showToast({
+  type: 'custom',
+  status: 'neutral',
+  media: <EtTraderAvatar avatarUrls={urls} hasVerifiedBadge={badge} piLevel={tier} />,
+  // Default surface is solid `carbon050`; use `carbon900` (its inverse) for text.
+  message: (
+    <EtText variant="body-secondary-regular" style={{ color: colors.carbon900 }}>
+      Stop loss updated to <EtText variant="body-secondary-bold">$1,234.56</EtText>
+    </EtText>
+  ),
+  duration: 5000,
+});
+```
+
+### Inverted-surface toast (high-emphasis events)
+
+The `variant: 'inverted'` flag swaps the standard `carbon050` surface for a
+solid `carbon900` card with `carbon050` text (max contrast). Works with any
+`type` — pair with `'custom'` for the copy-trading success notification, or
+with `'asset'` for a high-emphasis order toast.
+
+```tsx
+showToast({
+  type: 'custom',
+  status: 'neutral',
+  variant: 'inverted',
+  media: <EtTraderAvatar … />,
+  message: 'Stop loss updated to $1,234.56',
+});
+```
+
+### Rich text message with bold
+
+```tsx
+showToast({
+  type: 'asset',
+  status: 'success',
+  asset: { logoUrl: 'https://cdn.etoro.com/assets/AAPL.png' },
+  // The default surface is solid `carbon050` (light in light mode, dark in
+  // dark mode), so let `EtText` use its theme-aware color — do NOT hardcode a
+  // light color like `'white'` or it will be invisible in light mode.
+  message: (
+    <EtText variant="body-secondary-regular">
+      Order Received for buy{' '}
+      <EtText variant="body-secondary-bold">AAPL</EtText> at market
+    </EtText>
+  ),
+});
+```
+
+## Anti-patterns
+
+### Using toast for complex interactions
+
+```tsx
+// BAD - toasts don't support action buttons
+showToast({
+  type: 'asset',
+  status: 'error',
+  message: 'Order failed. Retry?', // No way to retry!
+});
+```
+
+**Fix:** Use a bottom sheet or modal for actions.
+
+### Using toast outside of ToastProvider
+
+```tsx
+// BAD - will throw error
+function App() {
+  const { showToast } = useToast(); // Error!
+  return <View />;
+}
+```
+
+**Fix:** Wrap your app with `<ToastProvider>`.
+
+### Setting duration: 0 without manual dismiss
+
+```tsx
+// BAD - toast will never dismiss
+showToast({
+  type: 'asset',
+  status: 'loader',
+  message: 'Loading...',
+  duration: 0, // Infinite!
+});
+// Never calls dismissToast()
+```
+
+**Fix:** Always store the toast ID and dismiss manually.
+
+## Status Icon Mapping
+
+| Status       | Icon             | Badge Color |
+| ------------ | ---------------- | ----------- |
+| `neutral`    | None             | -           |
+| `loader`     | Animated spinner | Gray        |
+| `success`    | Checkmark (v)    | Green       |
+| `error`      | Error icon       | Red         |
+| `disconnect` | Error icon       | Red         |
+
+## Gesture Behavior
+
+- **Swipe down**: Dismiss toast (threshold: 50px)
+- **Long press**: Pause auto-dismiss timer
+- **Release**: Resume auto-dismiss timer
+- **Tap (collapsed pile, 2+ toasts)**: Expand the stack so every toast is readable
+- **Tap (expanded, no `onPress`)**: Collapse the stack back into a pile
+- **Tap (single toast or expanded with `onPress`)**: Fire `onPress` and dismiss
+- **Close X (`closable: true`)**: Dismiss via the toast dismiss pipeline only — never fires `onPress`. Sibling Pressable outside the body Pressable (Banner-like `xmark`). Optional `closeAccessibilityLabel` (default `'Close'`).
+
+While collapsed, only the front toast is interactive — deeper toasts are
+`pointerEvents="none"` so taps fall through to the front and expand the pile.
+
+## Timers and the Expanded Stack
+
+Expanding is a read gesture, so it **freezes every toast's auto-dismiss timer**
+for as long as the stack stays open. Without this, a pile you tapped to read
+would evaporate mid-sentence, since each toast still dies `duration` ms after it
+was created.
+
+Collapsing (tap or idle) does **not** resume leftover original duration — the
+pile was already read, so each toast gets a fresh
+`TOAST_ANIMATION.POST_READ_DISMISS_DURATION` (1s) grace period and then
+dismisses. `duration: 0` (manual dismiss) stays infinite.
+
+Because frozen timers can't dismiss anything, the stack collapses itself after
+`TOAST_ANIMATION.EXPANDED_IDLE_TIMEOUT` (10s) of no interaction, which starts
+that short grace period. Dismissing a toast while expanded counts as
+interaction and pushes that deadline back. Swipe-to-dismiss works throughout.
+
+Two things can hold a timer — the hold gesture and an expanded stack — and
+`useToastController` OR-s them, so releasing one while the other is still active
+does not restart the countdown. `resumeTimer()` is a no-op unless the timer is
+actually paused; resuming a running timer would silently extend the toast's
+life.
+
+An `expandByDefault` stack is **not** affected: it is permanently spread out, so
+pausing there would mean toasts never leave the screen. Only a user-initiated
+expand freezes timers.
+
+## Visual Specifications
+
+All spacing values use constants from `core/styles/spacing.ts`:
+
+| Property            | Value                              | Spacing Constant |
+| ------------------- | ---------------------------------- | ---------------- |
+| Width               | 327px                              | -                |
+| Height              | 66px                               | -                |
+| Border radius       | 8px                                | X2               |
+| Background          | solid `carbon050` (theme-aware)    | -                |
+| Shadow              | `0px 4px 16px rgba(0,0,0,0.45)`    | -                |
+| Padding horizontal  | 16px                               | X4               |
+| Padding vertical    | 12px                               | X3               |
+| Content gap         | 16px                               | X4               |
+| Media size          | 36px                               | X9               |
+| Media border radius | 8px                                | X2               |
+| Badge size          | 20px                               | -                |
+| Stack gap (expanded)| 8px                                | X2               |
+| Collapse peek       | 14px per depth                     | -                |
+| Collapse scale step | 0.06 per depth (min 0.85)          | -                |
+| Asset group overlap | -24px                              | -X6              |
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - theme colors
+- `EtText` - text rendering
+- `EtoroIcon` - icon display
+- Icons: `V`, `Error`, `Loader`
+
+### External Dependencies
+
+- `react-native-reanimated` - animations
+- `react-native-gesture-handler` - gestures
+
+## Animation Timings
+
+| Animation     | Duration | Easing                               |
+| ------------- | -------- | ------------------------------------ |
+| Entry         | 300ms    | Spring (damping: 20, stiffness: 300) |
+| Exit          | 200ms    | Ease in cubic                        |
+| Stack reorder | Spring   | (damping: 25, stiffness: 200)        |
+
+## Related Context
+
+- `EtBottomSheet` - for complex interactions
+- `EtoroIcon` - icon component used for icon type
+- Toast designs in Figma: DS - React / Toast / Mobile

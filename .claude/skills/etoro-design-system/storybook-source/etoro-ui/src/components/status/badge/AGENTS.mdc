@@ -1,0 +1,307 @@
+---
+description: Agent guide for EtBadge - pill-shaped badge with compound Label/Icon subcomponents, nine color variants, two sizes, and automatic theme adaptation
+alwaysApply: false
+---
+
+# EtBadge Component
+
+## Purpose & Scope
+
+`EtBadge` is a pill-shaped badge component for the eToro design system. It uses a compound component pattern for flexible composition, supporting:
+
+- **Compound components**: `EtBadge.Label` and `EtBadge.Icon` subcomponents
+- **Nine color variants**: neutral, red, orange, yellow, green, mint, blue, purple, violet
+- **Two sizes**: medium (28px height), small (20px height)
+- **Optional icons**: prefix, suffix, or both
+- **Themed colors**: Automatically adapts to light/dark mode
+- **Props injection**: Colors injected into children via `useComponentChildren` hook
+
+**Does NOT handle:**
+
+- Interactive states (not pressable)
+- Navigation logic
+
+## Entry Points & Contracts
+
+### `EtBadge` (main component)
+
+```tsx
+<EtBadge
+  color?: BadgeColor            // default: 'neutral'
+  size?: BadgeSize              // default: 'medium'
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}
+</EtBadge>
+```
+
+**Children constraints:**
+
+- Must contain at least one of: `EtBadge.Label` or `EtBadge.Icon`
+- Can contain both `EtBadge.Label` and `EtBadge.Icon` in any order
+- Order of children determines visual layout (icon before label = prefix icon)
+
+### `EtBadge.Label`
+
+```tsx
+<EtBadge.Label
+  style?: StyleProp<TextStyle>
+>
+  {ReactNode}
+</EtBadge.Label>
+```
+
+**Behavior:**
+
+- Automatically colored based on parent badge's `color` prop
+- Uses `body-tiny-medium` text variant
+- Receives color via injected props (no prop drilling needed)
+
+### `EtBadge.Icon`
+
+```tsx
+<EtBadge.Icon
+  name:IconName // required - icon from icon library
+/>
+```
+
+**Behavior:**
+
+- Automatically colored based on parent badge's `color` prop
+- Fixed size: 12px
+- Receives color via injected props (no prop drilling needed)
+
+### Types
+
+| Type         | Values                                                                                                              |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `BadgeColor` | `'neutral'` \| `'red'` \| `'orange'` \| `'yellow'` \| `'green'` \| `'mint'` \| `'blue'` \| `'purple'` \| `'violet'` |
+| `BadgeSize`  | `'medium'` \| `'small'`                                                                                             |
+
+## Usage Patterns
+
+### Basic usage
+
+```tsx
+<EtBadge color="green">
+  <EtBadge.Label>New</EtBadge.Label>
+</EtBadge>
+```
+
+### With prefix icon
+
+```tsx
+<EtBadge color="green">
+  <EtBadge.Icon name="heart" />
+  <EtBadge.Label>Favorites</EtBadge.Label>
+</EtBadge>
+```
+
+### With suffix icon
+
+```tsx
+<EtBadge color="neutral">
+  <EtBadge.Label>More</EtBadge.Label>
+  <EtBadge.Icon name="chevronRight" />
+</EtBadge>
+```
+
+### With both icons
+
+```tsx
+<EtBadge color="purple">
+  <EtBadge.Icon name="heart" />
+  <EtBadge.Label>Featured</EtBadge.Label>
+  <EtBadge.Icon name="chevronRight" />
+</EtBadge>
+```
+
+### Different sizes
+
+```tsx
+<EtBadge size="medium" color="blue">
+  <EtBadge.Label>Default</EtBadge.Label>
+</EtBadge>
+
+<EtBadge size="small" color="blue">
+  <EtBadge.Label>Compact</EtBadge.Label>
+</EtBadge>
+```
+
+### Status indicators
+
+```tsx
+<EtBadge color="green">
+  <EtBadge.Label>Success</EtBadge.Label>
+</EtBadge>
+<EtBadge color="orange">
+  <EtBadge.Label>Warning</EtBadge.Label>
+</EtBadge>
+<EtBadge color="red">
+  <EtBadge.Label>Error</EtBadge.Label>
+</EtBadge>
+<EtBadge color="blue">
+  <EtBadge.Label>Info</EtBadge.Label>
+</EtBadge>
+```
+
+### Multiple badges in a row
+
+```tsx
+<View style={{ flexDirection: 'row', gap: 8 }}>
+  <EtBadge color="neutral">
+    <EtBadge.Label>Draft</EtBadge.Label>
+  </EtBadge>
+  <EtBadge color="yellow">
+    <EtBadge.Label>Pending</EtBadge.Label>
+  </EtBadge>
+  <EtBadge color="green">
+    <EtBadge.Label>Active</EtBadge.Label>
+  </EtBadge>
+</View>
+```
+
+## Anti-patterns
+
+### ❌ Using string children (not supported)
+
+```tsx
+// BAD - EtBadge doesn't support string shorthand
+<EtBadge color="green">Success</EtBadge>
+```
+
+**Fix:** Always use compound components:
+
+```tsx
+<EtBadge color="green">
+  <EtBadge.Label>Success</EtBadge.Label>
+</EtBadge>
+```
+
+### ❌ Using subcomponents outside EtBadge
+
+```tsx
+// BAD - will render without color
+<EtBadge.Label>Label</EtBadge.Label>
+
+// BAD - will render without color
+<EtBadge.Icon name="heart" />
+```
+
+**Fix:** Always wrap subcomponents inside `<EtBadge>` to receive proper colors.
+
+### ❌ Using badge for interactive elements
+
+```tsx
+// BAD - Badge is not pressable
+<Pressable>
+  <EtBadge color="green">
+    <EtBadge.Label>Click me</EtBadge.Label>
+  </EtBadge>
+</Pressable>
+```
+
+**Fix:** Use a button or chip component for interactive elements.
+
+### ❌ Using very long labels
+
+```tsx
+// BAD - Badge is designed for short labels
+<EtBadge color="neutral">
+  <EtBadge.Label>This is a very long label that will look bad</EtBadge.Label>
+</EtBadge>
+```
+
+**Fix:** Keep labels concise (1-2 words recommended).
+
+### ❌ Manually styling colors
+
+```tsx
+// BAD - bypasses design system
+<EtBadge.Label style={{ color: 'red' }}>Label</EtBadge.Label>
+```
+
+**Fix:** Colors are automatically managed based on badge `color` prop via injected props.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useBadgeColors` - hook providing themed colors (encapsulates `useEtoroTheme`)
+- `useComponentChildren` - hook that injects props into children via `cloneElement`
+- `EtText` - underlying text component for `EtBadge.Label`
+- `EtoroIcon` - underlying icon component for `EtBadge.Icon`
+
+### External Dependencies
+
+- `react-native` - `View`, `StyleSheet`
+
+### Design System Integration
+
+Text-color resolution per variant in [`utils/get-badge-colors.ts`](utils/get-badge-colors.ts) is **partially migrated to V2**:
+
+| Variant | V1 token | V2 token |
+| --- | --- | --- |
+| `neutral` | `textSecondaryNeutral` | `carbon500` |
+| `red` | `statusNegative` | `verdictNegative600` |
+| `green` | `statusPositive` | `verdictPositive600` |
+| `orange` | `statusOrange` | (not migrated — V1 retained) |
+| `yellow` | `statusYellow` | (not migrated — V1 retained) |
+| `mint` | `statusMint` | (not migrated — V1 retained) |
+| `blue` | `statusBlue` | (not migrated — V1 retained) |
+| `purple` | `statusPurple` | (not migrated — V1 retained) |
+| `violet` | `statusViolet` | (not migrated — V1 retained) |
+
+The 6 color-family variants (orange/yellow/mint/blue/purple/violet) keep their V1 `status*` text tokens because the V2 palette (`carbon`/`primary`/`verdict`) does not yet provide equivalents for those color families. They will migrate when the V2 palette is extended.
+
+Background fills (`backgrounds` map in `get-badge-colors.ts`) are sourced directly from primitive opacity scales (e.g. `greenOpacity['400.2']`) and are not theme tokens, so they are unaffected by the V1/V2 migration.
+
+## Props Injection Architecture
+
+The badge uses `React.cloneElement` to inject props into children:
+
+- `useComponentChildren` hook clones children and injects `textColor` prop
+- `EtBadge.Label` and `EtBadge.Icon` receive `textColor` as an injected prop
+- This eliminates the need for context while keeping the API clean
+
+**File structure:**
+
+```text
+hooks/
+├── use-component-children.tsx  # Hook for injecting props into children
+└── index.ts
+
+subcomponents/
+├── badge-label.tsx       # EtBadge.Label component
+├── badge-icon.tsx        # EtBadge.Icon component
+└── index.ts
+```
+
+## Sizing Specs
+
+| Size   | Height    | Horizontal Padding | Vertical Padding | Icon Size |
+| ------ | --------- | ------------------ | ---------------- | --------- |
+| Medium | X7 (28px) | 10px               | X1 (4px)         | 12px      |
+| Small  | X5 (20px) | 10px               | 0px              | 12px      |
+
+- Border radius: X5 (20px, pill shape)
+- Gap between children: HALF (2px)
+- Font: Body/Tiny/Medium (12px, weight 500)
+- Uses spacing constants from `core/styles/spacing` where applicable
+
+## Accessibility
+
+Built-in accessibility support:
+
+- `accessibilityRole="text"`
+- Custom `accessibilityLabel` can be provided
+- `testID` prop for testing
+
+## Related Context
+
+- `EtChip (controls/chips/)` - Similar compound component pattern for selectable chips
+- `EtText (foundations/text/)` - Underlying text component
+- `EtoroIcon (foundations/icon-assets/)` - Underlying icon component
+- Color primitives in `core/styles/colors/primitives/`

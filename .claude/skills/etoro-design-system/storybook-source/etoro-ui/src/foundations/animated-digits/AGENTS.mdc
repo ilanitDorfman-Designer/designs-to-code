@@ -1,0 +1,60 @@
+---
+description: Agent guide for EtAnimatedCount - animated numeric display with per-digit odometer/drop-in animations, decimal vs leading digit anchoring, and static fallback
+alwaysApply: false
+---
+
+# EtAnimatedCount
+
+## Purpose & Scope
+
+`EtAnimatedCount` renders a number (or pre-formatted string) as a row of individually animated digit
+slots. Digits animate with a spring "odometer" by default, formatting characters (commas, decimals,
+currency symbols) stay static, and the whole row can reflow smoothly as the value's length changes.
+
+- **Digit anchoring**: `'decimal'` (default) anchors identity to the decimal point so live-updating
+  magnitudes (prices, balances) roll in place like an odometer; `'leading'` anchors to typed order so a
+  freshly typed digit drops in from a blank slot on the right (numeric input).
+- **Static fallback**: `disableAnimation` renders `StaticDigit`/`StaticCharacter` (no animation) for
+  focus/scrubbing modes.
+
+> Structured after the canonical `components/button` role model (see `building-ui-components.mdc`):
+> a dedicated `animations/` folder holds every animated style/builder, `hooks/` is logic-only, `api/`
+> holds types, `subcomponents/` holds the render bricks, and `utils/` holds pure parsers.
+
+## File Structure
+
+```
+animated-digits/
+├── api/                    # Types (index.ts re-exports types.ts)
+├── animations/             # ANIMATION_CONFIG + entering/layout builders + useOdometerAnimation
+├── hooks/                  # use-animated-count-config (derivation) + use-animated-count-state (timing)
+├── subcomponents/          # animated-digits, leading-digit-cell, odometer-column, static-character, static-digit
+├── utils/                  # pure: character-parser, character-keys, init-props (+ specs)
+├── constants.ts            # ANIMATED_COUNT_DEFAULTS (non-animation)
+├── styles.ts               # static row container style
+├── et-animated-count.tsx   # composition-only: config -> state -> render
+├── index.ts                # barrel (public: EtAnimatedCount)
+└── AGENTS.mdc
+```
+
+`et-animated-count.tsx` is composition-only: it calls `useAnimatedCountConfig` -> `useAnimatedCountState`,
+builds `commonProps`, and maps parsed characters to the right subcomponent. All springs/layout builders
+live in `animations/`; all derivation (formatting, parsing, keys, text style) lives in `hooks/`.
+
+## Entry Point
+
+```tsx
+<EtAnimatedCount
+  number={1234.56}          // number | string (pre-formatted passes through)
+  digitAnchor="decimal"     // 'decimal' (odometer) | 'leading' (typed input)
+  disableAnimation={false}  // static render for scrub/focus
+  fontSize={50}
+  color={colors.textPrimaryNeutral}
+/>
+```
+
+## Notes
+
+- Public API is only `EtAnimatedCount` (exported from `src/index.ts`); everything else is internal.
+- Animation builders are worklet-safe and created once at module scope where possible to avoid per-render
+  reallocation (`makeRoomTransition`, `buildDropInEntering`).

@@ -1,0 +1,124 @@
+---
+description: Agent guide for EtAlertBanner - severity-based inline alert banner with icon, title, description, optional CTA and press handling
+alwaysApply: false
+---
+
+# EtAlertBanner Component
+
+## Purpose & Scope
+
+`EtAlertBanner` is a full-width inline alert surface for communicating an account/state-level condition that needs the user's attention (e.g. account liquidation, restrictions). It renders an icon + title + description, with an optional trailing CTA link and/or a whole-banner press handler.
+
+It is **not** the same as `EtBanner`:
+
+- `EtBanner` (`components/feedback/banner/`) — promo/marketing compound banner (Title/Description/Actions/Illustration + dismiss), no severity concept, fixed `cardDefault` background.
+- `EtAlertBanner` — severity-driven alert (colored fill per severity), simple props API, no compound children.
+
+If your design calls for a dismissible promo card with an illustration, use `EtBanner`, not `EtAlertBanner`.
+
+## Entry Point & Contract
+
+```tsx
+<EtAlertBanner
+  severity: AlertBannerSeverity     // currently only 'warning'
+  icon: string                      // EtIconV2 icon name
+  title: string
+  description: string
+  ctaLabel?: string
+  onCtaPress?: () => void
+  onPress?: () => void
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+/>
+```
+
+| Prop                 | Type                    | Default | Notes                                                                              |
+| -------------------- | ----------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `severity`           | `AlertBannerSeverity`   | —       | Only `'warning'` exists today (PBD-944). Drives background/icon/text color tokens.  |
+| `icon`               | `string`                | —       | Forwarded to `EtIconV2`'s `name` prop, rendered at size 20.                         |
+| `title`              | `string`                | —       | Bold single-line-ish heading, `label-primary-semibold`.                            |
+| `description`        | `string`                | —       | Supporting copy, `body-secondary-regular`.                                         |
+| `ctaLabel`           | `string`                | —       | When set, renders a trailing pressable text CTA in `colors.primary600`.            |
+| `onCtaPress`         | `() => void`            | —       | Handler for the CTA press. Ignored if `ctaLabel` is omitted.                        |
+| `onPress`            | `() => void`            | —       | When set, wraps the whole banner in a `Pressable` (`{testID}-pressable`).           |
+| `style`              | `StyleProp<ViewStyle>`  | —       | Merged onto the outer container, after the severity background color.              |
+| `testID`             | `string`                | —       | Root testID; derives `{testID}-title`, `{testID}-description`, `{testID}-cta`, `{testID}-pressable`. |
+| `accessibilityLabel` | `string`                | —       | Defaults to `` `${title}. ${description}` `` on the `accessibilityRole="alert"` container. |
+
+## Usage Patterns
+
+### Informational alert, no CTA
+
+```tsx
+import { EtAlertBanner } from 'etoro-ui';
+
+<EtAlertBanner severity="warning" icon="info-circle" title="Account Liquidated" description="You can't perform any trading activity until you deposit." />;
+```
+
+### With a CTA that opens a sheet/screen
+
+```tsx
+<EtAlertBanner
+  severity="warning"
+  icon="info-circle"
+  title={t('liquidation.banner.title')}
+  description={t('liquidation.banner.description')}
+  ctaLabel={t('liquidation.banner.learnMore')}
+  onCtaPress={() => sheetStore.open(LiquidationSheetMode.LIQUIDATION)}
+  testID="liquidation-banner-home"
+/>
+```
+
+### Whole-banner press (no separate CTA)
+
+```tsx
+<EtAlertBanner severity="warning" icon="info-circle" title="Action needed" description="Tap to review." onPress={openDetails} />
+```
+
+## Anti-patterns
+
+### Don't use this for promo/marketing content
+
+```tsx
+// BAD — no severity/urgency, just marketing copy
+<EtAlertBanner severity="warning" icon="gift" title="20% off Club" description="Upgrade today" />
+```
+
+**Fix:** Use `EtBanner` for promotional/dismissible content instead.
+
+### Don't pass both `onPress` and rely on the CTA for the same action
+
+Wrapping the whole banner in `onPress` while also wiring `onCtaPress` to a different action can be confusing for screen reader users, since the container announces as `accessibilityRole="alert"` while nesting an interactive `Pressable` CTA. Prefer one primary interaction per banner.
+
+## Design Tokens
+
+Severity color resolution lives in `et-alert-banner.styles.ts` (`getAlertBannerSeverityStyles`). Today only `'warning'` is implemented:
+
+| Element    | Token                        |
+| ---------- | ---------------------------- |
+| Background | `colors.accentF100`          |
+| Icon       | `colors.accentG700`          |
+| Text       | `colors.textPrimaryNeutral`  |
+| CTA text   | `colors.primary600`          |
+
+Spacing uses `X1`/`X3`/`X4` tokens from `core/styles`.
+
+## Accessibility
+
+- Root container has `accessibilityRole="alert"` so assistive tech announces it proactively.
+- `accessibilityLabel` defaults to `title + description` joined, unless overridden.
+- The CTA (when present) is a separate `accessibilityRole="button"` with its own `accessibilityLabel` (the `ctaLabel` text).
+
+## Dependencies & Edges
+
+### Internal
+
+- `EtText` — title (`label-primary-semibold`), description (`body-secondary-regular`), CTA (`label-tertiary-semibold`)
+- `EtIconV2` — leading icon, fixed size 20
+- `useEtoroTheme` — severity color tokens + `primary600` for the CTA
+
+### Related Context
+
+- `EtBanner (components/feedback/banner/)` — promo/marketing compound banner; reach for it when there's no severity/urgency concept.
+- `EtToast (components/feedback/toast/)` — transient, auto-dismissing feedback; use `EtAlertBanner` instead when the condition is persistent (stays until the underlying state changes).

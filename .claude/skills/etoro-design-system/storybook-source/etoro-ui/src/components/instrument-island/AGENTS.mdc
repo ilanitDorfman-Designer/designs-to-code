@@ -1,0 +1,136 @@
+---
+description: Agent guide for EtInstrumentIsland - a Dynamic-Island-style instrument switcher with Liquid Glass surface, animated chromatic edge glow, long-press expansion, a center-snapping instrument rail, and outside-tap collapse
+alwaysApply: false
+---
+
+# EtInstrumentIsland Component - Agent Guide
+
+## Overview
+
+`EtInstrumentIsland` is a Dynamic-Island-style instrument switcher inspired by iOS 27's Liquid Glass Dynamic Island. At rest it is a compact "pill" — the focused instrument framed by neighbour dots. A **long press** springs it open into a frosted **Liquid Glass** island holding a center-snapping rail of instruments; the centered one enlarges and is named beneath. Tapping anywhere outside collapses it back. The edges glow with a slowly-rotating, breathing chromatic light.
+
+It is **data-driven and presentational**: you hand it `items` and it reports focus / activation / expansion through callbacks. It owns no business logic and fetches no data.
+
+**Location:** `/libs/etoro-ui/src/components/instrument-island/`
+
+## Key Features
+
+- **Liquid Glass Surface**: Native `EtGlassView` on iOS 26+, with an `expo-blur` `BlurView` fallback elsewhere
+- **Alive Chromatic Glow**: Skia-powered rotating sweep gradient + blur that intensifies with expansion and gently breathes (toggle via `glow`)
+- **Springy Morph**: A single reanimated `expansion` shared value drives all size/radius/opacity interpolation for a cohesive Dynamic-Island morph
+- **Center-Snapping Rail**: Horizontal `ScrollView` with snap offsets; the centered item scales up and becomes "focused"
+- **Long-press to Expand / Outside-tap to Collapse**: Full-window backdrop captures the dismiss tap (toggle via `dismissOnOutsidePress`)
+- **Haptics**: Selection + impact haptics on iOS (toggle via `haptics`)
+- **Controlled / Uncontrolled**: Both `focusedId` and `isExpanded` support controlled and uncontrolled modes
+- **Responsive**: Expanded width derives from the screen width (override via `expandedWidth`)
+
+## Usage
+
+```tsx
+const [focusedId, setFocusedId] = useState('btc');
+
+<EtInstrumentIsland
+  items={[
+    { id: 'btc', symbol: 'BTC', label: 'Bitcoin', imageUrl: btcLogo, accentColor: '#F7931A' },
+    { id: 'aapl', symbol: 'AAPL', label: 'Apple', imageUrl: aaplLogo },
+    { id: 'nvda', symbol: 'NVDA', label: 'Nvidia', imageUrl: nvdaLogo },
+    { id: 'trader', symbol: 'JKamil', label: 'Jaynemesis', imageUrl: photo, shape: 'circle' },
+  ]}
+  focusedId={focusedId}
+  onFocusChange={setFocusedId}
+  onItemPress={openInstrument}
+  accessibilityLabel="Instrument switcher"
+/>;
+```
+
+Long-press the pill to expand, swipe the rail to change focus, tap a centered item to fire `onItemPress`, tap outside to collapse.
+
+## Data Model — `IslandInstrument`
+
+| Field             | Type          | Description                                                            |
+| ----------------- | ------------- | ---------------------------------------------------------------------- |
+| `id`              | `string`      | Stable identity used for focus tracking and callbacks                  |
+| `symbol`          | `string`      | Short symbol (e.g. "BTC"); default label beneath the focused item      |
+| `label`           | `string`      | Optional longer label shown when focused (falls back to `symbol`)      |
+| `imageUrl`        | `string`      | Avatar image URL (instrument logo / trader photo)                      |
+| `fallback`        | `string`      | Initials rendered when no image is available                           |
+| `backgroundColor` | `string`      | Background painted behind a transparent logo                           |
+| `shape`           | `AvatarShape` | `'square'` for instruments (default), `'circle'` for people/traders    |
+| `accentColor`     | `string`      | Accent color for the alive edge glow when this item is focused         |
+
+## Props Reference — `EtInstrumentIslandProps` (Root)
+
+| Prop                    | Type                          | Default      | Description                                                          |
+| ----------------------- | ----------------------------- | ------------ | -------------------------------------------------------------------- |
+| `items`                 | `IslandInstrument[]`          | required     | Ordered instruments (rail items + collapsed dots)                    |
+| `focusedId`             | `string`                      | -            | Controlled focused id (pair with `onFocusChange`)                    |
+| `defaultFocusedId`      | `string`                      | first item   | Initial focus (uncontrolled)                                         |
+| `onFocusChange`         | `(id: string) => void`        | -            | Fires when the centered/focused item changes                        |
+| `onItemPress`           | `(id: string) => void`        | -            | Fires when the focused item is tapped again (e.g. to open it)        |
+| `isExpanded`            | `boolean`                     | -            | Controlled expanded state (pair with `onExpandedChange`)             |
+| `defaultExpanded`       | `boolean`                     | `false`      | Initial expanded state (uncontrolled)                                |
+| `onExpandedChange`      | `(expanded: boolean) => void` | -            | Fires on long-press expand / outside-tap collapse                    |
+| `expandedWidth`         | `number`                      | screen-based | Width of the expanded island                                         |
+| `glow`                  | `boolean`                     | `true`       | Render the Skia chromatic edge glow                                  |
+| `haptics`               | `boolean`                     | `true`       | Fire selection/impact haptics on iOS                                 |
+| `dismissOnOutsidePress` | `boolean`                     | `true`       | Render a full-window backdrop so outside taps collapse the island    |
+| `style`                 | `StyleProp<ViewStyle>`        | -            | Style overrides for the outer (collapsed-footprint) container        |
+| `accessibilityLabel`    | `string`                      | -            | Accessibility label for the collapsed pill                           |
+| `testID`                | `string`                      | -            | Forwarded to the outer container (`-trigger`/`-backdrop` suffixes)   |
+
+## File Structure
+
+```
+instrument-island/
+├── et-instrument-island.tsx       # Root composition + styles
+├── et-instrument-island.test.tsx  # Tests
+├── index.ts                       # Public exports
+├── AGENTS.mdc                      # This file
+├── api/
+│   ├── types.ts                   # IslandInstrument, props, context value
+│   ├── context.tsx                # InstrumentIslandContext + useInstrumentIslandContext
+│   └── index.ts
+├── hooks/
+│   ├── use-island-layout.ts       # Resolves collapsed/expanded pixel geometry
+│   ├── use-island-state.ts        # Focus + expansion state, callbacks, haptics
+│   ├── use-expansion-animation.ts # Single `expansion` shared value → all animated styles
+│   └── index.ts
+├── subcomponents/
+│   ├── island-shell.tsx           # Liquid Glass / BlurView surface + specular rim
+│   ├── island-glow.tsx            # Skia rotating chromatic edge glow (decorative)
+│   ├── island-collapsed.tsx       # Compact pill: focused avatar + flanking dots
+│   ├── island-rail.tsx            # Center-snapping horizontal ScrollView
+│   ├── island-rail-item.tsx       # One rail avatar; scales/fades on focus
+│   ├── island-avatar.tsx          # EtAvatar wrapper for an IslandInstrument
+│   ├── island-dot.tsx             # Collapsed-state neighbour dot
+│   ├── island-label.tsx           # Cross-fading focused-item label
+│   └── index.ts
+└── utils/
+    ├── island-metrics.ts          # Pure geometry constants + helpers
+    └── index.ts
+```
+
+## Architecture Notes
+
+1. **Context Flow**: `InstrumentIslandContext` shares `items`, focus state, `isExpanded`, `glow`, `accentColor`, and the `onFocus` / `onItemActivate` / `onExpand` / `onCollapse` callbacks with subcomponents.
+2. **State** (`use-island-state`): Resolves controlled vs uncontrolled `focusedId` and `isExpanded`, exposes a `focusedIndex`, and fires haptics on iOS only.
+3. **Layout** (`use-island-layout`): Computes collapsed pill and expanded island dimensions/radius from `useWindowDimensions` (and optional `expandedWidth`). All geometry constants live in `utils/island-metrics.ts` as pure functions.
+4. **Animation** (`use-expansion-animation`): One `expansion` shared value (0→1) springs on expand and collapse. It splits `shellStyle` (width/height) from `surfaceStyle` (borderRadius) so the glow can bleed past the clipped glass surface, and cross-fades collapsed vs expanded content layers.
+5. **Glow** (`island-glow`): Skia `RoundedRect` stroked with a rotating `SweepGradient` + `BlurMask`. Only the gradient's start/end angles rotate — never the rect geometry — to avoid skewing corners. Purely decorative, `pointerEvents="none"`, intentionally bleeds past the edge.
+
+## Do's and Don'ts
+
+### Do:
+
+- Pass pre-resolved, primitive `items` — the island never fetches or derives data
+- Use `shape: 'circle'` for traders/people and the default `'square'` for instruments
+- Provide `accentColor` per item to tint the glow for the focused instrument
+- Pair `focusedId` with `onFocusChange` (and `isExpanded` with `onExpandedChange`) when controlling state
+- Set `glow={false}` in unit tests / low-end paths to skip the Skia canvas
+
+### Don't:
+
+- Don't put business logic inside the island — handle navigation/opening in `onItemPress`
+- Don't hardcode colors; the surface/dots/label/backdrop pull from `useEtoroTheme`
+- Don't animate width/height of inner content directly — drive everything from the shared `expansion` value
+- Don't rotate the glow's `RoundedRect` geometry; rotate only the sweep gradient angles

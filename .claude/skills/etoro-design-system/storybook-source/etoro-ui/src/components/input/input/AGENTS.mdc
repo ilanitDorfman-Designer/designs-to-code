@@ -1,0 +1,645 @@
+---
+description: Agent guide for EtInput - text input component with floating label, error states, character counter, password toggle, and adornment support (v1 implementation)
+alwaysApply: false
+---
+
+# EtInput Component - Technical Documentation
+
+Technical implementation guide for developers and AI agents modifying the EtInput component.
+
+---
+
+## Architecture Overview
+
+### Component Structure
+
+```
+et-input.tsx (Main component)
+├── components/
+│   ├── floating-label.tsx      # Animated label
+│   ├── input-field.tsx          # Core TextInput wrapper
+│   ├── input-adornment.tsx      # Prefix/Suffix renderer
+│   ├── helper-text.tsx          # Validation messages
+│   └── password-toggle-icon.tsx # Show/hide password
+├── hooks/
+│   ├── use-input-animations.ts  # Label & border animations
+│   └── use-input-state.ts       # State management
+├── utils/
+│   ├── init-props.ts            # Prop initialization
+│   ├── keyboard-types.ts        # Keyboard type mapping
+│   └── layout-calculations.ts   # Spacing & padding calculations
+└── api/
+    └── types.ts                 # TypeScript definitions
+```
+
+---
+
+## Dynamic Icon Sizing Implementation
+
+### The 12px Gap Formula
+
+The component maintains exactly **12px gap** between icon and text regardless of icon size.
+
+#### Formula
+
+```typescript
+// For any icon size:
+prefixWidth = 0 + iconSize + 12 - 0
+            = iconSize + 12
+
+// Examples:
+// 16px icon: prefixWidth = 28px
+// 20px icon: prefixWidth = 32px (default)
+// 24px icon: prefixWidth = 36px
+// 32px icon: prefixWidth = 44px
+```
+
+#### Visual Layout
+
+```
+┌──────────────────────────────────┐
+│ [icon] [12px gap] [text...]      │
+└──────────────────────────────────┘
+   ↑       ↑         ↑
+   │       │         └─ Input text or label
+   │       └─ 12px gap (ALWAYS)
+   └─ Icon at position 0px (variable size)
+```
+
+### Implementation Points
+
+#### 1. Label Animation (`use-input-animations.ts`)
+
+```typescript
+interface UseInputAnimationsProps {
+  isFocused: boolean;
+  hasValue: boolean;
+  hasPrefix: boolean;
+  prefixWidth?: number; // Dynamic based on icon size
+}
+
+export function useInputAnimations({
+  prefixWidth = 32, // Default for 20px icon
+  // ...
+}: UseInputAnimationsProps) {
+  const animatedLabelStyle = useAnimatedStyle(() => {
+    const translateX = hasPrefix
+      ? interpolate(
+          labelAnim.value,
+          [0, 1],
+          [prefixWidth, 0], // Unfocused → Focused
+        )
+      : 0;
+
+    return {
+      transform: [{ translateX }, { translateY }],
+      fontSize,
+    };
+  });
+
+  return { animatedLabelStyle };
+}
+```
+
+**Key Points:**
+
+- `prefixWidth` controls unfocused label position
+- When focused, label moves to `translateX: 0` (left edge)
+- Animation interpolates smoothly between positions
+
+#### 2. Input Text Padding (`layout-calculations.ts`)
+
+```typescript
+export function calculateInputPadding(
+  hasPrefix: boolean,
+  hasSuffix: boolean,
+  isPassword: boolean,
+  prefixSize?: number,
+  suffixSize?: number,
+): { paddingStart?: number; paddingEnd?: number } {
+  const padding: { paddingStart?: number; paddingEnd?: number } = {};
+
+  if (hasPrefix) {
+    const iconSize = prefixSize || 20;
+    padding.paddingStart = iconSize + 12; // icon size + gap
+  }
+
+  if (hasSuffix || isPassword) {
+    const iconSize = suffixSize || 20;
+    padding.paddingEnd = iconSize + 12; // icon size + gap
+  }
+
+  return padding;
+}
+```
+
+**Usage in `et-input.tsx`:**
+
+```typescript
+const inputPaddingStyle = calculateInputPadding(
+  hasPrefix,
+  hasSuffix,
+  isPassword,
+  appearance?.prefix?.size,
+  appearance?.suffix?.size,
+);
+
+// Applied to InputField:
+<InputField inputStyle={[appearance?.inputStyle, inputPaddingStyle]} />
+```
+
+**Key Points:**
+
+- Dynamic padding based on actual icon size
+- Ensures text cursor starts exactly 12px after icon
+- Works for both prefix and suffix independently
+- Centralized in `layout-calculations.ts` utility
+
+#### 3. Prefix Width Calculation (`layout-calculations.ts`)
+
+```typescript
+export function calculatePrefixWidth(hasPrefix: boolean, prefixSize?: number): number {
+  if (!hasPrefix) return 0;
+  const iconSize = prefixSize || 20;
+  return iconSize + 12; // icon size + gap
+}
+```
+
+**Usage in `et-input.tsx`:**
+
+```typescript
+const prefixWidth = calculatePrefixWidth(hasPrefix, appearance?.prefix?.size);
+
+const { animatedLabelStyle } = useInputAnimations({
+  isFocused,
+  value: state.value,
+  hasError,
+  hasPrefix,
+  prefixWidth, // Pass calculated width
+  // ...
+});
+```
+
+---
+
+## Component Lifecycle
+
+### 1. Initialization (`init-props.ts`)
+
+```typescript
+export function initializeProps(props: EtInputProps) {
+  return {
+    stateConfig: props.state,
+    appearanceConfig: props.appearance || {},
+    validationConfig: props.validation || {},
+    advancedConfig: props.advanced || {},
+  };
+}
+```
+
+### 2. State Management (`use-input-state.ts`)
+
+```typescript
+export function useInputState(value: string, onChangeText: (text: string) => void, type: InputType) {
+  const [isFocused, setIsFocused] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  const handleFocus = () => setIsFocused(true);
+  const handleBlur = () => setIsFocused(false);
+  const togglePasswordVisibility = () => setIsPasswordVisible((prev) => !prev);
+
+  return {
+    isFocused,
+    isPasswordVisible,
+    handleFocus,
+    handleBlur,
+    togglePasswordVisibility,
+  };
+}
+```
+
+### 3. Animation Setup (`use-input-animations.ts`)
+
+```typescript
+export function useInputAnimations({ isFocused, hasValue, hasPrefix, prefixWidth = 32 }: UseInputAnimationsProps) {
+  const labelAnim = useSharedValue(isFocused || hasValue ? 1 : 0);
+
+  useEffect(() => {
+    labelAnim.value = withSpring(isFocused || hasValue ? 1 : 0, {
+      damping: 20,
+      stiffness: 300,
+    });
+  }, [isFocused, hasValue]);
+
+  // ... animation style calculations
+}
+```
+
+---
+
+## Prop Flow Diagram
+
+```
+User passes EtInputProps
+        ↓
+initializeProps() splits into configs
+        ↓
+┌───────┴────────┬────────────┬──────────────┐
+│                │            │              │
+stateConfig  appearanceConfig  validationConfig  advancedConfig
+│                │            │              │
+├→ value         ├→ label     ├→ errorMessage ├→ textInputProps
+├→ onChangeText  ├→ placeholder ├→ helperText  └→ ref
+├→ type          ├→ prefix    └→ required
+├→ maxLength     ├→ suffix
+└→ disabled      ├→ inputStyle
+                 └→ focusBorderColor
+```
+
+---
+
+## State Handling
+
+### Focus States
+
+```typescript
+const [isFocused, setIsFocused] = useState(false);
+
+// Label moves up when:
+const shouldFloatLabel = isFocused || hasValue;
+
+// Border color changes when:
+const borderColor = isFocused ? appearance?.focusBorderColor || colors.borderActive : colors.borderDefault;
+```
+
+### Error States
+
+```typescript
+const hasError = Boolean(validation?.errorMessage);
+
+// Affects:
+// 1. Border color: red when hasError
+// 2. Helper text: shows error message
+// 3. Label color: red when hasError && isFocused
+```
+
+### Disabled States
+
+```typescript
+const isDisabled = state?.disabled;
+
+// Affects:
+// 1. Input: editable={!isDisabled}
+// 2. Adornments: Pressable disabled={isDisabled}
+// 3. Colors: uses disabled color scheme
+```
+
+---
+
+## Critical Implementation Details
+
+### 1. Ref Forwarding
+
+```typescript
+export const InputField = forwardRef<TextInput, InputFieldProps>(
+  (props, ref) => {
+    return <TextInput ref={ref} {...props} />;
+  },
+);
+
+InputField.displayName = 'InputField';
+```
+
+**Why:** Allows parent components to access TextInput methods (`focus()`, `blur()`, etc.)
+
+### 2. Placeholder Logic
+
+```typescript
+const shouldHidePlaceholder = !isFocused && !!label;
+const displayedPlaceholder = shouldHidePlaceholder ? '' : placeholder;
+```
+
+**Why:** Prevents visual clutter when floating label is shown
+
+### 3. Password Toggle Position
+
+```typescript
+// Password toggle takes precedence over suffix
+const effectiveSuffix = isPassword ? undefined : appearance?.suffix;
+
+// Render order:
+<InputField />
+{effectiveSuffix && <InputAdornment />}
+{isPassword && <PasswordToggleIcon />}
+```
+
+**Why:** Password toggle is always rightmost element
+
+### 4. RTL Support
+
+```typescript
+// Automatic in React Native, but ensure:
+// 1. Use paddingStart/paddingEnd (not paddingLeft/paddingRight)
+// 2. Use translateX (automatically flips in RTL)
+// 3. Icon positions handled by Flexbox
+```
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+
+**Files:**
+
+- `floating-label.test.tsx` - Animation behavior
+- `input-field.test.tsx` - Input rendering & ref forwarding
+- `helper-text.test.tsx` - Validation messages
+- `password-toggle-icon.test.tsx` - Toggle functionality
+
+**Coverage:**
+
+- ✅ Prop combinations
+- ✅ State transitions
+- ✅ Edge cases (empty, disabled, error)
+- ✅ Accessibility
+
+### Integration Tests
+
+Test with parent components:
+
+- Form validation flows
+- Multi-input forms
+- Dynamic value changes
+
+---
+
+## Performance Considerations
+
+### 1. Animation Optimization
+
+```typescript
+// Use useAnimatedStyle for better performance
+const animatedStyle = useAnimatedStyle(() => {
+  // Runs on UI thread
+  return { transform: [...] };
+});
+```
+
+### 2. Memoization
+
+```typescript
+const getInputStyle = useMemo(
+  () => ({
+    paddingStart: hasPrefix ? prefixIconSize + 12 : 0,
+    paddingEnd: hasSuffix ? suffixIconSize + 12 : 0,
+  }),
+  [hasPrefix, hasSuffix, prefixIconSize, suffixIconSize],
+);
+```
+
+### 3. Avoid Re-renders
+
+```typescript
+// Use useCallback for handlers
+const handleFocus = useCallback(() => setIsFocused(true), []);
+const handleBlur = useCallback(() => setIsFocused(false), []);
+```
+
+---
+
+## Modification Patterns
+
+### Adding a New Input Type
+
+1. **Update type definition** (`api/types.ts`):
+
+```typescript
+export type InputType = 'text' | 'email' | 'password' | 'number' | 'phone' | 'newType';
+```
+
+2. **Add keyboard type mapping** (`utils/keyboard-types.ts`):
+
+```typescript
+export function getKeyboardType(type: InputType): KeyboardTypeOptions {
+  switch (type) {
+    case 'newType':
+      return 'numeric';
+    // ...
+  }
+}
+```
+
+3. **Update input field logic if needed** (`components/input-field.tsx`)
+
+### Adding a New Adornment Feature
+
+1. **Update interface** (`api/types.ts`):
+
+```typescript
+export interface InputAdornmentConfig {
+  iconName?: IconName;
+  size?: number;
+  content?: ReactNode;
+  onPress?: () => void;
+  color?: string;
+  testID?: string;
+  newFeature?: string; // Add here
+}
+```
+
+2. **Update component** (`components/input-adornment.tsx`):
+
+```typescript
+export function InputAdornment({
+  newFeature,
+  // ...
+}: InputAdornmentProps) {
+  // Implement feature
+}
+```
+
+3. **Update spacing calculations if size changes** (`layout-calculations.ts`)
+
+### Changing the Gap Size
+
+**Current:** 12px gap
+
+**To change:**
+
+```typescript
+// In layout-calculations.ts:
+const GAP_SIZE = 16; // New gap size
+
+export function calculatePrefixWidth(hasPrefix: boolean, prefixSize?: number): number {
+  if (!hasPrefix) return 0;
+  const iconSize = prefixSize || 20;
+  return iconSize + GAP_SIZE; // Use constant
+}
+
+export function calculateInputPadding(
+  hasPrefix: boolean,
+  hasSuffix: boolean,
+  isPassword: boolean,
+  prefixSize?: number,
+  suffixSize?: number,
+): { paddingStart?: number; paddingEnd?: number } {
+  const padding: { paddingStart?: number; paddingEnd?: number } = {};
+
+  if (hasPrefix) {
+    const iconSize = prefixSize || 20;
+    padding.paddingStart = iconSize + GAP_SIZE;
+  }
+
+  if (hasSuffix || isPassword) {
+    const iconSize = suffixSize || 20;
+    padding.paddingEnd = iconSize + GAP_SIZE;
+  }
+
+  return padding;
+}
+```
+
+**Warning:** Changing the gap affects all instances globally.
+
+---
+
+## Common Issues & Solutions
+
+### Issue: Label overlaps icon when unfocused
+
+**Cause:** `prefixWidth` not calculated correctly
+
+**Solution:**
+
+```typescript
+// Use the utility function from layout-calculations.ts:
+import { calculatePrefixWidth } from './utils';
+
+const prefixWidth = calculatePrefixWidth(hasPrefix, appearance?.prefix?.size);
+
+// And pass it to useInputAnimations:
+const { animatedLabelStyle } = useInputAnimations({
+  isFocused,
+  value: state.value,
+  hasError,
+  hasPrefix,
+  prefixWidth, // Correctly calculated width
+  // ...
+});
+```
+
+### Issue: Animation is jumpy
+
+**Cause:** Icon size changing mid-render
+
+**Solution:**
+
+```typescript
+// Use useMemo to stabilize icon size:
+const prefixIconSize = useMemo(() => appearance?.prefix?.size || 20, [appearance?.prefix?.size]);
+```
+
+### Issue: Touch target too small for adornments
+
+**Cause:** Missing hit slop
+
+**Solution:**
+
+```typescript
+// In input-adornment.tsx:
+<Pressable
+  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+  onPress={onPress}
+>
+  {/* content */}
+</Pressable>
+```
+
+### Issue: Ref not working
+
+**Cause:** Not using forwardRef
+
+**Solution:**
+
+```typescript
+// Always use forwardRef for input components:
+export const InputField = forwardRef<TextInput, InputFieldProps>(
+  (props, ref) => {
+    return <TextInput ref={ref} {...props} />;
+  },
+);
+```
+
+---
+
+## Dependencies
+
+### Internal
+
+- `etoro-ui/core/hooks` - `useEtoroTheme()`
+- `etoro-ui/foundations/icon-assets` - `EtoroIcon`
+- `react-native-reanimated` - Animations
+
+**Testing note:** Some unit tests mock `react-native-reanimated`. If you add/adjust such mocks, make sure they expose:
+
+- `default.createAnimatedComponent` (used by floating labels at module load)
+- `Easing.out` and `Easing.cubic` (used by `useInputAnimations` timing config)
+
+### External
+
+- `react` - Core
+- `react-native` - Platform primitives
+
+---
+
+## Breaking Changes Log
+
+### v2.0.0 - Dynamic Icon Sizing
+
+- **Added:** `size` prop to `InputAdornmentConfig`
+- **Added:** `prefixWidth` prop to `useInputAnimations`
+- **Changed:** Spacing now dynamically calculated
+- **Migration:** No action needed (backward compatible with default 20px)
+
+### v1.5.0 - Prefix & Suffix Support
+
+- **Added:** `prefix` and `suffix` to `EtInputAppearanceConfig`
+- **Added:** `InputAdornmentConfig` interface
+- **Added:** `input-adornment.tsx` component
+- **Migration:** No action needed (optional feature)
+
+---
+
+## Future Enhancements
+
+### Potential Improvements
+
+1. **Loading State**
+   - Add `loading?: boolean` to show spinner
+   - Useful for async validation
+
+2. **Character Counter**
+   - Show remaining characters for `maxLength`
+   - `showCharacterCount?: boolean`
+
+3. **Multi-line Support**
+   - Support for `TextArea` variant
+   - `multiline?: boolean`
+
+4. **Auto-complete Suggestions**
+   - Dropdown with suggestions
+   - Integration with `FlatList`
+
+5. **Input Masking**
+   - Format as user types (phone, credit card)
+   - Integration with masking library
+
+---
+
+## Related Documentation
+
+- **README.md** - User-facing documentation & examples
+- **Storybook** - Interactive component gallery
+- **Types** (`api/types.ts`) - Full TypeScript definitions
+- **Tests** - Component test files for behavior examples

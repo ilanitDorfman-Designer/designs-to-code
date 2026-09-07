@@ -1,0 +1,15 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_gf)">
+<g transform="translate(-7.2, 0) scale(1.8000)">
+<path id="Rectangle-77" d="M26 0H2C0.89543 0 0 0.89543 0 2V18C0 19.1046 0.89543 20 2 20H26C27.1046 20 28 19.1046 28 18V2C28 0.89543 27.1046 0 26 0Z" fill="white"/>
+<path id="Path" d="M0 0H28V20L0 0Z" fill="#078930"/>
+<path id="Path_2" d="M0 0L28 20H0V0Z" fill="#FCDD09"/>
+<path id="Path_3" d="M14 6.66667L15.8287 12.6967L11.0412 8.96994H16.9588L12.1713 12.6967L14 6.66667Z" fill="#DA121A"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_gf">
+<circle cx="18" cy="18" r="18" fill="white"/>
+</clipPath>
+</defs>
+</svg>

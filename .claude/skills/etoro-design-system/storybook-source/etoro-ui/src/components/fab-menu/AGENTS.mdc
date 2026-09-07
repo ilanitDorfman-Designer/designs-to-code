@@ -1,0 +1,183 @@
+---
+description: Agent guide for EtFabMenu - Floating Action Button menu that expands to reveal actions with compound Trigger/Actions/Button pattern, staggered animations, close on outside press
+alwaysApply: false
+---
+
+# EtFabMenu Component
+
+## Purpose & Scope
+
+`EtFabMenu` is a Floating Action Button (FAB) menu for the eToro design system. It expands from a primary trigger to reveal multiple related actions in a vertical stack above the trigger.
+
+- **Compound component pattern**: `EtFabMenu.Trigger`, `EtFabMenu.Actions`, `EtFabMenu.Button`
+- **Default trigger**: Circular FAB with star/close icon based on state
+- **Custom trigger**: Accepts `EtButton` or render-prop function for custom content
+- **Close on outside press**: Transparent overlay closes menu when tapping outside (configurable)
+- **Close on action**: Menu automatically closes when an action is selected
+
+**Does NOT handle:**
+
+- Positioning (consumer places the component, e.g. `position: absolute`, bottom-right)
+- Navigation logic (use with router handlers in `onPress`)
+- More than 5 actions (design guideline: 3–5 max recommended)
+
+## Entry Points & Contracts
+
+### `EtFabMenu` (root)
+
+```tsx
+<EtFabMenu
+  closeOnOutsidePress?: boolean   // default: true
+  contentInset?: { bottom?: number; right?: number }   // when menu opens in Modal; match parent position
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {children}
+</EtFabMenu>
+```
+
+**Children:** Must include `EtFabMenu.Trigger` and `EtFabMenu.Actions`.
+
+**contentInset:** When `closeOnOutsidePress` is true and the menu opens, content renders in a Modal. Pass `contentInset` with the same `bottom`/`right` values as your positioning container so the FAB stays fixed (no jump).
+
+### `EtFabMenu.Trigger`
+
+```tsx
+<EtFabMenu.Trigger>
+  {children?: ReactNode | ((isOpen: boolean) => ReactNode)}
+</EtFabMenu.Trigger>
+```
+
+- **No children**: Renders default circular FAB (44×44, primary green, star/close icon)
+- **Children (EtButton)**: Clones and adds `onPress` to toggle
+- **Children (function)**: Receives `isOpen`, e.g. `(isOpen) => <EtButton><EtButton.Icon name={isOpen ? 'close' : 'plus'} /></EtButton>`
+
+### `EtFabMenu.Actions`
+
+```tsx
+<EtFabMenu.Actions>
+  {EtFabMenu.Button[]}
+</EtFabMenu.Actions>
+```
+
+Only `EtFabMenu.Button` children are valid. Invalid children are filtered out with a `__DEV__` warning.
+
+### `EtFabMenu.Button`
+
+```tsx
+<EtFabMenu.Button
+  iconName: IconName    // required
+  label: string         // required
+  onPress: () => void   // required
+  disabled?: boolean    // default: false
+  testID?: string
+  accessibilityLabel?: string  // defaults to label
+/>
+```
+
+## Usage
+
+### Basic (default trigger)
+
+```tsx
+<EtFabMenu>
+  <EtFabMenu.Trigger />
+  <EtFabMenu.Actions>
+    <EtFabMenu.Button iconName="star" label="Action 01" onPress={handle1} />
+    <EtFabMenu.Button iconName="heart" label="Action 02" onPress={handle2} />
+  </EtFabMenu.Actions>
+</EtFabMenu>
+```
+
+### With custom trigger (EtButton)
+
+```tsx
+<EtFabMenu>
+  <EtFabMenu.Trigger>
+    <EtButton>
+      <EtButton.Icon name="plus" />
+    </EtButton>
+  </EtFabMenu.Trigger>
+  <EtFabMenu.Actions>...</EtFabMenu.Actions>
+</EtFabMenu>
+```
+
+### With icon swap (render prop)
+
+```tsx
+<EtFabMenu>
+  <EtFabMenu.Trigger>
+    {(isOpen) => (
+      <EtButton>
+        <EtButton.Icon name={isOpen ? 'close' : 'plus'} />
+      </EtButton>
+    )}
+  </EtFabMenu.Trigger>
+  <EtFabMenu.Actions>...</EtFabMenu.Actions>
+</EtFabMenu>
+```
+
+### Positioned (e.g. bottom-right)
+
+```tsx
+<View style={{ flex: 1 }}>
+  <Content />
+  <View style={{ position: 'absolute', bottom: 100, right: 16 }}>
+    <EtFabMenu contentInset={{ bottom: 100, right: 16 }}>
+      <EtFabMenu.Trigger />
+      <EtFabMenu.Actions>...</EtFabMenu.Actions>
+    </EtFabMenu>
+  </View>
+</View>
+```
+
+Pass `contentInset` with the same values as your container's `bottom`/`right` so the FAB position stays fixed when the menu opens.
+
+## Design System Integration
+
+- **Colors** (from `useEtoroTheme().colors`):
+  - Trigger: `bgActionBrand`
+  - Action items: `bgPositiveForthiary`
+  - Text/icon: `textPrimaryNeutral`, `textInvertedPrimaryNeutral`
+- **Sizes & spacing**:
+  - FAB: 44×44, padding X2, borderRadius FAB_SIZE/2 (circular)
+  - Action items: height 44, icon 20×20, padding X3 (vertical) X4 (horizontal), borderRadius ACTION_HEIGHT/2 (pill), icon-text gap X2
+  - Trigger icon: 20×20
+
+## States & Behavior
+
+- **Default**: Collapsed
+- **On trigger press**: Expands to reveal actions
+- **Main FAB icon**: Star when closed, Close when open (default trigger)
+- **Action press**: Executes callback, closes menu
+- **Outside press**: Closes menu (when `closeOnOutsidePress={true}`)
+- **Android back**: `onRequestClose` on Modal closes menu (native-only via `core/web/modal-request-close` — RNW's Modal would otherwise ALSO close on Escape keyup, behind the dismiss stack's back)
+- **ESC key (web)**: Closes menu via the shared dismiss stack (`core/web/use-dismissable`, topmost open layer only)
+
+## Usage Guidelines (from design system)
+
+**Do:**
+- Keep actions limited (3–5 max recommended)
+- Ensure all actions are closely related
+- Use clear iconography
+- Close menu after selection (handled automatically)
+
+**Avoid:**
+- Using as a replacement for navigation menus
+- Including unrelated actions
+- Overloading with too many options
+
+## Anti-patterns
+
+❌ **Non-Button children in Actions** – Only `EtFabMenu.Button` allowed
+
+❌ **Using as navigation** – FAB menu is for contextual actions, not primary navigation
+
+❌ **Too many actions** – Keep 3–5 max per design guidelines
+
+## Dependencies
+
+- `useEtoroTheme` – theme colors
+- `EtButton`, `EtoroIcon`, `EtText` – primitives
+- `expo-haptics` – haptic feedback
+- `Modal`, `Pressable` – React Native

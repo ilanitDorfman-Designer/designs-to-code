@@ -1,0 +1,335 @@
+---
+description: Agent guide for EtSwipeableRow - horizontal left-swipe to reveal action buttons.
+alwaysApply: false
+---
+
+# EtSwipeableRow Component - Agent Guide
+
+## Purpose & Scope
+
+`EtSwipeableRow` is a list-row component that enables horizontal left-swipe to reveal action buttons. It uses a compound component pattern where content and actions are composed as sibling children.
+
+**Location:** `/libs/etoro-ui/src/components/list/swipeable-row/`
+
+**Key capabilities:**
+
+- **Left-swipe gesture**: Pan gesture reveals action buttons positioned behind the content
+- **Compound component pattern**: `EtSwipeableRow.Action` subcomponents define revealed buttons
+- **Spring-based animation**: Snap-open / snap-closed with configurable spring physics
+- **Uniform icon fade-in**: All action icons fade in together as the row is dragged open
+- **Full-swipe shortcut (default ON)**: Drag past `fullSwipeThreshold` (default 60% of row width) and release to auto-trigger the LAST action — the last action's background expands across the row, a single medium haptic fires, then the last action's `onPress` runs (or `onFullSwipeCommit` if provided) and the row springs back to closed
+- **Destructive opt-in (`collapseOnLastAction`)**: When set, BOTH a full-swipe commit AND a press of the LAST action animate the row's height to 0 before firing the callback (Telegram-style dismissal). Use for delete/archive rows.
+- **List integration**: `isDragging` prop auto-closes swipe when parent list scrolls
+- **Coordination callback**: `onSwipeStart` lets parents close other open rows (single-open-row pattern)
+
+**Does NOT handle:**
+
+- Right-to-left swipe (only left swipe is supported)
+- Action state management (parent owns what actions exist and their handlers)
+- Row selection or highlighting
+- Sibling list-item reflow after a full-swipe commit (the row goes to height 0 before notifying the consumer; closing the gap in the surrounding list is the consumer's concern)
+
+## Architecture
+
+```text
+EtSwipeableRow (Root)
+├── SwipeableRowContext.Provider (shares closeSwipe, defaultButtonWidth)
+├── View (container, overflow: hidden)
+│   ├── View (actionsContainer, absolute right, contains Action elements)
+│   │   └── EtSwipeableRow.Action × N (revealed on swipe)
+│   └── GestureDetector → Animated.View (sliding content layer)
+│       └── {contentChildren} (everything that is NOT an Action)
+```
+
+Children are automatically separated: `EtSwipeableRow.Action` elements go into the actions container; all other children become the sliding content layer.
+
+## Component API
+
+### `<EtSwipeableRow>`
+
+Root container that wraps content and action buttons.
+
+**Props (`EtSwipeableRowProps`):**
+
+| Prop                    | Type                               | Required | Description                                                                                                       |
+| ----------------------- | ---------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `children`              | `ReactNode`                        | Yes      | Content elements and `EtSwipeableRow.Action` subcomponents                                                        |
+| `isDragging`            | `boolean`                          | No       | When `true`, auto-closes an open swipe. Wire to parent list drag state.                                           |
+| `onSwipeStart`          | `(closeSwipe: () => void) => void` | No       | Called when a swipe begins on a closed row. Receives the row's `closeSwipe` function for single-open-row pattern. |
+| `contentContainerStyle` | `StyleProp<ViewStyle>`             | No       | Style for the sliding content layer. Override `backgroundColor` when rendering on non-neutral surfaces.           |
+| `enableFullSwipe`       | `boolean`                          | No       | Enables the Telegram-style "swipe all the way" shortcut for the LAST action. Default `true`.                      |
+| `fullSwipeThreshold`    | `number`                           | No       | Fraction of row width past which a release commits the full-swipe. Range `(0, 1]`. Default `0.6`.                 |
+| `onFullSwipeCommit`     | `() => void`                       | No       | Override called instead of the last action's `onPress` when a full-swipe commits.                                 |
+| `collapseOnLastAction`  | `boolean`                          | No       | When `true`, both full-swipe commits AND presses of the LAST action animate the row's height to 0 before firing the callback. Default `false`. |
+
+### `<EtSwipeableRow.Action>`
+
+Action button revealed behind the content on left swipe. Must be a direct child of `EtSwipeableRow`.
+
+**Props (`EtSwipeableActionProps`):**
+
+| Prop                 | Type                   | Default | Description                                                 |
+| -------------------- | ---------------------- | ------- | ----------------------------------------------------------- |
+| `children`           | `ReactNode`            | -       | Content rendered inside the action (icon, text, etc.)       |
+| `onPress`            | `() => void`           | -       | Called when tapped.                                         |
+| `width`              | `number`               | `70`    | Width in pixels. Affects total snap distance.               |
+| `style`              | `StyleProp<ViewStyle>` | -       | Container style. Use `backgroundColor` to color the action. |
+| `testID`             | `string`               | -       | Stable automation identifier forwarded to the press target. |
+| `accessibilityLabel` | `string`               | -       | Label for screen readers                                    |
+| `accessibilityHint`  | `string`               | -       | Hint for screen readers                                     |
+| `accessibilityRole`  | `AccessibilityRole`    | -       | Accessibility role                                          |
+| `accessible`         | `boolean`              | -       | Whether the action is accessible                            |
+
+## Usage Patterns
+
+### Single action (delete)
+
+```tsx
+<EtSwipeableRow>
+  <EtListItemV2 size="large">{/* row content */}</EtListItemV2>
+  <EtSwipeableRow.Action onPress={handleDelete} style={{ backgroundColor: colors.statusNegative }}>
+    <EtIconV2 name="trash" size="lg" color={colors.textBright} />
+  </EtSwipeableRow.Action>
+</EtSwipeableRow>
+```
+
+### Multiple actions
+
+```tsx
+<EtSwipeableRow onSwipeStart={handleSwipeStart}>
+  <EtListItemV2 size="large">{/* row content */}</EtListItemV2>
+  <EtSwipeableRow.Action onPress={handleTrade} style={{ backgroundColor: colors.bgNeutralSecondary }}>
+    <EtIconV2 name="trade" size="lg" color={colors.textBright} />
+  </EtSwipeableRow.Action>
+  <EtSwipeableRow.Action onPress={handleDelete} style={{ backgroundColor: colors.statusNegative }}>
+    <EtIconV2 name="trash" size="lg" color={colors.textBright} />
+  </EtSwipeableRow.Action>
+</EtSwipeableRow>
+```
+
+### Destructive row (`collapseOnLastAction`)
+
+When the last action removes the row from the list (delete, archive, etc.), opt into the
+height-collapse animation so the row visually disappears in lockstep with both a full-swipe
+commit and a direct tap on the destructive action:
+
+```tsx
+<EtSwipeableRow collapseOnLastAction>
+  <RowContent />
+  <EtSwipeableRow.Action onPress={handleArchive} style={{ backgroundColor: colors.bgInfo }}>
+    <EtIconV2 name="archive" size="lg" color={colors.textBright} />
+  </EtSwipeableRow.Action>
+  <EtSwipeableRow.Action
+    onPress={() => removeFromList(item.id)}
+    style={{ backgroundColor: colors.statusNegative }}
+  >
+    <EtIconV2 name="trash" size="lg" color={colors.textBright} />
+  </EtSwipeableRow.Action>
+</EtSwipeableRow>
+```
+
+The collapse fires the `onPress` callback only after the height animation completes — your
+callback is responsible for removing the item from the underlying data so the surrounding
+list closes the gap.
+
+### Single-open-row pattern (in a list)
+
+Only one row should be open at a time. Use `onSwipeStart` to close the previously open row:
+
+```tsx
+function SwipeableList({ items }) {
+  const closeRef = useRef<(() => void) | null>(null);
+
+  const handleSwipeStart = useCallback((closeSwipe: () => void) => {
+    closeRef.current?.();
+    closeRef.current = closeSwipe;
+  }, []);
+
+  return items.map((item) => (
+    <EtSwipeableRow key={item.id} onSwipeStart={handleSwipeStart}>
+      <RowContent item={item} />
+      <EtSwipeableRow.Action onPress={() => handleDelete(item.id)} style={{ backgroundColor: colors.statusNegative }}>
+        <EtIconV2 name="trash" size="lg" color={colors.textBright} />
+      </EtSwipeableRow.Action>
+    </EtSwipeableRow>
+  ));
+}
+```
+
+### Integration with list drag state
+
+Close swipe when the parent list starts dragging (scrolling):
+
+```tsx
+const [isDragging, setIsDragging] = useState(false);
+
+<FlashList
+  onScrollBeginDrag={() => setIsDragging(true)}
+  onScrollEndDrag={() => setIsDragging(false)}
+  renderItem={({ item }) => (
+    <EtSwipeableRow isDragging={isDragging}>
+      <RowContent item={item} />
+      <EtSwipeableRow.Action onPress={() => handleDelete(item.id)} style={{ backgroundColor: colors.statusNegative }}>
+        <EtIconV2 name="trash" size="lg" color={colors.textBright} />
+      </EtSwipeableRow.Action>
+    </EtSwipeableRow>
+  )}
+/>;
+```
+
+### Custom action width
+
+```tsx
+<EtSwipeableRow.Action width={90} onPress={handleDelete} style={{ backgroundColor: colors.statusNegative }}>
+  <EtIconV2 name="trash" size="lg" color={colors.textBright} />
+</EtSwipeableRow.Action>
+```
+
+### Custom content background
+
+When the row is rendered on a non-neutral surface, override the content background so it masks the actions correctly:
+
+```tsx
+<EtSwipeableRow contentContainerStyle={{ backgroundColor: colors.bgNeutralSecondary }}>{/* ... */}</EtSwipeableRow>
+```
+
+## Anti-patterns
+
+### Using Action outside of EtSwipeableRow
+
+```tsx
+// BAD - throws: "EtSwipeableRow.Action must be used within an EtSwipeableRow component"
+<EtSwipeableRow.Action onPress={handleDelete}>
+  <EtIconV2 name="trash" />
+</EtSwipeableRow.Action>
+```
+
+**Fix:** Always wrap Actions inside an `EtSwipeableRow`.
+
+### Wrapping Actions in intermediate components
+
+```tsx
+// BAD - child separation only checks direct children for SwipeableAction type
+<EtSwipeableRow>
+  <RowContent />
+  <View>
+    <EtSwipeableRow.Action onPress={handleDelete}>...</EtSwipeableRow.Action>
+  </View>
+</EtSwipeableRow>
+```
+
+**Fix:** Actions must be direct children of `EtSwipeableRow`. The `useSwipeableRowChildren` hook uses `Children.toArray` and checks `child.type === SwipeableAction` — wrapping in a `View` breaks type detection.
+
+### Forgetting contentContainerStyle on colored backgrounds
+
+```tsx
+// BAD - default bgNeutralPrimary won't match a secondary surface
+<View style={{ backgroundColor: colors.bgNeutralSecondary }}>
+  <EtSwipeableRow>
+    <RowContent />
+    <EtSwipeableRow.Action onPress={handleDelete}>...</EtSwipeableRow.Action>
+  </EtSwipeableRow>
+</View>
+```
+
+**Fix:** Pass `contentContainerStyle={{ backgroundColor: colors.bgNeutralSecondary }}` to match the parent surface, otherwise the sliding layer creates a visible color mismatch.
+
+### Not coordinating multiple swipeable rows
+
+```tsx
+// BAD - multiple rows can be open simultaneously
+{
+  items.map((item) => (
+    <EtSwipeableRow key={item.id}>
+      <RowContent />
+      <EtSwipeableRow.Action onPress={handleDelete}>...</EtSwipeableRow.Action>
+    </EtSwipeableRow>
+  ));
+}
+```
+
+**Fix:** Use the `onSwipeStart` callback with a `closeRef` to ensure only one row is open at a time (see "Single-open-row pattern" above).
+
+## Swipe Animation Details
+
+### Gesture configuration
+
+- **Activation**: Horizontal pan activates at `±5px` offset (`activeOffsetX([-5, 5])`)
+- **Conflict resolution**: Fails on vertical movement of `±10px` (`failOffsetY([-10, 10])`), yielding to vertical scrolling
+- **Translation**: Clamped between `-totalSwipeWidth` and `0` (left swipe only)
+
+### Snap logic
+
+On gesture end, the row snaps open when **either**:
+
+- Velocity exceeds `300` px/s in the swipe direction, **or**
+- Translation exceeds 50% of `totalSwipeWidth`
+
+Otherwise it snaps closed.
+
+### Spring config
+
+```text
+damping: 50, stiffness: 300, overshootClamping: true
+```
+
+### Total swipe width
+
+Calculated as the sum of all Action widths. Actions without an explicit `width` prop default to `70px`.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides `colors.bgNeutralPrimary` for default content background
+- `SwipeableRowContext` - React Context sharing `closeSwipe` and `defaultButtonWidth` with Action subcomponents
+
+### External Dependencies
+
+- `react-native-gesture-handler` - `GestureDetector`, `Gesture.Pan()` for swipe gesture handling
+- `react-native-reanimated` - `Animated.View`, `useAnimatedStyle`, `useSharedValue`, `withSpring` for animation
+- `react-native-worklets` - `scheduleOnRN` to bridge worklet `onBegin` callback to JS thread for `onSwipeStart`
+- `react-native` - `View`, `Pressable`, `StyleSheet`
+
+## File Structure
+
+```text
+swipeable-row/
+├── api/
+│   ├── index.ts                           # Re-exports types
+│   └── types.ts                           # EtSwipeableRowProps, EtSwipeableActionProps, SwipeableRowContextValue
+├── context/
+│   └── swipeable-row-context.tsx           # React Context + useSwipeableRowContext hook
+├── hooks/
+│   ├── index.ts                           # Re-exports all hooks
+│   ├── use-swipeable-row.ts               # Orchestration hook (combines animation + width + isDragging)
+│   ├── use-swipeable-row-children.ts      # Separates Action elements from content children
+│   ├── use-swipe-animation.ts             # Pan gesture, animated style, closeSwipe, snap logic
+│   ├── use-swipe-animation.spec.ts        # Tests for animation hook
+│   └── use-total-swipe-width.ts           # Calculates total snap width from action widths
+├── subcomponents/
+│   └── swipeable-action.tsx               # EtSwipeableRow.Action (Pressable)
+├── et-swipeable-row.tsx                   # Main compound component
+├── index.ts                               # Public exports (component + types)
+└── AGENTS.mdc                             # This file
+```
+
+## Do's and Don'ts
+
+### Do:
+
+- Use `EtSwipeableRow.Action` as direct children of `EtSwipeableRow`
+- Use `onSwipeStart` to implement single-open-row behavior in lists
+- Use `isDragging` to close swipe when the parent list scrolls
+- Set `contentContainerStyle` backgroundColor to match the parent surface
+- Provide `accessibilityLabel` on each Action for screen reader support
+- Use theme colors for action backgrounds (`colors.statusNegative` for destructive, etc.)
+
+### Don't:
+
+- Don't wrap Actions in intermediate View/Fragment containers (breaks child type detection)
+- Don't use Actions outside of an EtSwipeableRow (will throw)
+- Don't nest EtSwipeableRow components
+- Don't set negative or zero `width` on Actions (falls back to default 70px)
+- Don't forget to coordinate multiple rows in a list (use `onSwipeStart`)
+- Don't rely on right-swipe — only left-swipe is supported

@@ -1,0 +1,31 @@
+import { Defs, G, LinearGradient, Mask, Path, Rect, Stop, Svg } from 'react-native-svg';
+
+import type { DsReactLocalIconProps } from '../ds-react-local-icon-props';
+
+/** DS — React `chart-line-gradient` (generated from Figma SVG export). */
+export function DsReactIconChartLineGradient({ size, color }: DsReactLocalIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Mask id="ds_chart_line_gradient_mask_0" maskUnits="userSpaceOnUse" x="1" y="6" width="22" height="15">
+        <Rect x="1.16602" y="6.92505" width="21.5625" height="13.6139" fill="url(#ds_chart_line_gradient_0)" fillOpacity={0.7} />
+      </Mask>
+      <G mask="url(#ds_chart_line_gradient_mask_0)">
+        <Path
+          d="M16.9335 10.2362C18.9197 11.03 21.7665 8.41802 22.7421 7.00391V20.539H1.23438V15.4886C3.13332 13.1856 5.4366 12.5088 6.62961 13.0139C9.40841 14.1902 11.407 13.3372 11.8824 12.5088C13.4561 9.76623 15.8446 9.80096 16.9335 10.2362Z"
+          fill={color}
+        />
+      </G>
+      <Path
+        d="M21.5878 6.72731C21.8545 6.44551 22.3001 6.43329 22.5819 6.69997C22.8631 6.96662 22.8756 7.41048 22.6093 7.69216L20.3817 10.0447L20.3759 10.0535L20.3642 10.0642L20.3534 10.075C19.2351 11.1651 17.5566 11.4892 16.1073 10.9002C15.0269 10.4609 13.7744 10.8322 13.1249 11.7674L12.4813 12.6941C11.2945 14.4025 8.99521 14.9797 7.1249 14.0554C6.09067 13.5443 4.82913 13.7141 3.9706 14.4783L2.329 15.9812C2.04325 16.2428 1.59912 16.2242 1.33681 15.9382C1.07522 15.6525 1.09389 15.2084 1.37978 14.9461L3.02822 13.4353L3.03603 13.4295C4.3233 12.2834 6.20068 12.0315 7.74697 12.7957C9.00259 13.4163 10.543 13.0207 11.327 11.8924L11.9716 10.9646L12.1757 10.6961C13.2459 9.41429 15.0617 8.95858 16.6356 9.59841C17.5701 9.97838 18.6533 9.76655 19.369 9.07106L21.5878 6.72731Z"
+        fill={color}
+      />
+      <Defs>
+        <LinearGradient id="ds_chart_line_gradient_0" x1="12.4902" y1="10.4375" x2="14.749" y2="18.4431" gradientUnits="userSpaceOnUse">
+          <Stop offset="0.0660908" stopColor="white" />
+          <Stop offset="0.248761" stopColor="white" stopOpacity={0.3} />
+          <Stop offset="0.600265" stopColor="white" stopOpacity={0} />
+        </LinearGradient>
+      </Defs>
+    </Svg>
+  );
+}

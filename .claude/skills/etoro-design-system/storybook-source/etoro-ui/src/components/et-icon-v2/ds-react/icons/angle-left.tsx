@@ -1,0 +1,15 @@
+import { Path, Svg } from 'react-native-svg';
+
+import type { DsReactLocalIconProps } from '../ds-react-local-icon-props';
+
+/** DS — React `angle-left` (generated from Figma SVG export). */
+export function DsReactIconAngleLeft({ size, color }: DsReactLocalIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M16.5303 3.46967C16.8232 3.76256 16.8232 4.23744 16.5303 4.53033L9.06066 12L16.5303 19.4697C16.8232 19.7626 16.8232 20.2374 16.5303 20.5303C16.2374 20.8232 15.7626 20.8232 15.4697 20.5303L7.46967 12.5303C7.17678 12.2374 7.17678 11.7626 7.46967 11.4697L15.4697 3.46967C15.7626 3.17678 16.2374 3.17678 16.5303 3.46967Z"
+        fill={color}
+      />
+    </Svg>
+  );
+}

@@ -1,0 +1,344 @@
+---
+description: Agent guide for EtSelectionTileGroup - controlled tile-based selection group with four visual variants (icon, radio, toggle, toggleInput), two sizes (small, large), compound Option subcomponent, single and multi select modes, subtitle support, customizable icons, and optional inline inputs
+alwaysApply: false
+---
+
+# EtSelectionTileGroup Component
+
+## Purpose & Scope
+
+`EtSelectionTileGroup` is a controlled tile-based selection group for the eToro design system. It renders a vertical list of large tappable tiles with configurable right-side elements. It provides:
+
+- **Compound component pattern**: `EtSelectionTileGroup.Option` subcomponent
+- **Four visual variants**: `icon` (default), `radio`, `toggle`, `toggleInput`
+- **Two sizes**: `small` (default, content-driven height) and `large` (84px min height — use for prominent, standalone choices like KYC gender/personal-details)
+- **Single and multi select**: single select for all variants, multi select for `toggle`/`toggleInput`
+- **Customizable icon**: `iconName` prop on Option overrides the default chevron in `icon` variant
+- **Subtitle support**: optional secondary text line on options (primarily for `radio` variant)
+- **Border highlight**: selected state shown by visible border (for `icon` and `radio` variants)
+- **Haptic feedback**: enabled by default
+
+**Does NOT handle:**
+
+- Form validation logic (handle in parent)
+- Horizontal layout (always vertical)
+- Error state styling (unlike EtRadioGroup)
+- Labels or titles above the group (use external EtText)
+
+## Entry Points & Contracts
+
+### `EtSelectionTileGroup` (main component)
+
+Uses a discriminated union for single vs multi select:
+
+**Single select** (icon, radio, toggle, toggleInput with `selectionMode="single"`):
+
+```tsx
+<EtSelectionTileGroup
+  variant?: 'icon' | 'radio' | 'toggle' | 'toggleInput' // default: 'icon'
+  size?: 'small' | 'large'                // default: 'small'
+  selectionMode?: 'single'                // default: 'single'
+  value: string | null                    // required - currently selected value
+  onChange: (value: string) => void       // required - selection callback
+  disabled?: boolean                      // default: false
+  haptics?: boolean                       // default: true
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}
+</EtSelectionTileGroup>
+```
+
+**Multi select** (toggle/toggleInput only):
+
+```tsx
+<EtSelectionTileGroup
+  variant="toggle" | "toggleInput"        // required for multi
+  selectionMode="multi"                   // required for multi
+  size?: 'small' | 'large'                // default: 'small'
+  value: string[]                         // required - currently selected values
+  onChange: (value: string[]) => void     // required - selection callback
+  disabled?: boolean
+  haptics?: boolean
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}
+</EtSelectionTileGroup>
+```
+
+### `EtSelectionTileGroup.Option`
+
+```tsx
+<EtSelectionTileGroup.Option
+  value: string                // required - unique value for this option
+  subtitle?: string            // secondary text line
+  iconName?: string            // icon name for 'icon' variant (default: 'angle-right')
+  input?: SelectionTileOptionInputProps // optional inline EtInput customizations for toggleInput
+  disabled?: boolean           // default: false - option-level disabled
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}                   // string - label text
+</EtSelectionTileGroup.Option>
+```
+
+## Usage Patterns
+
+### Icon variant (default) — with chevron
+
+```tsx
+const [selected, setSelected] = useState<string | null>(null);
+
+<EtSelectionTileGroup value={selected} onChange={setSelected}>
+  <EtSelectionTileGroup.Option value="female">Female</EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="male">Male</EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="other">I go by something else</EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+### Icon variant — large size (KYC / prominent choices)
+
+```tsx
+<EtSelectionTileGroup variant="icon" size="large" value={selected} onChange={setSelected}>
+  <EtSelectionTileGroup.Option value="female">Female</EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="male">Male</EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="other">I go by something else</EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+### Icon variant — custom icon per option
+
+```tsx
+<EtSelectionTileGroup variant="icon" value={selected} onChange={setSelected}>
+  <EtSelectionTileGroup.Option value="done" iconName="check">Done</EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="next" iconName="arrow-right">Next Step</EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+### Radio variant — with subtitle
+
+```tsx
+<EtSelectionTileGroup variant="radio" value={selected} onChange={setSelected}>
+  <EtSelectionTileGroup.Option value="conservative" subtitle="Low tolerance for risk">
+    Very conservative
+  </EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="moderate" subtitle="Balance risk & growth">
+    Moderate
+  </EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="aggressive" subtitle="Maximum risk exposure">
+    Aggressive
+  </EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+### Toggle variant — single select
+
+```tsx
+<EtSelectionTileGroup variant="toggle" value={selected} onChange={setSelected}>
+  <EtSelectionTileGroup.Option value="notifications">Push notifications</EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="emails">Email updates</EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+### Toggle variant — multi select
+
+```tsx
+const [selected, setSelected] = useState<string[]>([]);
+
+<EtSelectionTileGroup variant="toggle" selectionMode="multi" value={selected} onChange={setSelected}>
+  <EtSelectionTileGroup.Option value="director">
+    A director or a 10% shareholder of a publicly traded corporation.
+  </EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="brokerage">
+    Employed by a brokerage firm or securities exchange.
+  </EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+### ToggleInput variant — multi select with inline input
+
+```tsx
+const [selected, setSelected] = useState<string[]>([]);
+
+<EtSelectionTileGroup variant="toggleInput" selectionMode="multi" value={selected} onChange={setSelected}>
+  <EtSelectionTileGroup.Option
+    value="director"
+    input={{
+      label: 'Please enter stock ticker',
+      fieldProps: { placeholder: 'AAPL' },
+    }}
+  >
+    A director or a 10% shareholder of a publicly traded corporation.
+  </EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="brokerage">
+    Employed by a brokerage firm or securities exchange.
+  </EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+### Group disabled
+
+```tsx
+<EtSelectionTileGroup value={selected} onChange={setSelected} disabled>
+  <EtSelectionTileGroup.Option value="opt1">Disabled option 1</EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="opt2">Disabled option 2</EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+## Anti-patterns
+
+### Using Option outside of SelectionTileGroup
+
+```tsx
+// BAD — throws runtime error
+<EtSelectionTileGroup.Option value="opt1">Option 1</EtSelectionTileGroup.Option>
+```
+
+**Fix:** Always wrap Options inside `<EtSelectionTileGroup>`.
+
+### Using multi select with non-toggle variant
+
+```tsx
+// BAD — multi select only works with toggle variant
+<EtSelectionTileGroup variant="radio" selectionMode="multi" value={[]} onChange={setSelected}>
+```
+
+**Fix:** Multi select requires `variant="toggle"` or `variant="toggleInput"`.
+
+### Duplicate values
+
+```tsx
+// BAD — values must be unique
+<EtSelectionTileGroup value={selected} onChange={setSelected}>
+  <EtSelectionTileGroup.Option value="same">Option A</EtSelectionTileGroup.Option>
+  <EtSelectionTileGroup.Option value="same">Option B</EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+**Fix:** Each option must have a unique value.
+
+### Using iconName with non-icon variant
+
+```tsx
+// BAD — iconName is only used by icon variant, ignored by radio/toggle
+<EtSelectionTileGroup variant="radio" value={selected} onChange={setSelected}>
+  <EtSelectionTileGroup.Option value="opt1" iconName="check">Option</EtSelectionTileGroup.Option>
+</EtSelectionTileGroup>
+```
+
+**Fix:** Only set `iconName` on options when using `variant="icon"`.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `SelectionTileGroupContext` — React context for sharing group state with options
+- `SelectionTileGroupProvider` — Context provider (handles memoization)
+- `RadioIndicator` — Reused from `radio-group/components/radio-indicator.tsx` for `radio` variant
+- `EtToggleSwitch` — Reused from `toggle-switch/et-toggle-switch.tsx` for `toggle` and `toggleInput` variants
+- `EtInput` — Reused from `input/input-v2/et-input.tsx` for `toggleInput` variant
+- `EtIconV2` — Icon component for `icon` variant
+- `EtText` — Text rendering for labels and subtitles
+- `useEtoroTheme` — Provides theme colors for tile styling
+
+### External Dependencies
+
+- `expo-haptics` — Haptic feedback on selection
+- `react-native` — `Pressable`, `View`, `StyleSheet`
+- `react-native-reanimated` — Used indirectly via `RadioIndicator` animations
+- `react-native-gesture-handler` — Used indirectly via `EtToggleSwitch`
+
+### Design System Integration
+
+- Tile background: `textPrimaryNeutral` at 5% opacity
+- Selected border: `textPrimaryNeutral` (for `icon` and `radio` variants)
+- Subtitle text: `textSecondaryNeutral`
+- Icon color: `textSecondaryNeutral`
+- Tile dimensions: `size="small"` → content-driven height, 12px border radius, 16px padding; `size="large"` → 84px min height (same radius/padding)
+- Gap between tiles: X3 (12px)
+
+## Patterns & Pitfalls
+
+### Variant Behavior Summary
+
+| Variant       | Right element              | Selection indicator      | Accessibility role |
+| ------------- | -------------------------- | ------------------------ | ------------------ |
+| `icon`        | Customizable icon          | Border highlight         | `radio`            |
+| `radio`       | Radio circle               | Border + filled dot      | `radio`            |
+| `toggle`      | Toggle switch              | Switch state             | `switch`           |
+| `toggleInput` | Toggle switch + EtInput    | Switch + visible EtInput | `switch`           |
+
+### Selection Behavior
+
+**Icon and Radio variants (single select):**
+
+| Action                  | Result              |
+| ----------------------- | ------------------- |
+| Tap unselected option   | Selects that option |
+| Tap selected option     | Nothing happens     |
+| Tap disabled option     | Nothing happens     |
+
+**Toggle/toggleInput variants (single select):**
+
+| Action                  | Result              |
+| ----------------------- | ------------------- |
+| Toggle unselected       | Selects that option |
+| Toggle selected         | Calls onChange       |
+| Toggle disabled         | Nothing happens     |
+
+**Toggle/toggleInput variants (multi select):**
+
+| Action                    | Result                         |
+| ------------------------- | ------------------------------ |
+| Toggle off → on           | Adds value to array            |
+| Toggle on → off           | Removes value from array       |
+| Toggle disabled           | Nothing happens                |
+
+### Context Architecture
+
+The group uses context to share state with options:
+
+- `SelectionTileGroupContext` — defines the context shape
+- `SelectionTileGroupProvider` — wraps children and provides memoized context value
+- Context provides: `value`, `onSelect`, `disabled`, `variant`, `selectionMode`
+- Options read `variant` from context to determine which right-side element to render
+
+**File structure:**
+
+```text
+selection-tile-group/
+├── api/
+│   ├── index.ts
+│   └── types.ts
+├── context/
+│   ├── index.ts
+│   ├── selection-tile-group-context.tsx
+│   └── selection-tile-group-provider.tsx
+├── subcomponents/
+│   ├── index.ts
+│   └── selection-tile-option.tsx
+├── et-selection-tile-group.tsx
+├── et-selection-tile-group.test.tsx
+├── index.ts
+└── AGENTS.mdc
+```
+
+### Accessibility
+
+Built-in accessibility support:
+
+- Group: `accessibilityRole="radiogroup"` for single select, `"group"` for multi select
+- Options: `accessibilityRole="radio"` for icon/radio, `"switch"` for toggle/toggleInput
+- `accessibilityState={{ selected, disabled }}`
+- `accessibilityLabel` defaults to option's `children` text
+
+## Related Context
+
+- `EtRadioGroup (controls/radio-group/)` — Similar compound component pattern; use for compact radio buttons without tile styling
+- `EtToggleSwitch (controls/toggle-switch/)` — Standalone toggle switch; reused internally by the toggle variant
+- `EtChipsGroupV2 (controls/chips-group-v2/)` — Similar discriminated union pattern for single/multi select
+- `RadioIndicator (radio-group/components/)` — Animated radio circle reused by radio variant

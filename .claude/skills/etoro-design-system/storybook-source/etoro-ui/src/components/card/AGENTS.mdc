@@ -1,0 +1,135 @@
+---
+description: Agent guide for EtCard - compound card component with sentiment-based background styling, dark mode halo effects, optional shadow, and Header/Content/Footer subcomponents. e.g. use for portfolio value tiles, stat blocks, content grouping on dashboard screens
+alwaysApply: false
+---
+
+# EtCard Component - Agent Guide
+
+## Overview
+
+`EtCard` is a basic card component with compound component pattern. It renders children directly for full flexibility, allowing semantic subcomponents (Header, Content, Footer) to be mixed with custom elements.
+
+**Location:** `/libs/etoro-ui/src/components/card/`
+
+## Key Features
+
+- **Compound Component Pattern**: Flexible composition with semantic subcomponents
+- **Direct Children Rendering**: Children render in natural JSX order with full flexibility
+- **Sentiment-Based Styling**: Background color changes based on `isPositive` prop
+- **Halo Effect**: Decorative halo in dark mode for positive/negative sentiment
+- **Shadow Styling**: Optional shadow with `shadow` prop (default: true)
+- **RTL Ready**: Uses logical properties for future RTL support
+
+## Usage
+
+```tsx
+import { EtCard, EtText } from 'etoro-ui';
+
+// Basic usage
+<EtCard>
+  <EtCard.Header>
+    <EtText variant="label-tertiary-semibold">Portfolio Value</EtText>
+  </EtCard.Header>
+  <EtCard.Content>
+    <EtText variant="num-lg">$42,150.23</EtText>
+  </EtCard.Content>
+  <EtCard.Footer>
+    <EtText variant="body-tiny-regular">Updated just now</EtText>
+  </EtCard.Footer>
+</EtCard>
+
+// With custom elements between sections
+<EtCard>
+  <EtCard.Header>...</EtCard.Header>
+  <View style={styles.divider} />
+  <EtCard.Content>...</EtCard.Content>
+  <EtCard.Content>...</EtCard.Content>
+</EtCard>
+
+// With sentiment
+<EtCard isPositive={true}>
+  <EtCard.Content>
+    <EtText style={{ color: colors.actionBrandText }}>+$1,234.56</EtText>
+  </EtCard.Content>
+</EtCard>
+```
+
+## Subcomponents
+
+| Component | Description                           |
+| --------- | ------------------------------------- |
+| `Header`  | Semantic container for header content |
+| `Content` | Semantic container for main content   |
+| `Footer`  | Semantic container for footer content |
+
+All subcomponents are pass-through Views with no default styles - they exist for semantic clarity and can be styled via the `style` prop.
+
+## Props Reference
+
+### EtCardProps (Root)
+
+| Prop         | Type                   | Default     | Description                                                                           |
+| ------------ | ---------------------- | ----------- | ------------------------------------------------------------------------------------- |
+| `children`   | `ReactNode`            | -           | Card content (subcomponents or any elements)                                          |
+| `style`      | `StyleProp<ViewStyle>` | -           | Container style overrides                                                             |
+| `shadow`     | `boolean`              | `true`      | Enable shadow styling                                                                 |
+| `isPositive` | `boolean \| undefined` | `undefined` | Sentiment: `true` = positive (green), `false` = negative (red), `undefined` = neutral |
+| `testID`     | `string`               | -           | Test identifier                                                                       |
+
+### Subcomponent Props (Header, Content, Footer)
+
+| Prop       | Type                   | Description     |
+| ---------- | ---------------------- | --------------- |
+| `children` | `ReactNode`            | Content         |
+| `style`    | `StyleProp<ViewStyle>` | Style overrides |
+| `testID`   | `string`               | Test identifier |
+
+### Sentiment Behavior
+
+- **Positive (`isPositive={true}`)**: Green background, green halo in dark mode
+- **Negative (`isPositive={false}`)**: Red background, red halo in dark mode
+- **Neutral (`isPositive={undefined}`)**: Secondary background, no halo
+
+## File Structure
+
+```
+card/
+├── et-card.tsx           # Root + compound assembly
+├── et-card.test.tsx      # Tests
+├── index.ts              # Exports
+├── AGENTS.mdc             # This file
+├── api/
+│   ├── types.ts          # TypeScript interfaces
+│   ├── context.tsx       # Context provider (for CardHalo)
+│   └── index.ts
+└── subcomponents/
+    ├── card-header.tsx
+    ├── card-content.tsx
+    ├── card-footer.tsx
+    ├── card-halo.tsx     # Decorative halo effect
+    ├── card-halo.test.tsx
+    └── index.ts
+```
+
+## Architecture Notes
+
+1. **Direct Children Rendering**: Children are rendered in their natural JSX order without extraction or reordering
+2. **Context**: `CardProvider` shares `isPositive` state with `CardHalo` subcomponent
+3. **CardHalo**: Only renders in dark mode when `isPositive` is defined (not neutral)
+4. **No Slot Extraction**: Unlike some compound components, EtCard does not extract or reorder children
+
+## Do's and Don'ts
+
+### Do:
+
+- Use semantic subcomponents (Header, Content, Footer) for clarity
+- Add custom elements (dividers, spacers) between sections when needed
+- Use multiple Content sections if your layout requires it
+- Pass `isPositive` for sentiment-based styling
+- Use `shadow={false}` for flat cards
+
+### Don't:
+
+- Don't expect children to be reordered - they render in JSX order
+- Don't nest EtCard components
+- Don't use subcomponents outside of EtCard (context won't be available for CardHalo)

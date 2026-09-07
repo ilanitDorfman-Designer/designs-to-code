@@ -1,0 +1,17 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_cf)">
+<g transform="translate(-7.2, 0) scale(1.8000)">
+<path id="Vector_2" d="M25.75 0.25H2.25C1.14543 0.25 0.25 1.14543 0.25 2.25V17.75C0.25 18.8546 1.14543 19.75 2.25 19.75H25.75C26.8546 19.75 27.75 18.8546 27.75 17.75V2.25C27.75 1.14543 26.8546 0.25 25.75 0.25Z" stroke="#F5F5F5" stroke-width="0.5"/>
+<path id="Rectangle-2" d="M28 0H0V5.33333H28V0Z" fill="#083D96"/>
+<path id="Rectangle-2_2" d="M28 9.33333H0V14.6667H28V9.33333Z" fill="#37AE39"/>
+<path id="Rectangle-2_3" d="M28 14.6667H0V20H28V14.6667Z" fill="#FFD13F"/>
+<path id="Rectangle-2_4" d="M17.3333 0H10.6667V20H17.3333V0Z" fill="#E42346"/>
+<path id="Star-8" fill-rule="evenodd" clip-rule="evenodd" d="M4.66667 3.44667L3.4911 4.2847L3.92484 2.9077L2.76455 2.04863L4.20819 2.03563L4.66667 0.666667L5.12514 2.03563L6.56878 2.04863L5.40849 2.9077L5.84224 4.2847L4.66667 3.44667Z" fill="#FFD03B"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_cf">
+<circle cx="18" cy="18" r="18" fill="white"/>
+</clipPath>
+</defs>
+</svg>

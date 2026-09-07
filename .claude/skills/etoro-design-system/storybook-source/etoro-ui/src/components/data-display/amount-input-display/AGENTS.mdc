@@ -1,0 +1,116 @@
+---
+description: Agent guide for EtAmountInputDisplay - a plug-and-play hero amount display (currency + animated number + unit) for numeric entry flows that progressively shrinks and fits its container as one scaled row, built on EtAnimatedCount.
+alwaysApply: false
+---
+
+# EtAmountInputDisplay Component
+
+## Purpose & Scope
+
+`EtAmountInputDisplay` renders a hero monetary amount as a single row - optional leading currency symbol, an animated number (`EtAnimatedCount`), an optional blinking caret, and an optional trailing unit label - and scales the whole row down as one unit so the amount:
+
+- shrinks progressively from ~the 6th digit (so large numbers never look huge), and
+- always fits its container width (fit-to-width guard for extreme values),
+
+with currency and unit shrinking in lockstep with the number because the entire row shares one `transform: scale`.
+
+It is the **display surface of an amount-entry flow** (the caret + shake exist because a keypad like `EtNumericKeypad` drives its value), but it is itself display-only: it is fully controlled via `value` and has no `onChange`/keyboard. It exists so consumers do not have to re-implement the `onLayout` measuring + scale wiring that a currency/unit amount needs. The scale engine is the component's own `useAmountAutoScale` hook (in `animations/`); this component owns rendering the affixes and measuring them.
+
+**Relationship to `EtAnimatedCount`:** `EtAnimatedCount` is the digit-rolling *primitive* (number only). `EtAmountInputDisplay` composes it and adds currency/unit affixes, auto-scale, caret, and shake.
+
+**Does NOT handle:** input/editing (display only - caller owns `value`), locale formatting (pass a pre-formatted string), or negative-sign layout.
+
+## Two APIs
+
+### Props (plug and play)
+
+```tsx
+<EtAmountInputDisplay value="1,234.56" currencySymbol="$" unitLabel="Shares" showCursor shakeTrigger={rejectCount} />
+```
+
+Defaults reproduce the trade execution hero (60px number in `textPrimaryNeutral`, 32px affixes in `textSecondaryNeutral`, `statusPositive` caret), so the props path looks right with zero styling.
+
+### Compound (custom arrangement / per-part styling)
+
+```tsx
+<EtAmountInputDisplay value="42">
+  <EtAmountInputDisplay.Currency>€</EtAmountInputDisplay.Currency>
+  <EtAmountInputDisplay.Value />
+  <EtAmountInputDisplay.Caret />
+  <EtAmountInputDisplay.Unit>Units</EtAmountInputDisplay.Unit>
+</EtAmountInputDisplay>
+```
+
+When children are present the props arrangement is ignored. Subcomponents read geometry/colors from context and (currency/unit/caret) report their measured widths back to the root's scale math.
+
+## How the auto-scale works
+
+The root measures the container (`onLayout`) and sums the affix widths reported by the subcomponents into `affixWidth`. That, plus the value's own `EtAnimatedCount` slot geometry, feeds `useAmountAutoScale({ value, availableWidth, affixWidth, digitWidth })`, which returns an animated `scaleStyle`. The tween is 100% UI thread (`useSharedValue` + `withTiming` + `useAnimatedStyle`, transform-only). The target scale is computed on JS because its inputs (measured widths + value) originate as JS-thread state.
+
+This is why the shrink lives here and not inside `EtAnimatedCount`: the number component only holds digits, whereas the shrink must include the currency/unit affixes, so it belongs at the row that renders them.
+
+## Key props
+
+| Prop | Default | Notes |
+| --- | --- | --- |
+| `value` | required | Formatted string that drives the number and the scale. |
+| `currencySymbol` / `unitLabel` | - | Props-path affixes. |
+| `showCursor` | false | Blinking caret after the number. |
+| `shakeTrigger` | 0 | Monotonic counter; each increment plays an error shake + haptic. |
+| `autoScale` | true | Set false to disable both progressive + overflow shrink. |
+| `fontSize` / `digitWidth` / `digitHeight` / `affixFontSize` / `currencyFontSize` | 60 / 35 / 72 / 32 / 40 | Geometry (also feeds the scale math). Currency runs larger than the unit affix. |
+| `numberColor` / `affixColor` / `currencyColor` / `caretColor` | theme (`textPrimaryNeutral` / `textSecondaryNeutral` / `carbon300` / `statusPositive`) | Color overrides. |
+| `shrinkStartDigits` / `shrinkStepPerDigit` / `progressiveMinScale` / `overflowMinScale` | 5 / 0.08 / 0.5 / 0.3 | Scale-curve tuning (passthrough to `useAmountAutoScale`). |
+
+## Dependencies
+
+- Own `animations/` folder: `useAmountInputDisplayAnimations` (orchestrator) composing `useAmountAutoScale`, `useShakeAnimation`, `useCaretBlinkAnimation`; pure scale math in `utils/` (`computeAmountScale`, `getAnimatedCountWidth`).
+- `EtAnimatedCount` (foundations/animated-digits), `EtText` (foundations/text).
+- `useEtoroTheme` for default colors.
+
+## Testing
+
+Mock the heavy leaf `../../../foundations/animated-digits` (`EtAnimatedCount` -> a `<Text testID="amount-input-display-count">`) and `expo-haptics`. `useEtoroTheme` is auto-mocked by the ui test setup. Stable testIDs: `amount-input-display-container`, `amount-input-display-row`, `amount-input-display-currency`, `amount-input-display-unit`, `amount-input-display-caret`, `amount-input-display-count`.
+
+## File Map
+
+Structured after the canonical `components/button` role model (see `building-ui-components.mdc`):
+`animations/` owns every animated style/builder, `hooks/` is logic-only, and the context is split by
+update frequency so affixes don't re-render on every keystroke.
+
+```
+amount-input-display/
+├── api/
+│   ├── index.ts
+│   └── types.ts                                 # EtAmountInputDisplayProps, AmountInputDisplayAffixProps
+├── animations/
+│   ├── constants.ts                             # makeRoomTransition, caret/shake/settle constants
+│   ├── use-amount-input-display-animations.ts   # orchestrator: auto-scale + shake + caret -> styles + caretOpacity
+│   ├── use-amount-auto-scale.ts                 # fit-to-width + progressive scale (UI thread)
+│   ├── use-caret-blink-animation.ts             # blinking caret opacity
+│   ├── use-shake-animation.ts                   # error shake translateX + haptic
+│   └── index.ts
+├── context/                                     # split by update frequency
+│   ├── config-context.tsx                       # static geometry/colors
+│   ├── state-context.tsx                        # caretOpacity + affix-width registry callbacks
+│   ├── value-context.tsx                        # hot path: the value string
+│   ├── amount-input-display-provider.tsx        # composed provider
+│   └── index.ts
+├── hooks/
+│   ├── index.ts
+│   ├── use-amount-input-display-config.ts       # props + theme -> resolved geometry/colors (memoized)
+│   └── use-amount-input-display-state.ts        # affix-width registry + availableWidth (logic-only)
+├── subcomponents/
+│   ├── amount-input-display-currency.tsx        # EtAmountInputDisplay.Currency (measures + reports width)
+│   ├── amount-input-display-value.tsx           # EtAmountInputDisplay.Value -> EtAnimatedCount
+│   ├── amount-input-display-caret.tsx           # EtAmountInputDisplay.Caret (blink + reserved width)
+│   ├── amount-input-display-unit.tsx            # EtAmountInputDisplay.Unit (measures + reports width)
+│   └── index.ts
+├── utils/                                       # pure: compute-amount-scale, get-animated-count-width (+ specs)
+├── constants.ts                                 # non-animation defaults (font size, digit geometry)
+├── styles.ts
+├── et-amount-input-display.tsx                  # composition (props path + compound children)
+├── index.ts
+├── tests/et-amount-input-display.test.tsx
+└── AGENTS.mdc
+```

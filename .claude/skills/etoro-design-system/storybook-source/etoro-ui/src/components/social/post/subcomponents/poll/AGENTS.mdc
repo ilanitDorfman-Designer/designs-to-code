@@ -1,0 +1,451 @@
+---
+description: Agent guide for EtPoll - compound component for interactive polls with votable/result options, progress bars, voter avatars, and undo functionality
+alwaysApply: false
+---
+
+# EtPoll Component
+
+## Purpose & Scope
+
+`EtPoll` is a compound component for building interactive polls and surveys. It provides:
+
+- **Compound component pattern**: Flexible composition with subcomponents
+- **Poll question display**: customizable question text
+- **Answer options**: separate components for voting vs. results states
+- **Vote visualization**: progress bars showing vote distribution
+- **Voter avatars**: displays up to 3 voter avatars
+- **Undo functionality**: allows users to retract their vote
+- **Results display**: shows percentages and vote counts
+
+**Does NOT handle:**
+
+- Vote submission logic (parent handles API calls)
+- Multiple selection (single answer only)
+- Real-time vote updates (parent manages data)
+
+## Compound Component API
+
+### Basic Usage
+
+```tsx
+<EtPoll answers={answers} voteCount={0}>
+  <EtPoll.Frame>
+    <EtPoll.Question>What's your investing style?</EtPoll.Question>
+    <EtPoll.OptionsList>
+      {answers.map((answer) => (
+        <EtPoll.VotableOption key={answer.id} answerId={answer.id} />
+      ))}
+    </EtPoll.OptionsList>
+    <EtPoll.FooterContent>
+      <EtPoll.VoteCount />
+    </EtPoll.FooterContent>
+  </EtPoll.Frame>
+</EtPoll>
+```
+
+### With Results & Voter Avatars
+
+```tsx
+<EtPoll answers={answers} voteCount={210} selectedId={selectedAnswer} avatarUrls={avatarUrls} additionalVotersCount={207} onUndo={() => handleUndo()}>
+  <EtPoll.Frame>
+    <EtPoll.Question>What's your investing style?</EtPoll.Question>
+    <EtPoll.OptionsList>
+      {answers.map((answer) => (
+        <EtPoll.ResultOption key={answer.id} answerId={answer.id} />
+      ))}
+    </EtPoll.OptionsList>
+    <EtPoll.FooterContent>
+      <EtPoll.VoterAvatars />
+      <EtPoll.UndoButton />
+    </EtPoll.FooterContent>
+  </EtPoll.Frame>
+</EtPoll>
+```
+
+> **Note:** `EtPoll.FooterDivider` is still exported for compositions that
+> need a separator above the footer, but the canonical Figma poll layout
+> (PE-904 / Feed 2026) does not include one. Omit it unless your design
+> explicitly calls for the divider.
+
+## Subcomponents
+
+### `EtPoll` (Provider)
+
+The root component that provides context to all subcomponents.
+
+**Props:**
+
+- `answers` (required) - Array of poll answer options
+- `voteCount` - Total vote count
+- `selectedId` - Currently selected answer ID (controlled)
+- `onVote` - Callback when answer is selected
+- `onUndo` - Callback when undo is pressed
+- `avatarUrls` - Array of avatar URLs (max 3)
+- `additionalVotersCount` - Count of additional voters not shown
+- `question` - Question text (if not using EtPoll.Question child)
+- `children` - Compound components
+
+### `EtPoll.Frame`
+
+Container with card styling: flat translucent overlay (`cardDefault`),
+rounded corners (`X4`), and `X5` padding/gap. Per Feed 2026 Figma there
+is no shadow or elevation.
+
+**Props:**
+
+- `children` (required) - Poll content
+- `style` - Optional style override
+- `testID` - Test identifier
+
+### `EtPoll.Question`
+
+Displays the poll question.
+
+**Props:**
+
+- `children` (required) - Question text
+- `maxLines` (default: 4) - Max visible lines before "Show more" truncation
+
+**Styling:**
+
+- Text variant: `label-primary-semibold` (Figma "Label/Primary/Semi-bold", 16/600/20)
+- Wrapped in `EtReadMoreText` so long questions are collapsible
+
+### `EtPoll.OptionsList`
+
+Container for poll options with proper spacing.
+
+**Props:**
+
+- `children` - Poll option components
+
+### `EtPoll.VotableOption`
+
+Answer option button for **before voting** state.
+
+**Props:**
+
+- `answerId` (required) - ID of the answer to display
+- `testID` - Test identifier
+
+**Behavior:**
+
+- Translucent pill button — bg = `${carbon900}14` (theme-aware ~8% black overlay,
+  preserved from the pre-PE-904 production value after design review)
+- Calls `actions.vote(answerId)` from context when pressed
+- Geometry: `paddingVertical: X2`, `paddingHorizontal: X5`, `borderRadius: X9`
+- Text variant: `body-secondary-medium` (14 / weight 500), color `carbon900`
+
+### `EtPoll.ResultOption`
+
+Answer option for **after voting** state (shows results).
+
+**Props:**
+
+- `answerId` (required) - ID of the answer to display
+- `testID` - Test identifier
+
+**Behavior:**
+
+- Animated progress fill — absolutely-positioned `Animated.View` sized to 100%
+  width and `scaleX`-animated 0 → `percentage / 100` from the leading edge
+  (`transformOrigin: 'left center'`, `400ms` cubic-out). Selected fill =
+  `primary600`; unselected fill = `${carbon900}14` (translucent overlay;
+  pre-PE-904 production value preserved)
+- Percentage on the right, rounded to integer (e.g. `58%`)
+- Selected percentage uses `verdictPositive600`; unselected uses `carbon900`
+- Selected label uses `carbon050` (white in light, dark in dark — readable on the
+  green pill in both themes); unselected label uses `carbon900`
+- No checkmark/icon — Figma uses fill color alone to indicate selection
+- Geometry: `paddingVertical: X2`, `paddingHorizontal: X5`, `borderRadius: X9`
+- Text variant: `body-secondary-medium` (14 / weight 500)
+- Percentage variant: `num-s-medium`
+
+### `EtPoll.VoteCount`
+
+Displays total vote count.
+
+**Behavior:**
+
+- Shows "X Votes" or "1 Vote" (plural/singular)
+- Text variant: `label-tertiary-regular`
+- Color: `textSecondary` from context
+
+### `EtPoll.VoterAvatars`
+
+Displays up to 3 voter avatars with additional count.
+
+**Behavior:**
+
+- Shows max 3 overlapping avatars
+- Shows "+X other voters" text if additionalVotersCount > 0
+- Automatically hides if no avatars and no additional count
+- Text variant: `label-tertiary-regular`
+
+### `EtPoll.UndoButton`
+
+Button to undo vote.
+
+**Behavior:**
+
+- Calls `actions.undo()` from context when pressed
+- Text variant: `label-tertiary-semibold`
+- Color: `indicatorPositive` (green)
+
+### `EtPoll.FooterDivider`
+
+Horizontal separator above footer.
+
+**Behavior:**
+
+- Border-top: 1px using theme's divider color
+
+> Not part of the canonical Feed 2026 poll layout (PE-904). Kept in the
+> compound API for compositions that explicitly need a divider above the
+> footer.
+
+### `EtPoll.FooterContent`
+
+Container for footer items with flex layout.
+
+**Props:**
+
+- `children` - Footer content (VoteCount, VoterAvatars, UndoButton, etc.)
+
+**Behavior:**
+
+- Horizontal layout with space-between
+
+## Common Patterns
+
+### Before Voting
+
+```tsx
+<EtPoll answers={answers} voteCount={totalVotes} onVote={handleVote}>
+  <EtPoll.Frame>
+    <EtPoll.Question>{question}</EtPoll.Question>
+    <EtPoll.OptionsList>
+      {answers.map((a) => (
+        <EtPoll.VotableOption key={a.id} answerId={a.id} />
+      ))}
+    </EtPoll.OptionsList>
+    <EtPoll.FooterContent>
+      <EtPoll.VoteCount />
+    </EtPoll.FooterContent>
+  </EtPoll.Frame>
+</EtPoll>
+```
+
+### After Voting (with Undo)
+
+```tsx
+<EtPoll
+  answers={answers}
+  voteCount={totalVotes}
+  selectedId={userSelection}
+  avatarUrls={voterAvatars}
+  additionalVotersCount={otherVotersCount}
+  onUndo={handleUndo}
+>
+  <EtPoll.Frame>
+    <EtPoll.Question>{question}</EtPoll.Question>
+    <EtPoll.OptionsList>
+      {answers.map((a) => (
+        <EtPoll.ResultOption key={a.id} answerId={a.id} />
+      ))}
+    </EtPoll.OptionsList>
+    <EtPoll.FooterContent>
+      <EtPoll.VoterAvatars />
+      <EtPoll.UndoButton />
+    </EtPoll.FooterContent>
+  </EtPoll.Frame>
+</EtPoll>
+```
+
+`EtPoll.FooterContent` lays out its children with `space-between`, so the
+`<EtPoll.UndoButton />` after `<EtPoll.VoterAvatars />` lands on the right.
+
+### Controlled State
+
+```tsx
+function MyPollComponent() {
+  const [selectedId, setSelectedId] = useState<string | undefined>();
+
+  return (
+    <EtPoll
+      answers={answers}
+      voteCount={totalVotes}
+      selectedId={selectedId}
+      onVote={(answerId) => {
+        setSelectedId(answerId);
+        submitVote(answerId);
+      }}
+      onUndo={() => {
+        setSelectedId(undefined);
+        retractVote();
+      }}
+    >
+      <EtPoll.Frame>
+        <EtPoll.Question>{question}</EtPoll.Question>
+        <EtPoll.OptionsList>
+          {selectedId
+            ? answers.map((a) => <EtPoll.ResultOption key={a.id} answerId={a.id} />)
+            : answers.map((a) => <EtPoll.VotableOption key={a.id} answerId={a.id} />)}
+        </EtPoll.OptionsList>
+        <EtPoll.FooterContent>
+          {selectedId ? (
+            <>
+              <EtPoll.VoterAvatars />
+              <EtPoll.UndoButton />
+            </>
+          ) : (
+            <EtPoll.VoteCount />
+          )}
+        </EtPoll.FooterContent>
+      </EtPoll.Frame>
+    </EtPoll>
+  );
+}
+```
+
+## Implementation Details
+
+### File Structure
+
+```text
+et-poll/
+├── api/
+│   ├── index.ts
+│   └── types.ts
+├── context/
+│   ├── index.ts
+│   ├── poll-context.tsx
+│   └── poll-provider.tsx
+├── hooks/
+│   ├── index.ts
+│   └── use-poll-stats.ts
+├── subcomponents/
+│   ├── index.ts
+│   ├── poll-frame.tsx
+│   ├── poll-question.tsx
+│   ├── poll-votable-option.tsx
+│   ├── poll-result-option.tsx
+│   ├── poll-options-list.tsx
+│   ├── poll-vote-count.tsx
+│   ├── poll-voter-avatars.tsx
+│   ├── poll-undo-button.tsx
+│   ├── poll-footer-divider.tsx
+│   └── poll-footer-content.tsx
+├── et-poll.tsx
+├── et-poll.test.tsx
+├── index.ts
+└── AGENTS.mdc
+```
+
+### Context & State
+
+**PollContext** provides to subcomponents:
+
+- `state` - Current poll state (question, answers with percentages, voteCount, selectedId, hasVoted)
+- `actions` - Vote and undo handlers
+- `meta` - Avatar data (avatarUrls, additionalVotersCount)
+- `colors` - Theme colors for consistent styling
+
+**PollProvider** manages:
+
+- Internal state for `selectedId` (when not controlled)
+- Percentage calculation via `usePollStats`
+- Theme color mapping
+
+### Percentage Calculation
+
+Percentages are calculated from votes if not provided:
+
+```typescript
+percentage = (votes / totalVotes) * 100;
+```
+
+Percentages are clamped to 0-100 range:
+
+```typescript
+const displayPercentage = Math.min(100, Math.max(0, rawPercentage));
+// Rendered as: {Math.round(displayPercentage)}%
+```
+
+## Dependencies
+
+- **Theme**: `useEtoroTheme` is used only in `PollProvider` to build the context. All subcomponents get colors from `usePollContext()` only.
+- **Text**: `EtText` for all text rendering
+- **Avatars**: `EtAvatar` for voter display
+- **Context**: `PollContext` supplies state, actions, meta, and theme colors to subcomponents
+- **Spacing**: X1, X2, X3, X4, X5, X9 tokens (X9 = 36 for pill height & radius)
+- **Border radius**: `X9` (36) for buttons/option pills, 60px for avatars
+
+## Anti-patterns
+
+- ❌ Passing non-array to answers prop
+- ❌ Mixing VotableOption and ResultOption without conditional logic
+- ❌ Hardcoding percentages when votes are available (let component calculate)
+- ❌ Not providing `onUndo` when using UndoButton
+- ❌ Bypassing the compound pattern (use the provided subcomponents)
+
+## Testing Notes
+
+- Renders with compound components
+- VotableOption triggers vote action
+- ResultOption displays percentages correctly
+- Vote count displays correctly (singular/plural)
+- Voter avatars render correctly
+- Undo button functionality works
+- Handles empty answers array
+- Calculates percentages from votes
+- Uses pre-calculated percentages when provided
+
+## Accessibility
+
+- All buttons have proper `accessibilityRole="button"`
+- Result options have `accessibilityLabel` with answer text
+- Vote count and avatars have semantic text
+
+## Design System Integration
+
+Slot → V2 token mapping per Figma `12026:20344` (Feed 2026 results variant, PE-904) plus prior-PR conventions for slots not in that node:
+
+| Slot | V2 token |
+| --- | --- |
+| Frame surface ([`poll-frame.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-frame.tsx)) | `cardDefault` (matches Figma `Surface/card/Default` `#1B1E210A`) |
+| Frame elevation | none (Figma — flat translucent overlay, no shadow) |
+| Question text ([`poll-question.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-question.tsx)) | inherits `carbon900` via `EtText` (variant `label-primary-semibold`) |
+| Undo button text ([`poll-undo-button.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-undo-button.tsx)) | `verdictPositive600` |
+| Voter avatar stack bg ([`poll-voter-avatars.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-voter-avatars.tsx)) | `cardDefault` (matches Figma `Surface/card/Default`) |
+| Voter "+N others" text | `carbon900` |
+| Votable pill bg ([`poll-votable-option.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-votable-option.tsx)) | inline `${carbon900}14` (theme-aware ~8% black overlay; pre-PE-904 production value preserved) |
+| Votable pill text | `carbon900` |
+| Result selected fill ([`poll-result-option.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-result-option.tsx)) | `primary600` (Figma `Primary/600` `#0EB12E` light / `#6EFF8B` dark) |
+| Result unselected fill | inline `${carbon900}14` (matches votable pill — keep both pre/post-vote pills visually identical except for the selected fill + percentage) |
+| Result selected label | `carbon050` (Figma `Carbon/Neutral/050` — white in light, dark in dark) |
+| Result unselected label | `carbon900` |
+| Result selected percentage | `verdictPositive600` |
+| Result unselected percentage | `carbon900` |
+| Footer divider (legacy, [`poll-footer-divider.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-footer-divider.tsx)) | `carbonSecondaryDivider` — not used in canonical Feed 2026 layout |
+
+### Behavior deltas (V1 → V2 → Feed 2026 / PE-904)
+
+The strict-Figma migration to V2 plus the PE-904 fix introduced these user-visible changes:
+
+1. **Frame surface** — solid `bgGreyPrimary` (`#F2F2F2` light / `#1A1C1F` dark) → translucent `cardDefault` (`#1B1E210A` both modes). Reads as a softer, on-page card that picks up the post background instead of a solid panel.
+2. **Question placement & typography** (PE-904) — moved from outside the card to inside `EtPoll.Frame`; variant upgraded from `body-secondary-regular` to `label-primary-semibold` (16/600/20) per Figma "Label/Primary/Semi-bold".
+3. **Footer divider removed** (PE-904) — Feed 2026 design has no separator between the options list and the votes/Undo row. The `EtPoll.FooterDivider` component is still exported for opt-in use but is omitted by `PollRenderer`.
+4. **Selected-result fill** (PE-904) — `verdictPositive600` → `primary600`. Same `#0EB12E` light value but routes through the `primary` token family per Figma.
+5. **Selected-result percentage** (PE-904) — was `carbon900`, now `verdictPositive600` (matches Figma's green percentage on the selected row).
+6. **Selected-result label** (PE-904 follow-up) — now `carbon050` (white in light, dark in dark) so the label always reads on the `primary600` fill in both themes. Earlier iterations kept `carbon900` (dark text on green in light mode) pending a "constant-white" token; `carbon050` is the design-system slot that already inverts per theme, so no new token is required.
+7. **Frame shadow removed** (PE-904 follow-up) — `shadowOpacity 0.03 + elevation 4` made the poll look like a floating card, not the flat translucent overlay Figma calls for. The `cardDefault` 4% black overlay is now the only visual chrome.
+8. **Checkmark icon removed** (PE-904) — selection is communicated by fill color alone; no `EtoroIcon checkCircle` overlay anymore.
+9. **Percentage formatting** (PE-904) — `displayPercentage.toFixed(2)` → `Math.round(displayPercentage)`. `57.14%` → `57%` to match the integer percentages shown in Figma.
+10. **Undo placement** (PE-904) — moved from the left/leading position to the right/trailing slot of `EtPoll.FooterContent` (uses the container's `space-between` layout).
+11. **Voter avatar stack bg** (PE-904) — `${carbon900}0D` (et-input convention) → `cardDefault`, matching Figma's `Surface/card/Default`.
+12. **Pill geometry** (PE-904 follow-up) — switched from fixed `height: X9` + `justifyContent: center` to padding-driven (`paddingVertical: X2`, `paddingHorizontal: X5`, `borderRadius: X9`) per Figma. Previously a literal `36` border-radius with implicit height.
+13. **Pill backgrounds** (PE-904 follow-up) — kept the pre-PE-904 production value `${carbon900}14` (theme-aware ~8% black overlay) for the unselected votable + result pills after design review (the design's dark-mode `#484848` does not have a matching V2 token, and the existing translucent overlay reads correctly on both light and dark post backgrounds). Selected pill remains `primary600`. The animated `scaleX` progress fill inside each `EtPoll.ResultOption` has been **kept** — the fill grows 0 → `percentage/100` from the leading edge, matching the pre-PE-904 production behavior; only the percentage text fades in afterwards.
+14. **Pill typography** (PE-904 follow-up) — `label-secondary-semibold` (14 / weight 600) → `body-secondary-medium` (14 / weight 500) per Figma `Body/Secondary/Medium`.
+15. **Undo button color** — `indicatorPositive` → `verdictPositive600`. Same green family; slight hex shift (`#33C728` → `#0EB12E` light) — verdict-green is the canonical V2 brand-positive (also consolidated in et-asset-item, et-line-chart, et-trade).
+16. **Text colors** — `textPrimaryNeutral` → `carbon900` everywhere (except the selected pill label, which uses `carbon050` per item 6). Light hex parity (`#1B1E21`); dark hex shifts (`#E5E5E5` → `#FFFFFF`), consistent with every prior PR in this series.

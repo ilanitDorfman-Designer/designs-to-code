@@ -1,0 +1,201 @@
+---
+description: Agent guide for EtClubBadge - small carbon-bordered pill marking eToro Club gating or membership, with optional lock icon prefix and serif Club wordmark
+alwaysApply: false
+---
+
+# EtClubBadge Component
+
+## Purpose & Scope
+
+`EtClubBadge` is a brand-fixed pill badge for the eToro Club program. Three orthogonal props produce the variants:
+
+- **`variant`** — `legacy` (default) or `v2` (Club 2.0 wordmark). Prefer {@link ClubBadge} from `@etoro/features/club/rn` in Club surfaces so the experiment picks the variant.
+- **`showLock`** — toggles the lock-icon prefix. Without lock identifies a Club entity (member, item); with lock flags Club-gated content (teaser cards, blurred values).
+- **`colorScheme`** — pins the badge to a fixed appearance instead of adapting to the active theme. Useful on surfaces whose color isn't theme-driven (always-dark hero cards, fixed-color banners).
+
+The badge is intentionally **brand-fixed**:
+
+- The label is always the Club **wordmark** (`v2`) or literal `"Club"` (`legacy`) — not exposed via `children`, not threaded through i18n
+- The icon is always `lock-fill` (when shown) — not configurable
+- **`legacy`** — primary brand border (`colors.primary600`); lock + label use the carbon palette per `colorScheme`
+- **`v2`** — carbon border; serif wordmark + lock use the carbon palette per `colorScheme` (see [Design Tokens](#design-tokens))
+
+If your design calls for a different label, icon, or color, you want `EtBadge`, not `EtClubBadge`.
+
+## Entry Point & Contract
+
+```tsx
+<EtClubBadge
+  variant?: 'legacy' | 'v2'       // default: 'legacy'
+  showLock?: boolean              // default: false
+  colorScheme?: 'light' | 'dark'  // default: undefined (adapts to theme)
+  accessibilityLabel?: string     // default: "eToro Club member" | "eToro Club"
+  testID?: string
+/>
+```
+
+| Prop                 | Type                          | Default                                                      | Notes                                                                      |
+| -------------------- | ----------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| `variant`            | `'legacy' \| 'v2'`            | `'legacy'`                                                   | Club 2.0 surfaces should use `ClubBadge` from club/rn instead of setting this manually. |
+| `showLock`           | `boolean`                     | `false`                                                      | Toggles the lock-fill icon prefix                                          |
+| `colorScheme`        | `'light' \| 'dark'` | —                                                            | Pin to one variant regardless of theme. Omit to adapt to the active theme. |
+| `accessibilityLabel` | `string`            | `"eToro Club member"` (no lock) / `"eToro Club"` (with lock) | Announces the badge's _meaning_, not its literal "Lock, Club" composition  |
+| `testID`             | `string`            | —                                                            | Forwarded to outer `<View>` wrapper                                        |
+
+## Usage Patterns
+
+### Marking a Club member (without lock — default)
+
+```tsx
+import { EtClubBadge } from 'etoro-ui';
+
+<View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+  <Avatar uri={user.avatar} />
+  <EtText variant="body-base-medium">{user.displayName}</EtText>
+  <EtClubBadge />
+</View>;
+```
+
+### Gating a Club-only feature (with lock)
+
+```tsx
+<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+  <EtText variant="heading-base">Analyst Consensus</EtText>
+  <EtClubBadge showLock />
+</View>
+```
+
+### Inside an upsell banner
+
+```tsx
+<EtCard>
+  <EtCard.Header>
+    <EtClubBadge showLock />
+    <EtText variant="heading-compact">Get full access</EtText>
+  </EtCard.Header>
+  <EtCard.Body>…</EtCard.Body>
+</EtCard>
+```
+
+### Pinning to one variant on a fixed-color surface
+
+Use `colorScheme` when the surface behind the badge doesn't follow the app theme — e.g. an always-dark hero card, a marketing banner with a fixed-color background, or a screenshot-friendly preview. The override changes border, foreground (lock + wordmark), and fill together.
+
+```tsx
+// Always-dark hero card — pin the badge to the dark variant so it
+// reads the same in both light and dark mode.
+<EtClubBadge showLock colorScheme="dark" />
+
+// Always-light marketing banner.
+<EtClubBadge colorScheme="light" />
+```
+
+## Anti-patterns
+
+### Don't customize the label
+
+```tsx
+// BAD — EtClubBadge has no children / label prop
+<EtClubBadge>Premium</EtClubBadge>
+
+// BAD — won't compile
+<EtClubBadge label="VIP" />
+```
+
+**Fix:** For arbitrary labels, use `EtBadge` instead:
+
+```tsx
+<EtBadge color="green">
+  <EtBadge.Icon name="lock" />
+  <EtBadge.Label>Premium</EtBadge.Label>
+</EtBadge>
+```
+
+### Don't wrap in a `Pressable`
+
+```tsx
+// BAD — badge is not an interactive control
+<Pressable onPress={openUpsell}>
+  <EtClubBadge />
+</Pressable>
+```
+
+**Fix:** Use a separate button / link adjacent to the badge:
+
+```tsx
+<View style={{ flexDirection: 'row', gap: 8 }}>
+  <EtClubBadge />
+  <EtLink onPress={openUpsell}>Join Club</EtLink>
+</View>
+```
+
+### Don't override the color via `style`
+
+```tsx
+// BAD — bypasses brand color, breaks dark-mode behavior
+<EtClubBadge style={{ borderColor: 'gold' }} />
+```
+
+The badge intentionally has no `style` prop. The visual identity is part of the brand.
+
+## Design Tokens
+
+Two token sets are in play, switched by the `colorScheme` prop:
+
+### Adaptive (default — `colorScheme` omitted)
+
+| Element          | Token                      | Light mode             | Dark mode                   |
+| ---------------- | -------------------------- | ---------------------- | --------------------------- |
+| Border           | `colors.carbon900`         | `#1B1E21` (carbon 900) | `#FFFFFF` (white)           |
+| Lock icon, wordmark | `colors.carbon900`      | `#1B1E21` (carbon 900) | `#FFFFFF` (white)           |
+| Background       | `colors.carbon900Inverted` | `#FFFFFF` (white)      | `#1B1E21` (carbon 900)      |
+
+### Pinned (`colorScheme="light"` / `colorScheme="dark"`)
+
+| Element          | `colorScheme="light"`    | `colorScheme="dark"`     |
+| ---------------- | ------------------------ | ------------------------ |
+| Border           | `colors.carbonStatic900` | `colors.carbonStatic050` |
+| Lock icon, wordmark | `colors.carbonStatic900` | `colors.carbonStatic050` |
+| Background       | `colors.carbonStatic050` | `colors.carbonStatic900` |
+
+The pinned mode uses the **static** carbon tokens (`carbonStatic900` / `carbonStatic050`), which never flip with the theme — so a badge with `colorScheme="dark"` looks the same whether the app is in light or dark mode.
+
+The fill is the _inverted_ (or static-inverted) carbon 900 token specifically so the badge sits flush against the surface behind it — it reads as a primary-outlined pill, not as a filled chip.
+
+## Sizing Specs
+
+| Property            | Value              | Source                                                              |
+| ------------------- | ------------------ | ------------------------------------------------------------------- |
+| Border width        | 1.5px              | Figma node `4712:50905` border                                      |
+| Border radius       | 20px               | Figma `rounded-[20px]`                                              |
+| Height              | 18px               | Figma `h-[18px]`                                                    |
+| Horizontal padding  | 3px left / 4px right | Figma `px-[5px]` on the badge root (tightened from spec) |
+| Gap (icon ↔ wordmark) | 2px              | Figma `gap-[2px]`                                                   |
+| Lock icon size      | 10px               | Figma node `4712:50906` (`lock-fill`)                               |
+| Wordmark typography | 10px Playfair italic | Figma node `4847:14763` (`club wordmark`); `PlayfairDisplay-MediumItalic` substitutes Larken |
+| Backdrop blur       | ~4px (intensity 8) | Figma `backdrop-blur-[4px]`                                          |
+
+## Accessibility
+
+- `accessibilityRole="text"` — announced as a single label, not as a button
+- `accessibilityLabel` defaults to the semantic meaning (`"eToro Club"`) — the lock icon and "Club" label are _decorative framing_ for the Club concept, so they're marked `accessible={false}` / `importantForAccessibility="no-hide-descendants"` and not separately announced
+- Override `accessibilityLabel` when context provides more meaning, e.g. `"eToro Club — required to view this section"`
+
+## Dependencies & Edges
+
+### Internal
+
+- `Text` — renders the Club wordmark in `PlayfairDisplay-MediumItalic` (Larken substitute; loaded by the host app)
+- `EtIconV2` — `lock-fill` icon
+- `useEtoroTheme` — `carbon900` + `carbon900Inverted` (adaptive) and `carbonStatic900` + `carbonStatic050` (pinned) tokens
+
+### Design-system primitives
+
+- All carbon tokens live in V2 carbon tokens (`core/styles/colors/tokens/v2/carbon.ts`)
+- `primary600` lives in `core/styles/colors/tokens/v2/primary-tokens.ts` — used by the `legacy` variant border; not used by `v2`
+- Lock icon source: `components/et-icon-v2/ds-react/icons/lock-fill.tsx`
+
+## Related Context
+
+- `EtBadge (components/status/badge/)` — general-purpose pill badge with 9 color variants and compound `Label` / `Icon` subcomponents. Reach for it whenever the brand-fixed Club badge isn't the right semantic.
+- Figma source: [Club - Alpha App, node `4712:50905`](https://www.figma.com/design/75EpeAbk6XvEurTZUHkDD7/Club---Alpha-App?node-id=4712-50905)

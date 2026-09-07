@@ -1,0 +1,14 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_sj)">
+<g transform="translate(-7.2, 0) scale(1.8000)">
+<path id="Rectangle" d="M26 0H2C0.89543 0 0 0.89543 0 2V18C0 19.1046 0.89543 20 2 20H26C27.1046 20 28 19.1046 28 18V2C28 0.89543 27.1046 0 26 0Z" fill="#BA0C2F"/>
+<path id="Rectangle_4" d="M11.4545 0H8.90909V20H11.4545V0Z" fill="#00205B"/>
+<path id="Rectangle_5" d="M28 8.75H0V11.25H28V8.75Z" fill="#00205B"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_sj">
+<circle cx="18" cy="18" r="18" fill="white"/>
+</clipPath>
+</defs>
+</svg>

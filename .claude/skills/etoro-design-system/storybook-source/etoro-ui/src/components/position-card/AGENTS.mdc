@@ -1,0 +1,317 @@
+---
+description: Agent guide for EtPositionCard - expandable position card with smooth animation, compound Header/Footer/ExpandedContent subcomponents, positive/negative variants, and curved handle
+alwaysApply: false
+---
+
+# EtPositionCard Component - Agent Guide
+
+## Overview
+
+`EtPositionCard` is an expandable position card component with smooth expand/collapse animation. It uses a compound component pattern with structured subcomponents for consistent layout matching Figma design.
+
+**Location:** `/libs/etoro-ui/src/components/position-card/`
+
+## Key Features
+
+- **Compound Component Pattern**: Flexible composition with structured subcomponents
+- **Smooth Animation**: core RN `Animated` height tween (chart-safe; see Animation Mechanism)
+- **Curved Handle**: Visual indicator for expand/collapse interaction (SVG-based)
+- **Loading State**: Built-in skeleton placeholders
+- **Controlled/Uncontrolled**: Both modes supported
+- **RTL Ready**: Uses `start`/`end` instead of `left`/`right` for future RTL support
+- **Positive/Negative Variants**: Different background colors based on `variant` prop
+- **Hybrid Children Rendering**: Uses `Children.map` transformation for flexibility while maintaining special handling for `ExpandedContent`
+
+## Usage
+
+```tsx
+<EtPositionCard isLoading={isLoading}>
+  <EtPositionCard.Header>
+    <EtPositionCard.Symbol>AAPL</EtPositionCard.Symbol>
+    <EtPositionCard.Name>Apple inc</EtPositionCard.Name>
+    <EtPositionCard.Price>197.93</EtPositionCard.Price>
+    <EtPositionCard.Change value={1.95} percentage={-1.03} />
+  </EtPositionCard.Header>
+
+  {/* Collapsed-only chrome: animates away in sync with the fold (no layout pop) */}
+  <EtPositionCard.CollapsedContent>
+    <EtPositionCard.Divider />
+  </EtPositionCard.CollapsedContent>
+
+  <EtPositionCard.ExpandedContent>
+    <EtLineChart {...chartProps} />
+    <EtPositionCard.StatRow label="Today's Return" value="$699.95" />
+  </EtPositionCard.ExpandedContent>
+
+  <EtPositionCard.Footer>
+    <EtPositionCard.CollapsedContent>
+      <EtPositionCard.Label>Net Value</EtPositionCard.Label>
+    </EtPositionCard.CollapsedContent>
+    <EtPositionCard.Action icon="share" onPress={handleShare} />
+    <EtPositionCard.Value>$1,699.19</EtPositionCard.Value>
+    <EtPositionCard.SecondaryInfo start={<EtPositionCard.Change value={699.95} percentage={69.3} />} end="6.921 shares" />
+  </EtPositionCard.Footer>
+</EtPositionCard>
+```
+
+## Subcomponents
+
+| Component         | Description                                      |
+| ----------------- | ------------------------------------------------ |
+| `Header`          | Container for top section                        |
+| `Symbol`          | Asset symbol (e.g., "AAPL")                      |
+| `Name`            | Asset name (e.g., "Apple inc")                   |
+| `Price`           | Current price display                            |
+| `Change`          | Price change with up/down indicator              |
+| `Divider`         | Horizontal divider line                          |
+| `ExpandedContent` | Animated section, height 0→full as card expands  |
+| `CollapsedContent`| Inverse of ExpandedContent: collapsed-only chrome, height full→0 as card expands |
+| `StatRow`         | Label + value stat row                           |
+| `Footer`          | Container for bottom section                     |
+| `Label`           | Label text (e.g., "Net Value")                   |
+| `Value`           | Large value text (e.g., "$1,699.19")             |
+| `SecondaryInfo`   | Secondary info row (start + end for RTL support) |
+| `Action`          | Action button (e.g., share icon)                 |
+
+## Props Reference
+
+### EtPositionCardProps (Root)
+
+| Prop                    | Type                          | Default      | Description                                                            |
+| ----------------------- | ----------------------------- | ------------ | ---------------------------------------------------------------------- |
+| `isExpanded`            | `boolean`                     | -            | Controlled expanded state                                              |
+| `defaultExpanded`       | `boolean`                     | `false`      | Initial state (uncontrolled)                                           |
+| `onExpandedChange`      | `(expanded: boolean) => void` | -            | Callback on state change                                               |
+| `isLoading`             | `boolean`                     | `false`      | Shows skeleton placeholders                                            |
+| `expandDirection`       | `'down' \| 'center'`          | `'down'`     | Direction of expansion animation                                       |
+| `handleBackgroundColor` | `string`                      | -            | Background color for the handle notch (should match screen background) |
+| `variant`               | `'positive' \| 'negative' \| 'neutral'` | `'positive'` | Controls background color: 'positive' = green, 'negative' = red, 'neutral' = default grey (no halo) |
+| `disableExpandAnimation` | `boolean`                    | `false`      | Skip the expand/collapse animation (see "Disabling the Animation")     |
+| `style`                 | `StyleProp<ViewStyle>`        | -            | Container style                                                        |
+| `testID`                | `string`                      | -            | Test ID                                                                |
+
+### Positive/Negative Variant
+
+The component has two separate concerns:
+
+1. **Card background** - controlled by `variant` prop on `EtPositionCard` root
+2. **CardChange direction** - auto-determined from `EtPositionCard.Change`'s own `percentage` prop
+
+Each `EtPositionCard.Change` component independently determines its arrow direction and color:
+
+- `percentage >= 0`: up arrow (green)
+- `percentage < 0`: down arrow (red)
+
+**Recommended usage** - derive the card's `variant` from the same percentage value to keep the card background and change indicators in sync:
+
+```tsx
+const percentage = -1.71;
+
+<EtPositionCard variant={percentage >= 0 ? 'positive' : 'negative'}>
+  <EtPositionCard.Change value={-8.45} percentage={percentage} />
+</EtPositionCard>;
+```
+
+### Expand Direction
+
+- **`'down'` (default)**: Content reveals from top to bottom. The expanded content is anchored at the top and grows downward.
+- **`'center'`**: Content reveals from center outward (bidirectional). The expanded content is centered and grows in both directions.
+
+### Collapsed-only chrome (avoid layout pops) — `CollapsedContent`
+
+Chrome that exists **only while collapsed** (e.g. a `Divider`, or a "Net Value" `Label`) must NOT be conditionally mounted/unmounted on the `isExpanded` flip. Doing so pops the layout at frame 0 of the fold — the footer jolts up/down before the height tween catches up (reads as a "tick"). Wrap such chrome in `EtPositionCard.CollapsedContent`. It is the exact inverse of `ExpandedContent`: its height animates `full → 0` as the card expands and `0 → full` as it collapses, in lockstep (same hook + easing), so the footer moves monotonically and never jolts. It is self-animating and can be placed anywhere (top level, or nested inside `Footer`):
+
+```tsx
+<EtPositionCard.CollapsedContent>
+  <EtPositionCard.Divider />
+</EtPositionCard.CollapsedContent>
+...
+<EtPositionCard.Footer>
+  <EtPositionCard.CollapsedContent>
+    <EtPositionCard.Label>Net Value</EtPositionCard.Label>
+  </EtPositionCard.CollapsedContent>
+  <EtPositionCard.Value>$1,699.19</EtPositionCard.Value>
+</EtPositionCard.Footer>
+```
+
+### Animation Mechanism (chart-safe) — read before touching it
+
+The default expand/collapse animates **only the outer container's `height`** (with `overflow: 'hidden'`) using **React Native's CORE `Animated` API — NOT Reanimated** (see `useSlotHeight` in `use-slot-height.ts`, shared by both `ExpandedContent` and `CollapsedContent`). The expanded child is mounted **exactly once** and stays mounted across every toggle; collapsing animates its height to `0` (clipped). It is never remounted. Easing is `Easing.inOut(Easing.cubic)` (slow start) so the first frame barely moves — the card lives in a `FlashList` header, and a fast-start easing made the first-frame list re-layout read as a "tick".
+
+This is the result of a long, painful debugging loop. The expanded content can contain a Skia `EtLineChart` (`@shopify/react-native-skia` `<Canvas>`), which **blanks out** under several conditions. The current path avoids every one of them — do not reintroduce them:
+
+1. **Remount** (e.g. an off-flow measure → in-flow swap). → Single persistent mount.
+2. **Reanimated** `Animated.View` driving the chart's ancestor — animated `height`, `transform`, OR a style that switches static→animated. **Every one of these blanked the chart in testing.** → We don't use Reanimated for the container at all.
+3. **Animated transform / opacity** around the content. → Only `height` is animated.
+
+Why RN core `Animated` works where Reanimated didn't: a core `Animated.View` with a JS-driven (`useNativeDriver: false`) height behaves like a plain `View` whose `height` prop updates each frame — it does not re-attach the native view — so Skia keeps painting. It also tweens reliably on the **New Architecture (Fabric)**, where `LayoutAnimation` height changes merely **snap** (so `LayoutAnimation` is NOT an option here either).
+
+Implementation details:
+
+- The content is measured once via an **absolutely-positioned inner `View`** so its natural height is reported regardless of the animated outer height.
+- Per-subcomponent fades (e.g. `StatRow`) use Reanimated independently and never wrap the chart, so they're safe.
+- If you need to animate anything containing a Skia `Canvas`, animate **height via core `Animated`** and keep the canvas out of any Reanimated/transform/opacity node.
+
+### Disabling the Animation
+
+`disableExpandAnimation` skips the height animation entirely and renders `ExpandedContent` inline (mounted when `isExpanded`, unmounted when not). The chart-safe animated path above is now the default even for cards that mount already expanded inside virtualized swipers, so this flag is rarely needed. Use it only if you explicitly want an instant (non-animated) open/close:
+
+```tsx
+<EtPositionCard isExpanded disableExpandAnimation>
+  <EtPositionCard.ExpandedContent>
+    <MyChart />
+  </EtPositionCard.ExpandedContent>
+</EtPositionCard>
+```
+
+Effect:
+
+- `ExpandedContent` renders inline (no `Animated.View`, no off-flow measurement) when `isExpanded` is true and is unmounted when false.
+- `StatRow` skips its opacity/translate fade-in.
+- The card still respects `isExpanded` toggles — content appears/disappears immediately.
+
+Use only when needed; the default animated path is the better experience for normal toggling.
+
+### Handle Notch
+
+The handle at the bottom of the card creates a visual "notch" effect. For this to work correctly, pass the `handleBackgroundColor` prop with the screen/parent background color:
+
+```tsx
+const { colors } = useEtoroTheme();
+
+<EtPositionCard handleBackgroundColor={colors.backgroundBase}>...</EtPositionCard>;
+```
+
+This creates the illusion of a small curved indent cut into the card's bottom edge.
+
+### CardChangeProps
+
+| Prop         | Type     | Description                         |
+| ------------ | -------- | ----------------------------------- |
+| `value`      | `number` | The change value (e.g., 1.95)       |
+| `percentage` | `number` | The percentage change (e.g., -1.03) |
+
+**Note:** The direction (up/down arrow, color) is automatically determined from the `percentage` prop. Each `EtPositionCard.Change` independently evaluates its `percentage` to show the appropriate indicator (≥0 = up/green, <0 = down/red). To ensure consistency between the card background color and change indicators, derive the card's `variant` prop from the same percentage value.
+
+### CardStatRowProps
+
+| Prop    | Type        | Description      |
+| ------- | ----------- | ---------------- |
+| `label` | `string`    | Label text       |
+| `value` | `ReactNode` | Value to display |
+
+### CardActionProps
+
+| Prop      | Type         | Description    |
+| --------- | ------------ | -------------- |
+| `icon`    | `string`     | Icon name      |
+| `onPress` | `() => void` | Press callback |
+
+## File Structure
+
+```
+position-card/
+├── et-position-card.tsx       # Root + compound assembly
+├── et-position-card.test.tsx  # Tests
+├── index.ts                   # Exports
+├── AGENTS.mdc                  # This file
+├── api/
+│   ├── types.ts               # TypeScript interfaces
+│   ├── context.tsx            # Context provider
+│   └── index.ts
+├── subcomponents/
+│   ├── card-header.tsx
+│   ├── card-symbol.tsx
+│   ├── card-name.tsx
+│   ├── card-price.tsx
+│   ├── card-change.tsx
+│   ├── card-divider.tsx
+│   ├── card-expanded-content.tsx
+│   ├── card-collapsed-content.tsx
+│   ├── card-stat-row.tsx
+│   ├── card-footer.tsx
+│   ├── card-label.tsx
+│   ├── card-value.tsx
+│   ├── card-secondary-info.tsx
+│   ├── card-action.tsx
+│   ├── card-handle.tsx        # Curved bottom + handle
+│   ├── card-halo.tsx          # Background halo effect
+│   └── index.ts
+├── use-slot-height.ts          # Shared core-Animated height tween (chart-safe)
+└── utils/
+    ├── children-utils.ts       # Children flattening and identification
+    └── index.ts
+```
+
+## Architecture Notes
+
+1. **Context Flow**: `PositionCardProvider` manages `isExpanded`, `isLoading`, and `onToggle`
+2. **Hybrid Children Rendering**: Uses `Children.map` transformation for flexibility while applying special animation handling to `ExpandedContent`
+3. **Animation**: `useSlotHeight` hook (core RN `Animated`, chart-safe) drives smooth height transitions for both `ExpandedContent` (open on expand) and `CollapsedContent` (open on collapse)
+4. **Handle**: Tap on curved bottom handle triggers expand/collapse
+
+## RTL Support
+
+This component is RTL-ready. All positioning uses logical properties:
+
+- `start`/`end` instead of `left`/`right`
+- `flex-start`/`flex-end` for alignment
+- No hardcoded `textAlign: 'left'` or `textAlign: 'right'`
+
+When the project enables RTL support, this component will automatically mirror correctly.
+
+## Design System Integration
+
+V2 carbon/verdict/surface tokens replace the legacy V1 palette in this component. Mapping per Figma node `37518:171393` ([Open=False, Content loader=False, Change=Positive dark](https://www.figma.com/design/cMyPhFndkPeXR6UkIuZujT/DS---React?node-id=37518-171393&m=dev)):
+
+| Slot                                           | V1 token                            | V2 token                               | Source                                                |
+| ---------------------------------------------- | ----------------------------------- | -------------------------------------- | ----------------------------------------------------- |
+| Card surface (positive)                        | `bgNeutralPositive`                 | `cardPositive`                         | Figma `Surface/card/Positive` `#F2FCF4` (exact)       |
+| Card surface (negative)                        | `bgNeutralNegative`                 | `cardNegative`                         | Mirror                                                |
+| Card surface (neutral)                         | `bgNeutralSecondary`                | `cardDefault`                          | Translucent neutral (et-poll-frame precedent)         |
+| Handle notch fallback (`handleBackgroundColor` default) | `bgNeutralPrimary`         | `backgroundBase`                       | Screen-behind surface                                 |
+| Handle bar                                     | `dividerTertiary`                   | `carbon400`                            | Figma `Carbon/Neutral/400` `#CCCCCC` (exact)          |
+| Invisible handle (3 sentiments)                | `bgNeutralPositive/Negative/Secondary` | `cardPositive/cardNegative/cardDefault` | Mirrors card surface                                  |
+| Card divider                                   | `dividerQuinary`                    | `carbonSecondaryDivider`               | Figma `var(--primary-divider)` `#B2B2B226` (exact)    |
+| Symbol "AAPL"                                  | `textPrimaryNeutral`                | `carbon900`                            | Figma `Carbon/Neutral/900`                            |
+| Name "Apple inc"                               | `textTertiaryNeutral`               | `carbon600`                            | Figma `Carbon/Neutral/600`                            |
+| Price                                          | `textPrimaryNeutral`                | `carbon900`                            | Figma                                                 |
+| Label (e.g. "Net Value")                       | `textPrimaryNeutral`                | `carbon600`                            | Figma `Carbon/Neutral/600` (meta-label intent)        |
+| Value (e.g. "$1,699.19")                       | `textPrimaryNeutral`                | `carbon900`                            | Figma                                                 |
+| StatRow label                                  | `textSecondaryNeutral`              | `carbon600`                            | Figma                                                 |
+| StatRow value (neutral)                        | `textPrimaryNeutral`                | `carbon900`                            | Figma                                                 |
+| StatRow value (positive)                       | `actionBrandText`                   | `verdictPositive600`                   | Brand-positive convention                             |
+| StatRow value (negative)                       | `actionBrandVarText`                | `verdictNegative600`                   | Brand-negative convention                             |
+| SecondaryInfo (e.g. "6.921 shares")            | `textSecondaryNeutral`              | `carbon900`                            | Figma `Carbon/Neutral/900` (primary emphasis)         |
+| Action icon                                    | `textPrimaryNeutral`                | `carbon900`                            | Figma                                                 |
+| Change positive                                | `actionBrandText`                   | `verdictPositive600`                   | Figma `Verdict/Positive/600`                          |
+| Change negative                                | `actionBrandVarText`                | `verdictNegative600`                   | Brand-negative convention                             |
+
+`CardHalo` keeps using its pre-baked PNG assets (`green-halo.png`, `red-oval.png`) — no theme tokens involved.
+
+### Behavior deltas vs production (V1 → V2)
+
+1. **Card surface (dark mode)** — `bgNeutralPositive` (`neutral[850]` flat grey) → `cardPositive` (`#242A25` warm-green-tinted dark). The dark-mode positive card now reads as a verdict-tinted surface rather than flat grey; mirror applies to negative.
+2. **Name "Apple inc"** — moves from tertiary tier (`#808080`) to `carbon600` (`#666666`) — slightly darker, more readable.
+3. **Label "Net Value"** — moves DOWN from primary (`#1A1A1A`) to `carbon600` (`#666666`); meta-label feel per Figma. Significant contrast drop. Consumers that need primary emphasis on a label slot should pass an inline `style={{ color: ... }}` override.
+4. **SecondaryInfo "shares"** — moves UP from secondary (`#666666`) to primary (`#1B1E21`); Figma renders secondary info with full primary emphasis.
+5. **Change colors** — green hex shift `#1CCF3F` → `#0EB12E` per the verdict-green consolidation already landed in `et-line-chart`/`et-poll`/`et-asset-item`/`et-trade`.
+6. **StatRow label** — diverges from prior PRs (`et-post`) that mapped similar meta text to `carbon500`; this Figma is explicit about `carbon600`. Per-component Figma source rules.
+
+## Do's and Don'ts
+
+### Do:
+
+- Use structured subcomponents for consistent Figma matching
+- Use `Header` container with Symbol/Name on start, Price/Change on end
+- Use `Footer` container for Net Value section
+- Use `ExpandedContent` for animated chart/stats section
+- Use `start`/`end` props for `SecondaryInfo` (not left/right)
+- Pass `variant="negative"` for negative/loss cards
+- Add custom elements between subcomponents when needed (they will render in order)
+
+### Don't:
+
+- Don't nest EtPositionCard components
+- Don't use subcomponents outside of EtPositionCard
+- Don't use `left`/`right` terminology in new code

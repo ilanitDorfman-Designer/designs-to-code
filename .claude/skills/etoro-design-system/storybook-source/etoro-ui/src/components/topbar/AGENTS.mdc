@@ -1,0 +1,328 @@
+---
+description: Agent guide for EtTopbar - slot-based navigation header with Start/Middle/End sections, RTL-aware naming, automatic centering, and Animated variant for scroll-driven animations. e.g. use for screen headers with back button, navigation bars with title and actions, settings screens with close button
+alwaysApply: false
+---
+
+# EtTopbar - Agent Guide
+
+> **AI Assistant Documentation**: This guide helps AI coding assistants understand and work with the EtTopbar component.
+
+## Overview
+
+The `EtTopbar` component is a flexible, compound component for building navigation headers in the eToro React Native application. It uses a slot-based architecture with start, middle, and end sections (RTL-aware naming).
+
+## Key Architecture
+
+- **Compound Component Pattern**: `EtTopbar.Start`, `EtTopbar.Middle`, `EtTopbar.End`, `EtTopbar.Action`, `EtTopbar.Title`
+- **Explicit Variants**: `EtTopbar` (regular View) and `EtTopbar.Animated` (Animated.View)
+- **Slot-Based Layout**: Children are distributed into slots via the `useSlots` hook
+- **Automatic Centering**: Middle content is absolutely positioned for true centering
+- **RTL-Aware Naming**: Slots use `start`/`middle`/`end` instead of left/right for proper bidirectional support
+- **Z-Index Management**: Start/end slots have higher z-index (2) than middle (1) for proper touch handling
+- **Theme Integration**: Uses `useEtoroTheme` for background color
+
+## Project Structure
+
+```text
+libs/etoro-ui/src/components/topbar/
+├── et-topbar.tsx              # Main compound component
+├── api/
+│   ├── index.ts               # Public type exports
+│   └── types.ts               # TypeScript interfaces
+├── subcomponents/
+│   ├── index.ts               # Component exports
+│   ├── topbar-action.tsx      # Pressable action button
+│   ├── topbar-start.tsx       # Start slot container (leading edge)
+│   ├── topbar-middle.tsx      # Middle slot container
+│   ├── topbar-end.tsx         # End slot container (trailing edge)
+│   └── topbar-title.tsx       # Styled title text
+├── hooks/
+│   ├── index.ts               # Hook exports
+│   └── use-slots.ts           # Slot distribution logic
+├── utils/
+│   ├── index.ts               # Utility exports
+│   ├── create-slot.ts         # Creates empty slot data
+│   ├── get-slot-name.ts       # Extracts slot name from element
+│   ├── is-element-of.ts       # Type guard for React elements
+│   └── resolve-middle-children.ts  # Handles loose children
+├── __tests__/
+│   └── et-topbar.test.tsx     # Component tests
+└── AGENTS.mdc                  # This file
+```
+
+## Usage Patterns
+
+### Basic Title Topbar
+
+```tsx
+<EtTopbar>
+  <EtTopbar.Title>Page Title</EtTopbar.Title>
+</EtTopbar>
+```
+
+### Topbar with Back Navigation
+
+```tsx
+<EtTopbar>
+  <EtTopbar.Start>
+    <EtTopbar.Action accessibilityLabel="Go back" onPress={goBack}>
+      <EtoroIcon icon={{ iconName: 'chevronLeft' }} appearance={{ size: 24 }} />
+    </EtTopbar.Action>
+  </EtTopbar.Start>
+  <EtTopbar.Middle>
+    <EtTopbar.Title>Settings</EtTopbar.Title>
+  </EtTopbar.Middle>
+</EtTopbar>
+```
+
+### Full Topbar with Multiple Actions
+
+```tsx
+<EtTopbar testID="main-topbar">
+  <EtTopbar.Start>
+    <EtTopbar.Action accessibilityLabel="Go back" onPress={goBack}>
+      <EtoroIcon icon={{ iconName: 'chevronLeft' }} appearance={{ size: 24 }} />
+    </EtTopbar.Action>
+  </EtTopbar.Start>
+  <EtTopbar.Middle>
+    <EtTopbar.Title>Portfolio</EtTopbar.Title>
+  </EtTopbar.Middle>
+  <EtTopbar.End>
+    <EtTopbar.Action accessibilityLabel="Search" onPress={openSearch}>
+      <EtoroIcon icon={{ iconName: 'search' }} appearance={{ size: 24 }} />
+    </EtTopbar.Action>
+    <EtTopbar.Action accessibilityLabel="Menu" onPress={openMenu}>
+      <EtoroIcon icon={{ iconName: 'menu' }} appearance={{ size: 24 }} />
+    </EtTopbar.Action>
+  </EtTopbar.End>
+</EtTopbar>
+```
+
+### Implicit Middle Slot
+
+Children not wrapped in a slot component are automatically placed in the middle:
+
+```tsx
+// These are equivalent:
+<EtTopbar>
+  <EtTopbar.Title>Title</EtTopbar.Title>
+</EtTopbar>
+
+<EtTopbar>
+  <EtTopbar.Middle>
+    <EtTopbar.Title>Title</EtTopbar.Title>
+  </EtTopbar.Middle>
+</EtTopbar>
+```
+
+## Component API
+
+### EtTopbar (Root)
+
+Uses regular `View`. For scroll-driven animations, use `EtTopbar.Animated`.
+
+| Prop     | Type                 | Description                |
+| -------- | -------------------- | -------------------------- |
+| children | ReactNode            | Slot components or content |
+| style    | StyleProp<ViewStyle> | Static ViewStyle           |
+| testID   | string               | Test identifier            |
+
+### EtTopbar.Animated
+
+Uses `Animated.View` for Reanimated animated styles.
+
+| Prop     | Type                     | Description                                         |
+| -------- | ------------------------ | --------------------------------------------------- |
+| children | ReactNode                | Slot components or content                          |
+| style    | AnimatedStyle<ViewStyle> | Supports both static and Reanimated animated styles |
+| testID   | string                   | Test identifier                                     |
+
+### EtTopbar.Start / Middle / End
+
+| Prop         | Type                 | Description                                          |
+| ------------ | -------------------- | ---------------------------------------------------- |
+| children     | ReactNode            | Slot content                                         |
+| style        | StyleProp<ViewStyle> | Custom slot styles                                   |
+| testID       | string               | Test identifier                                      |
+| ...ViewProps | -                    | All other View props (accessibility, onLayout, etc.) |
+
+### EtTopbar.Action
+
+| Prop               | Type       | Description                        |
+| ------------------ | ---------- | ---------------------------------- |
+| children           | ReactNode  | Action content (usually icon)      |
+| onPress            | () => void | Press handler                      |
+| accessibilityLabel | string     | Screen reader label for the action |
+| testID             | string     | Test identifier                    |
+| hitSlop            | number     | Touch area padding (default: 10)   |
+| ...PressableProps  | -          | All Pressable props supported      |
+
+### EtTopbar.Title
+
+| Prop          | Type                 | Description                               |
+| ------------- | -------------------- | ----------------------------------------- |
+| children      | ReactNode            | Title text                                |
+| variant       | EtTextVariant        | Text variant (default: 'heading-compact') |
+| numberOfLines | number               | Line limit (default: 1)                   |
+| style         | StyleProp<TextStyle> | Custom text styles                        |
+| testID        | string               | Test identifier                           |
+
+## Common Tasks
+
+### Adding a New Slot Type
+
+1. Create the slot component in `subcomponents/`:
+
+   ```typescript
+   export function TopbarCustom({ children, style, testID }: ViewProps) {
+     return <View style={style} testID={testID}>{children}</View>;
+   }
+   TopbarCustom.etTopbarSlot = 'custom' as SlotName;
+   ```
+
+2. Add to `SlotName` type in `api/types.ts`
+3. Add to `SLOT_COMPONENTS` in `hooks/use-slots.ts`
+4. Export from `subcomponents/index.ts`
+5. Add to `EtTopbar` compound component
+
+### Customizing Topbar Height
+
+Override the `minHeight` in styles:
+
+```tsx
+<EtTopbar style={{ minHeight: 80 }}>...</EtTopbar>
+```
+
+### Customizing Padding
+
+```tsx
+<EtTopbar style={{ paddingHorizontal: 16, paddingVertical: 12 }}>...</EtTopbar>
+```
+
+### Scroll-Driven Animations
+
+Use `EtTopbar.Animated` for Reanimated animated styles. The screen owns the scroll state; the topbar is purely presentational.
+
+```tsx
+import { useAnimatedStyle, interpolate, useSharedValue, useAnimatedScrollHandler } from 'react-native-reanimated';
+
+function MyScreen() {
+  const scrollY = useSharedValue(0);
+
+  const animatedTopbarStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(scrollY.value, [0, 100], [1, 0.8]),
+    transform: [{ translateY: interpolate(scrollY.value, [0, 100], [0, -64]) }],
+  }));
+
+  return (
+    <View style={{ flex: 1 }}>
+      <EtTopbar.Animated style={animatedTopbarStyle}>
+        <EtTopbar.Title>Animated Title</EtTopbar.Title>
+      </EtTopbar.Animated>
+      <Animated.ScrollView
+        onScroll={useAnimatedScrollHandler((event) => {
+          scrollY.value = event.contentOffset.y;
+        })}
+      >
+        {/* Content */}
+      </Animated.ScrollView>
+    </View>
+  );
+}
+```
+
+**Key principle**: Scroll state is managed by the screen, not the topbar. This follows the `patterns-explicit-variants` rule—use the explicit `Animated` variant when you need animation support.
+
+## Slot Distribution Logic
+
+The `useSlots` hook processes children and distributes them into start, middle, and end slots:
+
+1. Iterates through all children
+2. Identifies slot components via the `etTopbarSlot` static property (e.g., `TopbarStart.etTopbarSlot = 'start'`)
+3. Groups children by slot name (start, middle, end)
+4. For each recognized slot component, extracts the following from its props:
+   - `children` — the slot's content
+   - `style` — custom styles for this slot instance
+   - `testID` — test identifier
+   - `additionalProps` — all remaining ViewProps (e.g., `accessibilityLabel`, `onLayout`, `pointerEvents`)
+5. Collects "loose" children (elements not wrapped in a slot component)
+6. Places loose children in middle slot if no explicit `EtTopbar.Middle` content exists
+7. Returns slot metadata for start, middle, and end, each containing:
+   - `children` — array of collected slot content
+   - `styles` — array of collected style objects
+   - `testID` — first encountered testID for the slot
+   - `additionalProps` — array of collected additional ViewProps
+
+All `additionalProps` are forwarded to the rendered slot Views, allowing full control over accessibility and layout behavior.
+
+## Best Practices for AI Assistants
+
+1. **Use compound components**: Always use `EtTopbar.Start`, `EtTopbar.End`, etc. for slot content
+2. **Add testIDs**: Include testID on root and slots for testing
+3. **Use EtTopbar.Action**: Wrap interactive elements in Action for consistent hit slop
+4. **Set accessibilityLabel**: On Action components for screen reader support
+5. **Center titles**: Use `EtTopbar.Middle` or let implicit centering handle it
+6. **Check z-index**: Start/end have z-index 2, middle has z-index 1
+
+## Troubleshooting
+
+**Q: Title not centering correctly**
+A: Ensure title is in `EtTopbar.Middle` or as a direct child (not in Start/End)
+
+**Q: Action buttons not responding to taps**
+A: Check z-index; start/end slots (z-index 2) should be above middle (z-index 1)
+
+**Q: Custom styles not applying**
+A: Pass `style` prop to the specific slot component, not just root
+
+**Q: Content overlapping**
+A: Middle slot is absolutely positioned; ensure start/end content doesn't overflow
+
+## Liquid Glass (iOS 26+)
+
+EtTopbar automatically detects Liquid Glass availability (iOS 26+) and adapts its rendering:
+
+### Behavior When Liquid Glass Is Active
+
+- **Transparent background**: The topbar root becomes transparent so glass elements float over content.
+- **Glass-wrapped slots**: Start and End slot children are automatically wrapped in an `EtGlassView`.
+  - **Single child** in a slot → circular glass surface.
+  - **Multiple children** in a slot → pill-shaped glass surface.
+- **Middle slot**: Not glass-wrapped by the topbar itself. Components placed in Middle (e.g., `EtTextToggle`) handle their own glass treatment via `LiquidGlassContext`.
+- **LiquidGlassContext**: Provided by the topbar root. Subcomponents and children can consume it via `useLiquidGlassContext()` from `etoro-ui/core`.
+
+### Behavior When Liquid Glass Is Unavailable (Android, iOS < 26)
+
+- Rendering is identical to the pre-Liquid-Glass design. No visual change.
+- `GlassSlotWrapper` renders children directly without any wrapper.
+
+### Infrastructure Used
+
+- `useLiquidGlass()` — hook that detects glass availability (guards with `Platform.OS === 'ios'`).
+- `EtGlassView` — renders native `GlassView` on iOS 26+ or plain `View` elsewhere.
+- `LiquidGlassContext` — context provided at root; consumed by subcomponents.
+- All from `libs/etoro-ui/src/core/liquid-glass/`.
+
+### Caveats
+
+- **Never set `opacity < 1`** on `EtGlassView` or its parents. Use `animate` and `animationDuration` props for fade effects.
+- **`isInteractive` prop** on `GlassView` can only be set once on mount. Remount with a new `key` to toggle.
+- Glass wrapping does not affect touch targets — `hitSlop` on `TopbarAction` remains effective.
+
+## Related Files
+
+- [et-topbar.tsx](./et-topbar.tsx) - Main component implementation
+- [types.ts](./api/types.ts) - TypeScript interfaces
+- [use-slots.ts](./hooks/use-slots.ts) - Slot distribution hook
+- [liquid-glass/](../../core/liquid-glass/) - Shared Liquid Glass infrastructure
+
+## Design System Integration
+
+V1 → V2 mapping for `EtTopbar` slots:
+
+| Slot | V1 token | V2 token |
+| --- | --- | --- |
+| Topbar background (`use-topbar-layout`) | `bgNeutralPrimary` | `backgroundBase` |
+| `TopbarStepProgress` segment fill (no `color` prop) | `textPrimaryNeutral` | `carbon900` |
+
+Consider these rules if they affect your changes.

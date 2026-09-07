@@ -1,0 +1,327 @@
+---
+description: Agent guide for EtAssetInfo - compound component for rendering asset/person identity blocks with avatar, title, and subtitle in horizontal or vertical layouts
+alwaysApply: false
+---
+
+# EtAssetInfo Component
+
+## Purpose & Scope
+
+`EtAssetInfo` is a compound UI component for rendering an asset/person identity block with:
+
+- Avatar/logo
+- Primary text (`Title`)
+- Secondary text (`Subtitle`)
+
+It supports two layouts:
+
+- `horizontal`: avatar on the left, title/subtitle stacked on the right
+- `vertical`: avatar, then title, then subtitle in a column
+
+This component is intentionally presentational. It does not manage fetching, navigation, selection state, or business logic.
+
+## Entry Points & Contracts
+
+### `EtAssetInfo` (main component)
+
+```tsx
+<EtAssetInfo
+  data={{
+    avatar?: {
+      source: string,                  // required when using EtAssetInfo.Avatar
+      size?: 'small' | 'medium' | 'large', // default: 'medium'
+      shape?: 'circle' | 'square',         // default: 'square'
+      alt?: string,
+    },
+    title?: string,                         // used when Title has no children
+    subtitle?: string,                     // used when Subtitle has no children
+  }}
+  layout?: 'horizontal' | 'vertical'       // default: 'horizontal'
+  ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip'  // default: 'tail'
+  maxWidth?: number                        // horizontal layout only; constrains text block
+  shrink?: boolean                         // horizontal layout; fills flex parent and shrinks text block for proper ellipsis
+  style?: StyleProp<ViewStyle>
+>
+  {children}
+</EtAssetInfo>
+```
+
+- `layout`, `ellipsizeMode`, `maxWidth`, and `shrink` are **root-level props**.
+- `data.title` and `data.subtitle` are optional; when set, `<EtAssetInfo.Title />` and `<EtAssetInfo.Subtitle />` can be used with no children to render that text.
+
+`children` are expected to be compound subcomponents:
+
+- `<EtAssetInfo.Avatar />`
+- `<EtAssetInfo.Title>...</EtAssetInfo.Title>`
+- `<EtAssetInfo.Subtitle>...</EtAssetInfo.Subtitle>`
+
+### `EtAssetInfo.Avatar`
+
+```tsx
+<EtAssetInfo.Avatar style?: StyleProp<ViewStyle> />
+```
+
+- Reads `avatar` config from context (no direct avatar props).
+- Throws at runtime if `avatar.source` is missing/empty.
+- Uses internal `EtAvatar` with `EtAvatar.Image`.
+
+### `EtAssetInfo.Title`
+
+```tsx
+<EtAssetInfo.Title>{ReactNode}</EtAssetInfo.Title>
+```
+
+- Delegates to internal `EtAssetInfoText` with `value={data.title}`, `variant="label-primary-bold"`, and theme color for text.
+- **No children and no `data.title`**: renders `null`.
+- **No children but `data.title` is set**: renders `EtText` with `data.title`, `numberOfLines={1}`, and `ellipsizeMode` from context.
+- **Has children**: renders a horizontal row wrapper (`View`) for custom composition (e.g. label + badge).
+- No `style` prop; styling is driven by variant and theme.
+
+### `EtAssetInfo.Subtitle`
+
+```tsx
+<EtAssetInfo.Subtitle>{ReactNode}</EtAssetInfo.Subtitle>
+```
+
+- Delegates to internal `EtAssetInfoText` with `value={data.subtitle}` and `variant="label-secondary-regular"`.
+- **No children and no `data.subtitle`**: renders `null`.
+- **No children but `data.subtitle` is set**: renders `EtText` with `data.subtitle`, `numberOfLines={1}`, and `ellipsizeMode` from context.
+- **Has children**: renders a horizontal row wrapper (`View`) for custom composition.
+- No `style` prop; styling is driven by variant.
+
+## Internal Architecture
+
+### 1) Data normalization (`useDefaults`)
+
+`useDefaults({ data, layout, ellipsizeMode, maxWidth })` resolves defaults and returns a memoized context value of type `EtAssetDefaults`:
+
+- `layout`: defaults to `'horizontal'`
+- `ellipsizeMode`: defaults to `'tail'`
+- `maxWidth`: passed through only when layout is horizontal; set to `undefined` in vertical layout
+- `data`: spread from input; `data.avatar` is normalized to `{ source, shape: shape ?? 'square', size: size ?? 'medium' }` when present (other avatar fields such as `alt` are not merged into this normalized object in the current implementation)
+
+### 2) Child slot extraction (`useSlots`)
+
+`useSlots(children)` scans children by `displayName` and extracts slots:
+
+- `EtAssetInfo.Avatar`
+- `EtAssetInfo.Title`
+- `EtAssetInfo.Subtitle`
+
+Important behavior:
+
+- If multiple components of the same slot exist, the last one wins.
+- Unknown children are ignored by the slotter.
+- Slot order in JSX is not required; render order is controlled by root layout logic.
+
+### 3) Title and Subtitle rendering (`EtAssetInfoText`)
+
+`EtAssetInfoTitle` and `EtAssetInfoSubtitle` delegate to a shared internal component `EtAssetInfoText`, which:
+
+- If `children` is present: renders a horizontal row `View` with `X2` gap (custom composition).
+- Else if `value` is present: renders `EtText` with `variant`, `numberOfLines={1}`, `ellipsizeMode` from context, and optional `style` (used only by the internal call; Title passes theme color, Subtitle uses default).
+- Otherwise: returns `null`.
+
+Title passes `value={data.title}`, `variant="label-primary-bold"`, and theme `color: colors.textPrimaryNeutral`. Subtitle passes `value={data.subtitle}` and `variant="label-secondary-regular"`. Both use a fixed `lineHeight: 20` for the text style.
+
+### 4) Context boundary
+
+`EtAssetInfo` provides `EtAssetInfoContext`, and subcomponents read it via `useEtAssetInfoContext()`.
+
+- Using subcomponents outside `EtAssetInfo` throws runtime errors.
+
+### 5) Layout rendering
+
+- `horizontal`: renders `avatar` + text block (`title` + `subtitle`), with optional `maxWidth` style on text block.
+- `vertical`: renders `avatar`, `title`, `subtitle` sequentially.
+- Root container always uses design-system spacing (`X2`) and `alignSelf: 'flex-start'`.
+- When `shrink` is `true` (horizontal only): the root container becomes `flex: 1` and the text block becomes `flex: 1, minWidth: 0`. This makes `EtAssetInfo` claim the available row space and lets `Title`/`Subtitle` shrink so `numberOfLines={1}` produces a proper ellipsis. Useful when the parent is a flex row with siblings (e.g. price) that should keep their natural width.
+
+## Usage Patterns
+
+### Data-driven title and subtitle (empty slots)
+
+When `data.title` and `data.subtitle` are set, use empty slots so text and ellipsis are driven by context:
+
+```tsx
+<EtAssetInfo
+  data={{
+    avatar: {
+      source: user.avatarUrl,
+      shape: 'circle',
+      size: 'medium',
+      alt: user.name,
+    },
+    title: user.name,
+    subtitle: `@${user.username}`,
+  }}
+  layout="horizontal"
+>
+  <EtAssetInfo.Avatar />
+  <EtAssetInfo.Title />
+  <EtAssetInfo.Subtitle />
+</EtAssetInfo>
+```
+
+### Asset list row with truncation width
+
+```tsx
+<EtAssetInfo
+  data={{
+    avatar: {
+      source: asset.logoUrl,
+      shape: 'square',
+      size: 'medium',
+      alt: asset.symbol,
+    },
+    title: asset.symbol,
+    subtitle: asset.name,
+  }}
+  layout="horizontal"
+  maxWidth={140}
+  ellipsizeMode="tail"
+>
+  <EtAssetInfo.Avatar />
+  <EtAssetInfo.Title />
+  <EtAssetInfo.Subtitle />
+</EtAssetInfo>
+```
+
+### Dynamic truncation in a flex row (with sibling price)
+
+Use `shrink` when `EtAssetInfo` shares a row with siblings whose width changes at runtime (e.g. a live price). The text block fills the remaining space and truncates with an ellipsis automatically — no `maxWidth` magic number needed.
+
+```tsx
+<View style={{ flexDirection: 'row', alignItems: 'center', gap: X4 }}>
+  <EtAssetInfo
+    data={{
+      avatar: { source: asset.logoUrl, shape: 'square', size: 'medium' },
+      title: asset.symbol,
+      subtitle: asset.name,
+    }}
+    shrink
+  >
+    <EtAssetInfo.Avatar />
+    <EtAssetInfo.Title />
+    <EtAssetInfo.Subtitle />
+  </EtAssetInfo>
+
+  <View>{/* price section keeps its natural width */}</View>
+</View>
+```
+
+Prefer `shrink` over a hardcoded `maxWidth` when available space is dynamic.
+
+### Custom title/subtitle (children with badges)
+
+When you need custom composition (e.g. badge next to title), pass children and omit title/subtitle from `data`:
+
+```tsx
+<EtAssetInfo data={{ avatar: { source: asset.logoUrl, shape: 'square', size: 'medium' } }} layout="horizontal">
+  <EtAssetInfo.Avatar />
+  <EtAssetInfo.Title>
+    <EtText variant="label-primary-bold">{asset.symbol}</EtText>
+    <EtBadge color="green">
+      <EtBadge.Label>100</EtBadge.Label>
+    </EtBadge>
+  </EtAssetInfo.Title>
+  <EtAssetInfo.Subtitle>{asset.name}</EtAssetInfo.Subtitle>
+</EtAssetInfo>
+```
+
+### Vertical card identity block
+
+```tsx
+<EtAssetInfo
+  data={{
+    avatar: {
+      source: asset.logoUrl,
+      shape: 'square',
+      size: 'large',
+      alt: asset.symbol,
+    },
+    title: asset.symbol,
+    subtitle: asset.name,
+  }}
+  layout="vertical"
+>
+  <EtAssetInfo.Avatar />
+  <EtAssetInfo.Title />
+  <EtAssetInfo.Subtitle />
+</EtAssetInfo>
+```
+
+## Anti-patterns
+
+### ❌ Using subcomponents outside root provider
+
+```tsx
+// BAD - throws at runtime
+<EtAssetInfo.Title>BTC</EtAssetInfo.Title>
+```
+
+Fix: Always render subcomponents inside `<EtAssetInfo>...</EtAssetInfo>`.
+
+### ❌ Missing avatar source
+
+```tsx
+// BAD - Avatar throws because source is empty/missing
+<EtAssetInfo data={{ title: 'BTC' }}>
+  <EtAssetInfo.Avatar />
+</EtAssetInfo>
+```
+
+Fix: Provide `data.avatar.source` whenever using `EtAssetInfo.Avatar`.
+
+### ❌ Assuming arbitrary children are rendered
+
+```tsx
+// BAD - random children are ignored by slot extraction
+<EtAssetInfo data={data}>
+  <View />
+</EtAssetInfo>
+```
+
+Fix: Use the supported compound subcomponents for visible output.
+
+### ❌ Hardcoded spacing/color overrides as default approach
+
+Fix: Prefer design tokens (`X2`) and theme-driven text styling via built-in Title/Subtitle behavior. Use `style` props only for targeted overrides.
+
+## Dependencies & Design System Integration
+
+- Theme:
+  - `EtAssetInfoTitle` uses `useEtoroTheme().colors.textPrimaryNeutral` for data-driven title text (via `EtAssetInfoText`).
+- Typography:
+  - Title: `label-primary-bold` (through `EtAssetInfoText`)
+  - Subtitle: `label-secondary-regular` (through `EtAssetInfoText`)
+- Primitives:
+  - Avatar rendering uses `EtAvatar` + `EtAvatar.Image`.
+  - Title/Subtitle data-driven text and row layout use internal `EtAssetInfoText` (which uses `EtText` and `View`).
+- Spacing:
+  - Uses `X2` token in root and in `EtAssetInfoText` row wrapper.
+
+## File Map
+
+```text
+asset-info/
+├── api/
+│   ├── index.ts
+│   └── types.ts
+├── context/
+│   ├── et-asset-info-context.tsx
+│   └── index.ts
+├── hooks/
+│   ├── index.ts
+│   ├── use-et-asset-defaults.ts
+│   └── use-et-asset-info-slots.ts
+├── subcomponents/
+│   ├── index.ts
+│   ├── et-asset-info-avatar.tsx
+│   ├── et-asset-info-subtitle.tsx
+│   ├── et-asset-info-text.tsx      # internal: shared by Title & Subtitle
+│   └── et-asset-info-title.tsx
+├── et-asset-info.tsx
+├── AGENTS.mdc
+└── index.ts
+```

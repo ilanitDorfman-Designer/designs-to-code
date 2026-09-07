@@ -1,0 +1,84 @@
+---
+description: Agent guide for EtPreviewContainer - floating liquid-glass preview card shell with Content/Trailing composition, optional tab-bar sync, and grab handle. Use for portfolio peek cards and similar floating summary previews above the bottom nav.
+alwaysApply: false
+---
+
+# EtPreviewContainer Component - Agent Guide
+
+## Overview
+
+`EtPreviewContainer` is a dumb, reusable floating glass preview card. It owns the Liquid Glass / blur shell, optional grab handle, press + haptics, optional absolute placement above the tab bar, and optional hide-with-tab-bar animation. Domain content (labels, values, charts) is composed by the consumer.
+
+**Location:** `/libs/etoro-ui/src/components/preview-container/`
+
+## Key Features
+
+- **Compound Component Pattern**: `Content` (left text stack) and `Trailing` (right visual)
+- **Liquid Glass**: Native iOS 26+ glass via `EtGlassView`; frosted blur fallback elsewhere
+- **Floating mode**: Pins above the bottom tab bar + safe-area inset
+- **Tab-bar sync**: Slides/fades with `useTabBarVisibility` when `syncWithTabBar`
+- **Grab handle**: Centred pill at the top (toggle with `showHandle`)
+
+## Usage
+
+```tsx
+import { EtPreviewContainer, EtText, EtSparkChart } from 'etoro-ui';
+
+<EtPreviewContainer
+  floating
+  syncWithTabBar
+  onPress={handleOpen}
+  accessibilityLabel="My portfolio value"
+  testID="portfolio-peek-card"
+>
+  <EtPreviewContainer.Content>
+    <EtText variant="label-tertiary-regular">My portfolio value</EtText>
+    {/* live value leaf */}
+  </EtPreviewContainer.Content>
+  <EtPreviewContainer.Trailing>
+    <EtSparkChart data={sparkData} balance="positive" width={100} height={26} />
+  </EtPreviewContainer.Trailing>
+</EtPreviewContainer>
+```
+
+Without `floating`, the consumer owns positioning (same as `EtGlassFab`).
+
+## Subcomponents
+
+| Component | Description |
+| --------- | ----------- |
+| `EtPreviewContainer.Content` | Left flex-shrink text stack (label + value) |
+| `EtPreviewContainer.Trailing` | Right trailing visual (sparkline, icon, etc.) |
+
+## Props
+
+| Prop | Type | Default | Description |
+| ---- | ---- | ------- | ----------- |
+| `children` | `ReactNode` | required | Compound Content / Trailing |
+| `onPress` | `() => void` | - | Press handler (after haptic) |
+| `accessibilityLabel` | `string` | - | A11y label |
+| `floating` | `boolean` | `false` | Absolute above tab bar |
+| `syncWithTabBar` | `boolean` | `false` | Hide with tab bar (needs `floating`) |
+| `showHandle` | `boolean` | `true` | Grab handle |
+| `haptics` | `boolean` | `true` | Light impact on press |
+| `disabled` | `boolean` | `false` | Disable press |
+| `style` | `StyleProp<ViewStyle>` | - | Outer style |
+| `testID` | `string` | - | Test ID on pressable |
+
+## Exported constants
+
+- `PREVIEW_HEIGHT` (96) — approx height for off-screen hide / list bottom padding
+- `PREVIEW_CONTAINER_BOTTOM_OFFSET` — `TAB_BAR_HEIGHT + 12` gap above the nav bar
+
+## Do / Don't
+
+- **DO** keep domain data (facades, currency, privacy mask, sheet bodies) in the feature
+- **DO** compose label/value/chart as children
+- **DON'T** put business logic or API calls inside this component
+- **DON'T** set `opacity < 1` on the glass surface itself (breaks liquid glass)
+
+## Related
+
+- Glass primitives: `EtGlassView`, `useLiquidGlass` (`etoro-ui/core`)
+- Similar glass surface: `EtGlassFab`
+- Consumer example: `PortfolioMainPeekSheet` in portfolio-insights

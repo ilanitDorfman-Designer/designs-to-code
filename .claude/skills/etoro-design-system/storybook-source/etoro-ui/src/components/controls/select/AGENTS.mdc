@@ -1,0 +1,343 @@
+---
+description: Agent guide for EtSelect - presentational select trigger with text and field variants, compound Label/Value/LeadingContent API for opening selector modals
+alwaysApply: false
+---
+
+# EtSelect Component
+
+## Purpose & Scope
+
+`EtSelect` is a presentational select trigger component for the eToro design system. It provides a button-like interface to open select/selector modals with:
+
+- **Single root component**: `<EtSelect>` with `type` prop (`'text'` or `'field'`)
+- **Compound component API**: `EtSelect.Label`, `EtSelect.Value`, `EtSelect.LeadingContent`
+- **Structured context**: `{ state, meta }` pattern for styling injection into subcomponents
+- **Generic composition**: The dev composes whatever content they need (icons, flags, etc.)
+- **Haptic feedback**: Enabled by default
+- **Accessibility**: Uses React Native accessibility props (role, state, labels)
+
+**Does NOT handle:**
+
+- Select modal/dropdown logic (trigger only - parent manages modal state)
+- Selection state management (parent controls displayed text)
+- Validation or error states
+- Specific icon types (clock, calendar, etc.) — the dev composes these themselves
+
+## Entry Points & Contracts
+
+### `EtSelect` (root component)
+
+```ts
+interface EtSelectProps {
+  children: ReactNode;
+  onPress: () => void;
+  type?: 'text' | 'field'; // default: 'field'
+  disabled?: boolean; // default: false (ignored for text type)
+  readonly?: boolean; // default: false (field only) — see Readonly state below
+  showChevron?: boolean; // default: true (field only) — readonly forces hidden unless disabled wins
+  haptics?: boolean; // default: true
+  width?: DimensionValue; // default: 335 (field type only)
+  style?: StyleProp<ViewStyle>;
+  testID?: string;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+}
+```
+
+### Type Behavior
+
+#### `type="text"` — Inline text
+
+- Renders semibold text with trailing chevron icon only (no leading icons)
+- Always interactive (disabled prop is ignored)
+- Flexible width, self-sizing
+- `LeadingContent` is ignored in this type
+
+#### `type="field"` — Bordered container
+
+- Auto-switches between empty (placeholder) and filled appearance
+- Filled state triggers when `EtSelect.Label` or `EtSelect.LeadingContent` is present
+- Supports disabled state
+- Fixed width (default 335px)
+
+### Compound Subcomponents
+
+| Subcomponent              | Purpose                             | Used in                   |
+| ------------------------- | ----------------------------------- | ------------------------- |
+| `EtSelect.Label`          | Label text above value              | Field type (filled state) |
+| `EtSelect.Value`          | Value/placeholder text              | Both types                |
+| `EtSelect.LeadingContent` | Content before value (icon or flag) | Field type only           |
+
+## Architecture
+
+### Composition Philosophy
+
+This component is **generic** — it does NOT include built-in icons for specific use cases (clock, calendar, country, etc.). Instead, the developer composes whatever content they need via compound children. This means:
+
+- No `EtSelectType` enum for icon selection
+- No built-in icon rendering logic
+- The UI kit stays lean; the dev builds the input as needed
+
+### File Structure
+
+```text
+select/
+├── api/
+│   ├── index.ts          # Public API exports
+│   └── types.ts          # EtSelectProps, subcomponent props, EtSelectType
+├── context/
+│   ├── index.ts
+│   └── select-context.tsx # Context with { state, meta } interface
+├── hooks/
+│   ├── index.ts
+│   ├── use-select-config.ts    # Configuration: colors, sizes, borders
+│   └── use-select-children.ts  # Children processing: extract compound children
+├── subcomponents/
+│   ├── index.ts
+│   ├── select-label.tsx          # EtSelect.Label (body-secondary-medium)
+│   ├── select-value.tsx          # EtSelect.Value (heading-large or heading-compact)
+│   └── select-leading-content.tsx # EtSelect.LeadingContent (passthrough)
+├── et-select.tsx          # Root component + Object.assign for compound API
+├── et-select.test.tsx     # Tests
+├── index.ts               # Public exports
+└── AGENTS.mdc              # This file
+```
+
+### Data Flow
+
+1. Consumer renders `<EtSelect type="text"|"field" ...>` with compound children
+2. `EtSelectBase` (root component):
+   a. `useSelectChildren` → extracts compound children by displayName
+   b. Detects `hasValue` (field only) based on Label/LeadingContent presence
+   c. `useSelectConfig` → computes `{ state, meta }` context + border/bg colors
+   d. Wraps children in `SelectContext.Provider`
+   e. Renders layout based on `type` prop
+3. Subcomponents → consume `{ state, meta }` context for auto-styling
+
+### Context Interface
+
+```ts
+interface SelectContextValue {
+  state: {
+    type: 'text' | 'field';
+    disabled: boolean;
+    readonly: boolean;
+  };
+  meta: {
+    textColor: string;
+    labelColor: string;
+    iconColor: string;
+    iconSize: number;
+  };
+}
+```
+
+## Usage Patterns
+
+### Text Type
+
+```tsx
+<EtSelect type="text" onPress={handlePress}>
+  <EtSelect.Value>Select</EtSelect.Value>
+</EtSelect>
+
+// String shorthand
+<EtSelect type="text" onPress={handlePress}>Select</EtSelect>
+```
+
+> **Note:** Text type renders only the value text + chevron. `LeadingContent` is ignored.
+
+### Field Type
+
+```tsx
+// Empty placeholder
+<EtSelect type="field" onPress={handlePress}>
+  <EtSelect.Value>Select</EtSelect.Value>
+</EtSelect>
+
+// With value (auto-filled appearance via Label)
+<EtSelect type="field" onPress={handlePress}>
+  <EtSelect.Label>Time</EtSelect.Label>
+  <EtSelect.Value>10:15 AM</EtSelect.Value>
+</EtSelect>
+
+// With country flag (dev composes the flag)
+<EtSelect type="field" onPress={handlePress}>
+  <EtSelect.Label>Country of residence</EtSelect.Label>
+  <EtSelect.LeadingContent>
+    <EtCountryFlag isoCode="GB" size={20} />
+  </EtSelect.LeadingContent>
+  <EtSelect.Value>United Kingdom</EtSelect.Value>
+</EtSelect>
+
+// Disabled
+<EtSelect type="field" onPress={handlePress} disabled>
+  <EtSelect.Label>Country</EtSelect.Label>
+  <EtSelect.Value>United Kingdom</EtSelect.Value>
+</EtSelect>
+
+// Readonly (locked value, normal colors, no chevron) — pair with i18n'd accessibilityHint
+<EtSelect
+  type="field"
+  onPress={handlePress}
+  readonly
+  accessibilityHint={t('payee.country_locked_hint')}
+>
+  <EtSelect.Label>Account country</EtSelect.Label>
+  <EtSelect.LeadingContent>
+    <EtCountryFlag isoCode="DK" size={20} />
+  </EtSelect.LeadingContent>
+  <EtSelect.Value>Denmark</EtSelect.Value>
+</EtSelect>
+
+// Field with no chevron (rare — for custom triggers without affordance)
+<EtSelect type="field" onPress={handlePress} showChevron={false}>
+  <EtSelect.Value>Custom</EtSelect.Value>
+</EtSelect>
+```
+
+### Readonly state (field only)
+
+`readonly` provides a third interaction state alongside enabled/disabled, for values that are
+**locked but not unavailable** (e.g. DKK accounts where country is fixed to Denmark).
+
+| Slot                   | Enabled                | Readonly                  | Disabled         | Disabled + Readonly         |
+| ---------------------- | ---------------------- | ------------------------- | ---------------- | --------------------------- |
+| Value text (filled)    | `carbon900`            | `carbon900`               | `carbon300`      | `carbon300`                 |
+| Value text (empty)     | `carbon500`            | `carbon500`               | `carbon300`      | `carbon300`                 |
+| Label                  | `carbon500`            | `carbon500`               | `carbon300`      | `carbon300`                 |
+| Chevron icon           | `carbon500`            | _(hidden)_                | `carbon300`      | `carbon300` (visible)       |
+| Pressable              | enabled                | enabled (handler no-ops)  | `disabled={true}`| `disabled={true}`           |
+| Haptics                | yes                    | no                        | no               | no                          |
+| `accessibilityState.disabled` | `false`         | `false`                   | `true`           | `true`                      |
+
+**Precedence (D5):** when both `disabled` and `readonly` are set, **`disabled` wins** — including
+chevron visibility. This keeps a globally-disabled form visually uniform across all fields.
+
+**Implementation note (D1):** `Pressable.disabled` is driven by `isDisabled`, never by `isReadonly`.
+Readonly relies on `handlePress` no-op'ing internally so platform a11y semantics
+(`accessibilityState.disabled = false`) stay honest. Setting `Pressable.disabled=true` would force
+VoiceOver / TalkBack to announce "disabled" regardless of the explicit accessibilityState override.
+
+### `showChevron` history
+
+Originally introduced in commit `632eccfa48` (EtPicker → EtSelect rename) with default `true`.
+**Removed** in commit `ddd0f29a4f` (Feb 2026) for "API simplicity / consistent visual appearance,"
+then **re-introduced** for PAH-384 to support the readonly state. Default remains `true` for
+backward compatibility. Do not remove without auditing consumers in send-payment-payee, KYC, and
+W8BEN forms — they may rely on `readonly` (which is implemented as a chevron-hide path).
+
+## Anti-patterns
+
+### ❌ Using dot notation on root component
+
+```tsx
+// BAD - root component is <EtSelect>, not <EtSelect.Field>
+<EtSelect.Field onPress={handlePress}>...</EtSelect.Field>
+```
+
+**Fix:** Use the `type` prop:
+
+```tsx
+<EtSelect type="field" onPress={handlePress}>
+  ...
+</EtSelect>
+```
+
+### ❌ Using for form input
+
+```tsx
+// BAD - EtSelect is not an input field
+<EtSelect type="field" onPress={() => {}}>
+  <EtSelect.Value>{userInput}</EtSelect.Value>
+</EtSelect>
+```
+
+**Fix:** Use `EtInput` for text input. `EtSelect` is only for triggering selects/modals.
+
+### ❌ Using Label in text type
+
+```tsx
+// BAD - Label is only used in field type's filled state
+<EtSelect type="text" onPress={handlePress}>
+  <EtSelect.Label>Category</EtSelect.Label>
+  <EtSelect.Value>All</EtSelect.Value>
+</EtSelect>
+```
+
+**Fix:** `Label` is only used in field type. For text type, use just `Value`.
+
+### ❌ Hardcoding English a11y strings for readonly state
+
+```tsx
+// BAD - accessibilityValue is not part of EtSelectProps (won't compile).
+// Even if it were, hardcoded English a11y text breaks non-EN locales.
+<EtSelect type="field" onPress={...} readonly accessibilityValue={{ text: 'read-only' }}>
+```
+
+**Fix:** `EtSelect` deliberately omits `accessibilityValue` from its API to prevent hardcoded
+strings at the component level. Consumers pass an i18n'd `accessibilityHint` describing the
+locked state, so non-English locales hear the right string:
+
+```tsx
+<EtSelect
+  type="field"
+  onPress={...}
+  readonly
+  accessibilityHint={t('send_payment.payee.field.country_locked_hint')}
+>
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` (via `useSelectConfig`) - provides theme colors
+- `EtText` - text rendering in subcomponents and fallback
+- `EtoroIcon` - chevron-down trailing icon
+- `SelectContext` - shares `{ state, meta }` with compound subcomponents
+
+### External Dependencies
+
+- `expo-haptics` - haptic feedback on press
+- `react-native` - `Pressable`, `View`, `StyleSheet`
+
+### Design System Integration
+
+Colors map to V2 carbon tokens via `useEtoroTheme().colors`. Slot → token:
+
+| Slot | V2 token |
+| --- | --- |
+| Text type value / icon (idle) | `carbon900` |
+| Field type placeholder + chevron (idle, empty) | `carbon500` |
+| Field type filled value | `carbon900` |
+| Field type label (filled) + chevron (filled) | `carbon500` |
+| All disabled (text / label / icon) | `carbon300` |
+| Field background overlay | `${carbon900}0D` (carbon900 at ~5% opacity) |
+
+- **Typography**:
+  - Text type: `heading-large` (22px, semibold, lh 28, ls -0.25)
+  - Field: `heading-compact` (18px, medium, lh 24)
+  - Field (filled) label: `body-secondary-medium` (14px, medium, lh 20)
+- **Icons**: 24px for text type, 20px for field (chevron-down only)
+- **Layout**:
+  - Text: flexible width, 28px min-height, gap 4px (X1)
+  - Field (empty): 335px default width, 68px height, 12px radius, borderless
+  - Field (filled): 335px default width, 68px height, 8px radius, borderless
+- **Spacing**: X1 (4), X2 (8), X3 (12), X5 (20), X7 (28), X17 (68)
+
+### Behavior deltas (V1 → V2)
+
+The strict-Figma migration to V2 (`45107:26668`) introduced three intentional visual changes beyond the token swap:
+
+1. **Field background** flips from a solid surface (`bgNeutralPrimary` — white in light, near-black in dark) to a translucent `carbon900` overlay at ~5% (`#1B1E210D`), so the field now blends into whatever surface it sits on.
+2. **1px border removed entirely.** The previous reverse-polarity ternary (`disabled` stronger than `enabled`) is gone — `borderWidth: 0` on both `fieldContainer` and `filledContainer`. Figma "Field" state is borderless.
+3. **`CONTENT_OPACITY = 0.8` removed.** The inner row no longer dims to 80%; placeholder + chevron render at full opacity, with `carbon500` providing the muted tone via the token instead of a runtime opacity multiplier.
+
+## Related Context
+
+- `EtInput (components/input/)` - For text input (not selection)
+- `EtCountryFlag (components/country-flag/)` - Country flag component (composed by dev)
+- `EtBottomSheetV2 (components/overlays/bottom-sheet-v2/)` - Common select UI container
+- `EtText (foundations/text/)` - Text component used internally
+- `EtoroIcon (foundations/icon-assets/)` - Chevron-down icon

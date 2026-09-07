@@ -1,0 +1,384 @@
+---
+description: Agent guide for EtSection - flexible section container with Title, SelectTitle, Chips, Pagination, and Content subcomponents for consistent section-based layouts. e.g. for watchlist headers with filter chips, carousels with pagination dots, static content blocks with titles
+alwaysApply: false
+---
+
+# EtSection Component
+
+## Purpose & Scope
+
+`EtSection` is a flexible section container component for the eToro design system. It provides consistent layout for section-based UI patterns with:
+
+- **Static title** (`EtSection.Title`) - Simple heading text
+- **Pressable select title** (`EtSection.SelectTitle`) - Title with chevron for pickers/selectors
+- **Chips group** (`EtSection.Chips`) - Wraps EtChipsGroupV2 with auto fadeColor
+- **Pagination dots** (`EtSection.Pagination`) - Wraps EtPagination with section defaults (size="small", color="neutral")
+- **Flexible content area** (`EtSection.Content`) - Container for custom content (lists, text, etc.)
+
+**Does NOT handle:**
+
+- State management for selectors (parent component controls this)
+- Content rendering (you provide the content)
+- Background styling (transparent by default)
+- Section-level padding (consumer controls outer padding)
+
+## Entry Points & Contracts
+
+### `EtSection` (main component)
+
+```tsx
+<EtSection
+  title?: string              // Shorthand for static title
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {children}
+</EtSection>
+```
+
+### `EtSection.Title`
+
+```tsx
+<EtSection.Title
+  style?: StyleProp<TextStyle>
+  testID?: string
+>
+  {string | ReactNode}
+</EtSection.Title>
+```
+
+### `EtSection.SelectTitle`
+
+```tsx
+<EtSection.SelectTitle
+  text: string                 // Required - title text
+  onPress: () => void          // Required - opens picker/selector
+  haptics?: boolean            // default: true
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+  accessibilityHint?: string
+/>
+```
+
+Note: Uses EtSelect with variant="text" internally.
+
+### `EtSection.Chips`
+
+```tsx
+<EtSection.Chips
+  items: ChipsGroupItem[]     // Required - chip items
+  selectionMode?: 'none' | 'single' | 'multi'
+  value?: string | null | string[]
+  onChange?: (value) => void
+  layout?: 'scroll' | 'wrap'  // default: 'scroll'
+  gap?: number                // default: X2 (8px)
+  fadeColor?: string          // default: theme bgNeutralPrimary
+  haptics?: boolean           // default: true
+  ...EtChipsGroupV2Props
+/>
+```
+
+### `EtSection.Pagination`
+
+```tsx
+<EtSection.Pagination
+  totalPages: number                          // Required - total number of pages
+  currentPage: number | SharedValue<number>   // Required - current page (0-indexed)
+  size?: 'small' | 'large'                   // default: 'small' (overrides EtPagination default of 'large')
+  color?: 'neutral' | 'primary'              // default: 'neutral'
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+/>
+```
+
+Note: Wraps EtPagination with section-appropriate defaults. Use with `usePagination` hook for scroll-driven carousels.
+
+### `EtSection.Content`
+
+```tsx
+<EtSection.Content
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {ReactNode}
+</EtSection.Content>
+```
+
+## Layout Specs
+
+| Property               | Value        | Token         |
+| ---------------------- | ------------ | ------------- |
+| Gap (between elements) | 12px         | X3            |
+| Title style            | heading-large | 22px semibold |
+
+## Usage Patterns
+
+### Static title with chips
+
+```tsx
+<EtSection>
+  <EtSection.Title>My Watchlist</EtSection.Title>
+  <EtSection.Chips items={chips} selectionMode="single" value={selected} onChange={setSelected} />
+</EtSection>
+```
+
+### Select title with chips (pressable)
+
+```tsx
+const [selectedPeriod, setSelectedPeriod] = useState('1M');
+
+<EtSection>
+  <EtSection.SelectTitle text={selectedPeriod} onPress={() => openPeriodPicker()} accessibilityHint="Opens period selector" />
+  <EtSection.Chips items={filterChips} selectionMode="single" value={selected} onChange={setSelected} />
+</EtSection>;
+```
+
+### Static title with custom content
+
+```tsx
+<EtSection>
+  <EtSection.Title>About eToro</EtSection.Title>
+  <EtSection.Content>
+    <EtText>Custom content here...</EtText>
+  </EtSection.Content>
+</EtSection>
+```
+
+### Shorthand with title prop
+
+```tsx
+<EtSection title="Quick Section">
+  <EtSection.Chips items={chips} ... />
+</EtSection>
+```
+
+### Title with carousel and pagination
+
+```tsx
+import { EtSection, usePagination } from 'etoro-ui';
+import Animated from 'react-native-reanimated';
+
+const CARD_WIDTH = 300;
+const CARD_GAP = 8;
+const SNAP_INTERVAL = CARD_WIDTH + CARD_GAP;
+
+const { currentPageAnimated, scrollHandler } = usePagination({
+  totalPages: 5,
+  itemWidth: SNAP_INTERVAL,
+});
+
+<EtSection>
+  <EtSection.Title>Featured</EtSection.Title>
+  <Animated.FlatList
+    horizontal
+    data={items}
+    onScroll={scrollHandler}
+    scrollEventThrottle={16}
+    snapToInterval={SNAP_INTERVAL}
+    decelerationRate="fast"
+    renderItem={renderItem}
+  />
+  <EtSection.Pagination totalPages={5} currentPage={currentPageAnimated} />
+</EtSection>;
+```
+
+Note: The FlatList and Pagination are direct children of EtSection, so the section's `gap: X3` (12px) applies between them automatically.
+
+### Full-width breakout pattern
+
+When the page has horizontal padding (e.g. `padding: 16`), use `marginHorizontal: -PAGE_PADDING` on Chips or a carousel FlatList to make them scroll edge-to-edge. Add `contentContainerStyle={{ paddingHorizontal: PAGE_PADDING }}` to align the first item with the title instead of the screen edge.
+
+**Edge-to-edge** (first item at screen edge):
+
+```tsx
+const PAGE_PADDING = 16;
+
+<EtSection>
+  <EtSection.Title>Watchlist</EtSection.Title>
+  <EtSection.Chips items={chips} selectionMode="single" value={selected} onChange={setSelected} style={{ marginHorizontal: -PAGE_PADDING }} />
+</EtSection>;
+```
+
+**Padded** (first item aligned with title):
+
+```tsx
+<EtSection>
+  <EtSection.Title>Watchlist</EtSection.Title>
+  <EtSection.Chips
+    items={chips}
+    selectionMode="single"
+    value={selected}
+    onChange={setSelected}
+    style={{ marginHorizontal: -PAGE_PADDING }}
+    contentContainerStyle={{ paddingHorizontal: PAGE_PADDING }}
+  />
+</EtSection>
+```
+
+The same pattern applies to carousel FlatLists and EtSection.Pagination:
+
+```tsx
+<Animated.FlatList
+  horizontal
+  style={{ marginHorizontal: -PAGE_PADDING }}
+  contentContainerStyle={{ paddingHorizontal: PAGE_PADDING }}
+  snapToInterval={SNAP_INTERVAL}
+  ...
+/>
+<EtSection.Pagination
+  style={{ marginHorizontal: -PAGE_PADDING }}
+  ...
+/>
+```
+
+### Section without content (title only)
+
+```tsx
+<EtSection>
+  <EtSection.Title>Section Header</EtSection.Title>
+</EtSection>
+```
+
+## Anti-patterns
+
+### Do NOT nest multiple titles
+
+```tsx
+// BAD - only one title per section
+<EtSection>
+  <EtSection.Title>Title 1</EtSection.Title>
+  <EtSection.SelectTitle text="Title 2" onPress={fn} />
+</EtSection>
+
+// GOOD - choose one title type
+<EtSection>
+  <EtSection.SelectTitle text="Select Period" onPress={fn} />
+  <EtSection.Content>...</EtSection.Content>
+</EtSection>
+```
+
+### Do NOT use title prop with Title subcomponent
+
+```tsx
+// BAD - redundant
+<EtSection title="My Title">
+  <EtSection.Title>Another Title</EtSection.Title>
+</EtSection>
+
+// GOOD - use one approach
+<EtSection title="My Title">
+  <EtSection.Chips items={chips} ... />
+</EtSection>
+```
+
+### Do NOT use EtChipsGroupV2 directly in Content
+
+```tsx
+// BAD - use EtSection.Chips instead
+<EtSection>
+  <EtSection.Title>Filters</EtSection.Title>
+  <EtSection.Content>
+    <EtChipsGroupV2 items={chips} ... />
+  </EtSection.Content>
+</EtSection>
+
+// GOOD - use dedicated Chips subcomponent
+<EtSection>
+  <EtSection.Title>Filters</EtSection.Title>
+  <EtSection.Chips items={chips} ... />
+</EtSection>
+```
+
+### Do NOT use EtPagination directly in Content
+
+```tsx
+// BAD - use EtSection.Pagination instead
+<EtSection>
+  <EtSection.Title>Featured</EtSection.Title>
+  <EtSection.Content>
+    <Carousel />
+    <EtPagination totalPages={5} currentPage={0} />
+  </EtSection.Content>
+</EtSection>
+
+// GOOD - use dedicated Pagination subcomponent
+<EtSection>
+  <EtSection.Title>Featured</EtSection.Title>
+  <Carousel />
+  <EtSection.Pagination totalPages={5} currentPage={currentPageAnimated} />
+</EtSection>
+```
+
+### Do NOT pass non-string to SelectTitle
+
+```tsx
+// BAD - SelectTitle uses text prop, not children
+<EtSection.SelectTitle onPress={fn}>
+  <View><Text>Title</Text></View>
+</EtSection.SelectTitle>
+
+// GOOD - use text prop
+<EtSection.SelectTitle text="Selected Option" onPress={fn} />
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors
+- `EtText` - underlying text component for Title
+- `EtSelect` - underlying component for SelectTitle (compact variant)
+- `EtPagination` - underlying component for Pagination
+- `SectionContext` - React context for passing state to subcomponents
+
+### External Dependencies
+
+- `react-native` - `View`, `StyleSheet`
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`)
+- Spacing uses design tokens (`X2`, `X3`, `X5` from `core/styles/spacing`)
+- Title uses `heading-large` text variant (22px semibold)
+
+## File Structure
+
+```text
+section/
+├── api/
+│   ├── index.ts           # Public type exports
+│   └── types.ts           # Type definitions
+├── context/
+│   ├── index.ts           # Context exports
+│   └── section-context.tsx
+├── subcomponents/
+│   ├── index.ts              # Subcomponent exports
+│   ├── section-chips.tsx     # Chips wrapper
+│   ├── section-content.tsx
+│   ├── section-pagination.tsx # Pagination wrapper
+│   ├── section-select-title.tsx
+│   └── section-title.tsx
+├── et-section.tsx         # Main component
+├── et-section.test.tsx    # Tests
+├── index.ts               # Public exports
+└── AGENTS.mdc              # This file
+```
+
+## Related Context
+
+- [EtChipsGroupV2](../../controls/chips-group-v2/AGENTS.mdc) - Wrapped by EtSection.Chips
+- [EtPagination](../../navigation/pagination/AGENTS.mdc) - Wrapped by EtSection.Pagination
+- [EtSelect](../../controls/select/AGENTS.mdc) - Used internally by SelectTitle
+- [EtHeader](../../header/AGENTS.mdc) - Similar compound component pattern
+- [EtListItem](../../list/list-item/AGENTS.mdc) - Can be used in Content area
+
+## Design System Integration
+
+V1 → V2 mapping for `EtSection`:
+
+| Slot | V1 token | V2 token |
+| --- | --- | --- |
+| Section title text color (context) | `textPrimaryNeutral` | `carbon900` |
+| `EtSection.Chips` default `fadeColor` | `bgNeutralPrimary` | `backgroundBase` |

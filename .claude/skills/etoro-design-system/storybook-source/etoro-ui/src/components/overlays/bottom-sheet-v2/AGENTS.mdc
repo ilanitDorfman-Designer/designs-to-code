@@ -1,0 +1,913 @@
+---
+description: Agent guide for EtBottomSheet v2 - modal bottom sheet wrapper around @gorhom/bottom-sheet with compound API, Header with Title/Action subcomponents, scrollable content, virtualized lists (FlatList/SectionList/FlashList), and sticky footer
+alwaysApply: false
+---
+
+# EtBottomSheet v2 Component
+
+## Purpose & Scope
+
+`EtBottomSheet` is a wrapper around `@gorhom/bottom-sheet` (v5+) that provides a compound component API for modal bottom sheets in the eToro design system.
+
+### Features
+
+- **Compound component pattern**: `EtBottomSheet.Header`, `EtBottomSheet.Content`, `EtBottomSheet.Footer`
+- **Floating drag handle**: Handle indicator floats above the sheet background
+- **Header compound API**: `Header.Title` and `Header.Action` for flexible header composition
+- **Dynamic sizing**: Automatically sizes to content height
+- **Scrollable content**: Uses `BottomSheetScrollView` when `scrollable={true}`
+- **Virtualized lists**: `List`, `SectionList`, and `FlashList` for large datasets
+- **Sticky footer**: Keyboard-aware footer using `BottomSheetFooter`
+- **Loading state**: Built-in loading indicator with custom placeholder support
+- **Accessibility**: Screen reader announcements, reduced motion support
+- **Animation presets**: `smooth`, `bouncy` (default), `fast` open/close spring styles
+
+### Does NOT Handle
+
+- Form validation logic (handle in parent)
+- Navigation logic (use with router/navigation handlers)
+- Custom `WithSpringConfig` overrides (use `animationPreset` presets instead)
+- Initial open state via `index` prop (use imperative API instead)
+
+### Opening and Closing the Sheet
+
+The sheet is controlled imperatively via the `bottomSheetRef`:
+
+```tsx
+const sheetRef = useRef<BottomSheetModal | null>(null);
+
+// Open the sheet
+sheetRef.current?.present();
+
+// Close the sheet
+sheetRef.current?.dismiss();
+
+// Snap to specific index
+sheetRef.current?.snapToIndex(1);
+```
+
+**Note:** The library's `index` prop for initial state is not exposed. This is intentional - `BottomSheetModal` is designed to start closed and be presented imperatively. Use `present()` in a `useEffect` if you need the sheet open on mount.
+
+## IMPORTANT: BottomSheetModalProvider Requirement
+
+**The `EtBottomSheet` component MUST be used within a `BottomSheetModalProvider`** from `@gorhom/bottom-sheet`.
+
+```tsx
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+// At app root:
+<GestureHandlerRootView style={{ flex: 1 }}>
+  <BottomSheetModalProvider>
+    <YourApp />
+  </BottomSheetModalProvider>
+</GestureHandlerRootView>;
+```
+
+## Header Patterns
+
+### Compound Header (recommended for most cases)
+
+Use `Header.Title` and `Header.Action` subcomponents for title + actions.
+
+```tsx
+<EtBottomSheet.Header>
+  <EtBottomSheet.Header.Title>Settings</EtBottomSheet.Header.Title>
+  <EtBottomSheet.Header.Action onPress={handleClose} accessibilityLabel="Close">
+    <EtoroIcon icon={{ iconName: 'close' }} appearance={{ size: 24 }} />
+  </EtBottomSheet.Header.Action>
+</EtBottomSheet.Header>
+```
+
+**Title** renders centered `heading-compact` text. Accepts all `EtTextProps` for overrides.
+**Action** is a `Pressable` with `accessibilityRole="button"` and `hitSlop=10`. Always positioned at the trailing edge.
+
+### Title Only
+
+```tsx
+<EtBottomSheet.Header>
+  <EtBottomSheet.Header.Title>Select Option</EtBottomSheet.Header.Title>
+</EtBottomSheet.Header>
+```
+
+### Close Button Only (no title)
+
+```tsx
+<EtBottomSheet.Header>
+  <EtBottomSheet.Header.Action onPress={handleClose} accessibilityLabel="Close">
+    <EtoroIcon icon={{ iconName: 'close' }} appearance={{ size: 24 }} />
+  </EtBottomSheet.Header.Action>
+</EtBottomSheet.Header>
+```
+
+### Custom Content Header
+
+For fully custom header content (e.g., search input), pass arbitrary children. The Header falls back to default padding without compound layout.
+
+```tsx
+<EtBottomSheet.Header>
+  <BottomSheetTextInput placeholder="Search..." value={searchText} onChangeText={setSearchText} />
+</EtBottomSheet.Header>
+```
+
+### Mixed Custom + Action
+
+You can mix custom content with `Header.Action` — Action children are separated to the trailing edge.
+
+```tsx
+<EtBottomSheet.Header>
+  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+    <Image source={{ uri: imageUrl }} style={styles.logo} />
+    <EtText variant="label-primary-semibold">{symbolName}</EtText>
+  </View>
+  <EtBottomSheet.Header.Action onPress={handleClose} accessibilityLabel="Close">
+    <EtoroIcon icon={{ iconName: 'close' }} appearance={{ size: 24 }} />
+  </EtBottomSheet.Header.Action>
+</EtBottomSheet.Header>
+```
+
+## Entry Points & Contracts
+
+### `EtBottomSheet` (main component)
+
+```tsx
+<EtBottomSheet
+  // Required
+  bottomSheetRef={RefObject<BottomSheetModal>}
+
+  // Sizing
+  snapPoints?: (number | string)[]              // disables dynamic sizing
+  enableDynamicSizing?: boolean                 // default: true
+  maxDynamicContentSize?: number                // auto-calculated for scrollable
+  topInset?: number                             // top safe area inset
+  bottomInset?: number                          // bottom safe area inset
+
+  // Behavior
+  onOpen?: () => void                           // called when sheet opens
+  onClose?: () => void                          // called when sheet closes (animation complete)
+  onBeforeClose?: () => boolean | void          // called before close, return false to prevent
+  onChange?: (index: number) => void            // sheet snap point changed
+  onAnimate?: (fromIndex, toIndex, fromPosition, toPosition) => void  // animation start with positions
+  closeOnBackdrop?: boolean                     // default: true
+  enablePanDownToClose?: boolean                // default: true (note: library default is false)
+  animationPreset?: 'smooth' | 'bouncy' | 'fast' // default: 'bouncy' — open/close spring style
+  enableContentPanningGesture?: boolean         // default: true
+  enableHandlePanningGesture?: boolean          // default: true
+  enableOverDrag?: boolean                      // default: true
+  overDragResistanceFactor?: number             // default: 2.5
+  detached?: boolean                            // default: false (floating modal)
+
+  // Animation (Advanced)
+  animatedIndex?: SharedValue<number>           // for external animation coordination
+  animatedPosition?: SharedValue<number>        // for position-based effects (parallax)
+
+  // Keyboard
+  keyboardBehavior?: 'extend' | 'fillParent' | 'interactive'  // default: 'interactive'
+  keyboardBlurBehavior?: 'none' | 'restore'     // default: 'none'
+  enableBlurKeyboardOnGesture?: boolean         // default: false
+  android_keyboardInputMode?: 'adjustPan' | 'adjustResize'    // default: 'adjustPan'
+
+  // Appearance
+  showHandle?: boolean                          // default: true
+  backdrop?: BackdropConfig                     // { enabled?, onPress? } - enabled by default
+  style?: StyleProp<ViewStyle>                  // sheet container style
+  backgroundStyle?: StyleProp<ViewStyle>        // sheet background style
+  loading?: boolean                             // default: false
+
+  // Accessibility
+  accessibilityLabel?: string
+  testID?: string
+>
+  {children}
+</EtBottomSheet>
+```
+
+### Subcomponents
+
+#### `EtBottomSheet.Header`
+
+Compound component with `Title` and `Action` subcomponents.
+
+```tsx
+<EtBottomSheet.Header style?: StyleProp<ViewStyle> testID?: string>
+  <EtBottomSheet.Header.Title>Title</EtBottomSheet.Header.Title>
+  <EtBottomSheet.Header.Action onPress={fn} accessibilityLabel="Close">
+    <EtoroIcon icon={{ iconName: 'close' }} />
+  </EtBottomSheet.Header.Action>
+</EtBottomSheet.Header>
+```
+
+**Header.Title** - Extends `EtTextProps`. Defaults: `variant="heading-compact"`, `numberOfLines=1`, `textAlign: 'center'`.
+**Header.Action** - Extends `PressableProps`. Defaults: `accessibilityRole="button"`, `hitSlop=10`. Always trailing.
+
+#### `EtBottomSheet.Content`
+
+```tsx
+<EtBottomSheet.Content
+  scrollable?: boolean              // default: false
+  loadingPlaceholder?: ReactNode    // custom loading UI
+  style?: StyleProp<ViewStyle>
+>
+  {children}
+</EtBottomSheet.Content>
+```
+
+#### `EtBottomSheet.Footer`
+
+```tsx
+<EtBottomSheet.Footer
+  transparent?: boolean              // default: false — drop the solid background layer
+  scrollFade?: SharedValue<number>   // gradient above the footer, see below
+>
+  {/* EtButtonV2 components */}
+</EtBottomSheet.Footer>
+```
+
+Note: Footer styling is handled by the parent component. Content is rendered with consistent padding and safe area handling — do not re-add `paddingTop` in your footer content.
+
+`scrollFade` dissolves scrolling content into the footer when there is more to scroll. Pass the remaining distance to the bottom (`max(contentHeight - viewportHeight - scrollOffset, 0)`), fed by the sheet's `onScroll`, `onContentSizeChange` and `onScrollViewLayout`. The last two matter: RN never fires `onScroll` from mounting alone, so without them the gradient stays invisible until the first scroll gesture. The footer positions the gradient above its own opaque box — placing it inside the footer paints the surface color over the identical background and shows nothing.
+
+## Usage Patterns
+
+### Basic sheet with title and close
+
+```tsx
+const sheetRef = useRef<BottomSheetModal | null>(null);
+
+<EtBottomSheet bottomSheetRef={sheetRef} onClose={handleClose}>
+  <EtBottomSheet.Header>
+    <EtBottomSheet.Header.Title>Select Option</EtBottomSheet.Header.Title>
+    <EtBottomSheet.Header.Action onPress={() => sheetRef.current?.dismiss()} accessibilityLabel="Close">
+      <EtoroIcon icon={{ iconName: 'close' }} appearance={{ size: 24 }} />
+    </EtBottomSheet.Header.Action>
+  </EtBottomSheet.Header>
+  <EtBottomSheet.Content>
+    <YourContent />
+  </EtBottomSheet.Content>
+  <EtBottomSheet.Footer>
+    <EtButtonV2 variant="primary-filled" onPress={handleConfirm}>
+      Confirm
+    </EtButtonV2>
+  </EtBottomSheet.Footer>
+</EtBottomSheet>;
+```
+
+### Search header with custom content
+
+```tsx
+<EtBottomSheet
+  bottomSheetRef={sheetRef}
+  snapPoints={['60%']}
+>
+  <EtBottomSheet.Header>
+    <BottomSheetTextInput value={searchText} onChangeText={setSearchText} placeholder="Search..." />
+  </EtBottomSheet.Header>
+  <EtBottomSheet.Content scrollable>
+    <SearchResults items={filteredItems} />
+  </EtBottomSheet.Content>
+</EtBottomSheet>
+```
+
+### Confirmation dialog (prevent accidental close)
+
+```tsx
+<EtBottomSheet bottomSheetRef={sheetRef} closeOnBackdrop={false} enablePanDownToClose={false}>
+  <EtBottomSheet.Header>
+    <EtBottomSheet.Header.Title>Delete Account?</EtBottomSheet.Header.Title>
+  </EtBottomSheet.Header>
+  <EtBottomSheet.Content>
+    <EtText>This action cannot be undone.</EtText>
+  </EtBottomSheet.Content>
+  <EtBottomSheet.Footer>
+    <EtButtonV2 variant="negative-filled" onPress={handleDelete}>
+      Delete
+    </EtButtonV2>
+    <EtButtonV2 variant="primary-subtle" onPress={handleCancel}>
+      Cancel
+    </EtButtonV2>
+  </EtBottomSheet.Footer>
+</EtBottomSheet>
+```
+
+### Multiple actions in header
+
+```tsx
+<EtBottomSheet bottomSheetRef={sheetRef}>
+  <EtBottomSheet.Header>
+    <EtBottomSheet.Header.Title>Edit Profile</EtBottomSheet.Header.Title>
+    <EtBottomSheet.Header.Action onPress={handleReset} accessibilityLabel="Reset">
+      <EtoroIcon icon={{ iconName: 'refresh' }} />
+    </EtBottomSheet.Header.Action>
+    <EtBottomSheet.Header.Action onPress={handleSave} accessibilityLabel="Save">
+      <EtText style={{ color: colors.primary600 }}>Save</EtText>
+    </EtBottomSheet.Header.Action>
+  </EtBottomSheet.Header>
+  <EtBottomSheet.Content>
+    <ProfileForm />
+  </EtBottomSheet.Content>
+</EtBottomSheet>
+```
+
+## Anti-patterns
+
+### Using subcomponents outside EtBottomSheet
+
+```tsx
+// BAD - context not available
+<EtBottomSheet.Content>
+  <Text>Content</Text>
+</EtBottomSheet.Content>
+```
+
+### Multiple of same subcomponent
+
+```tsx
+// BAD - throws runtime error
+<EtBottomSheet bottomSheetRef={sheetRef}>
+  <EtBottomSheet.Header>...</EtBottomSheet.Header>
+  <EtBottomSheet.Header>...</EtBottomSheet.Header> // Error!
+</EtBottomSheet>
+```
+
+### Missing BottomSheetModalProvider
+
+```tsx
+// BAD - will not render
+<App>
+  <EtBottomSheet bottomSheetRef={sheetRef}>...</EtBottomSheet>
+</App>
+
+// GOOD - wrap with provider
+<GestureHandlerRootView style={{ flex: 1 }}>
+  <BottomSheetModalProvider>
+    <App>
+      <EtBottomSheet bottomSheetRef={sheetRef}>...</EtBottomSheet>
+    </App>
+  </BottomSheetModalProvider>
+</GestureHandlerRootView>
+```
+
+### Using regular TextInput
+
+```tsx
+// BAD - won't work properly
+<EtBottomSheet.Header>
+  <TextInput placeholder="Search..." />
+</EtBottomSheet.Header>
+
+// GOOD - use BottomSheetTextInput
+<EtBottomSheet.Header>
+  <BottomSheetTextInput placeholder="Search..." />
+</EtBottomSheet.Header>
+```
+
+### Using index prop for initial state
+
+```tsx
+// BAD - index prop is not exposed; BottomSheetModal starts closed by design
+<EtBottomSheet bottomSheetRef={sheetRef} index={0}>
+  ...
+</EtBottomSheet>;
+
+// GOOD - use imperative API to open on mount
+useEffect(() => {
+  sheetRef.current?.present();
+}, []);
+```
+
+### Using regular FlatList/ScrollView inside Content
+
+```tsx
+// BAD - gesture conflicts, scrolling won't work properly
+<EtBottomSheet.Content scrollable>
+  <FlatList data={items} renderItem={...} />
+</EtBottomSheet.Content>
+
+// GOOD - use EtBottomSheet.List for virtualized lists
+<EtBottomSheet.List
+  data={items}
+  renderItem={...}
+  keyExtractor={(item) => item.id}
+/>
+
+// GOOD - for horizontal lists, use react-native-gesture-handler
+import { FlatList } from 'react-native-gesture-handler';
+```
+
+### Stacking sheets (sub-sheets opened from within another sheet)
+
+When you present a second `EtBottomSheet` while another is already open
+(e.g. a fee/info sub-sheet opened from a confirmation sheet), gorhom's
+default `stackBehavior='switch'` **minimizes the parent sheet**. In
+hosting trees where the parent's `onClose` resets the data backing the
+sheet (a common controller pattern), the parent's React tree unmounts,
+which then unmounts the freshly-presented sub-sheet too — the sub-sheet
+appears to "close right away".
+
+Pass `stackBehavior="push"` on the sub-sheet so the parent stays
+presented underneath:
+
+```tsx
+// BAD - nesting sheets in the JSX tree (parent owns the JSX, but gorhom
+// renders modals via a Portal, so the JSX position doesn't control z-index).
+<EtBottomSheet bottomSheetRef={parentRef}>
+  <EtBottomSheet.Content>
+    <EtBottomSheet bottomSheetRef={childRef}>...</EtBottomSheet>
+  </EtBottomSheet.Content>
+</EtBottomSheet>;
+
+// GOOD - render sub-sheet as a sibling, present imperatively, and use
+// stackBehavior="push" so the parent stays mounted/presented behind it.
+function ParentSheet({ parentRef }) {
+  const childRef = useRef<BottomSheetModal | null>(null);
+  return (
+    <>
+      <EtBottomSheet bottomSheetRef={parentRef}>...</EtBottomSheet>
+      <EtBottomSheet bottomSheetRef={childRef} stackBehavior="push">
+        ...
+      </EtBottomSheet>
+    </>
+  );
+}
+```
+
+`stackBehavior` accepts:
+
+- `'switch'` (default) — minimize the previous modal; restore on dismiss.
+  Suited to sheet-to-sheet **navigation** where the second sheet replaces
+  the first in the user's focus.
+- `'push'` — stack on top without touching the previous modal. Use for
+  **tooltip / info sub-sheets** so the parent stays presented and its
+  state is left alone.
+- `'replace'` — fully dismiss the previous modal (its `onClose` fires) and
+  do not restore it.
+
+### Dismissing without handling keyboard
+
+```tsx
+// BAD - keyboard may stay visible after sheet closes
+const handleSubmit = () => {
+  sheetRef.current?.dismiss();
+};
+
+// GOOD - dismiss keyboard before closing sheet
+import { Keyboard } from 'react-native';
+
+const handleSubmit = () => {
+  Keyboard.dismiss();
+  sheetRef.current?.dismiss();
+};
+```
+
+## Architecture
+
+### Component Structure
+
+```text
+EtBottomSheet
+├── EtBottomSheetHandle (floating drag indicator - internal)
+├── EtBottomSheet.Header (compound: Title + Action subcomponents)
+│   ├── EtBottomSheet.Header.Title (centered heading text)
+│   ├── EtBottomSheet.Header.Action (trailing pressable)
+│   └── Custom children (backward compat)
+├── EtBottomSheet.Content (scrollable or static)
+│   ├── BottomSheetView (non-scrollable)
+│   └── BottomSheetScrollView (scrollable)
+├── EtBottomSheet.List / SectionList / FlashList (virtualized)
+└── EtBottomSheet.Footer (sticky, keyboard-aware)
+    └── BottomSheetFooter
+```
+
+### File Structure
+
+```text
+bottom-sheet-v2/
+├── et-bottom-sheet.tsx              # Main component
+├── et-bottom-sheet.test.tsx         # Unit tests
+├── index.ts                         # Public exports
+├── AGENTS.mdc                        # This documentation
+├── api/
+│   ├── index.ts                     # Public API exports
+│   ├── props.types.ts               # Main component props
+│   ├── context.types.ts             # Context types
+│   └── common.types.ts              # Shared types + library re-exports
+├── context/
+│   ├── index.ts                     # Context exports
+│   ├── et-bottom-sheet-config.context.tsx  # Static config context
+│   ├── et-bottom-sheet-state.context.tsx   # Dynamic state context
+│   └── et-bottom-sheet.provider.tsx        # Combined provider
+├── hooks/
+│   ├── index.ts                     # Hook exports
+│   ├── use-et-bottom-sheet-backdrop.tsx
+│   ├── use-et-bottom-sheet-footer.tsx
+│   ├── use-et-bottom-sheet-footer.const.ts  # Footer-specific constants
+│   └── use-et-bottom-sheet-footer.test.tsx
+├── utils/
+│   ├── index.ts                     # Utility exports
+│   ├── et-bottom-sheet.const.ts     # Shared constants (animation, layout)
+│   ├── et-bottom-sheet-children.ts          # Child parsing utility
+│   ├── et-bottom-sheet-children.test.tsx
+│   ├── et-bottom-sheet-layout.tsx           # Layout render helper
+│   └── et-bottom-sheet-layout.test.tsx
+└── subcomponents/
+    ├── index.ts                     # Subcomponent exports
+    ├── background/
+    │   ├── index.ts
+    │   └── et-bottom-sheet-background.tsx   # Custom background for floating effect
+    ├── handle/
+    │   ├── index.ts
+    │   ├── et-bottom-sheet-handle.tsx       # Floating handle component
+    │   ├── et-bottom-sheet-handle.types.ts
+    │   └── et-bottom-sheet-handle.const.ts  # Handle-specific constants
+    ├── header/
+    │   ├── index.ts
+    │   ├── et-bottom-sheet-header.tsx       # Compound: Title + Action
+    │   ├── et-bottom-sheet-header.types.ts
+    │   ├── et-bottom-sheet-header.const.ts
+    │   └── et-bottom-sheet-header.test.tsx
+    ├── content/
+    │   ├── index.ts
+    │   ├── et-bottom-sheet-content.tsx
+    │   ├── et-bottom-sheet-content.types.ts
+    │   ├── et-bottom-sheet-content.const.ts
+    │   └── et-bottom-sheet-content.test.tsx
+    ├── list/
+    │   ├── index.ts                 # Re-exports all list components
+    │   ├── et-bottom-sheet-list.const.ts  # Shared list constants
+    │   ├── flat/
+    │   │   ├── index.ts
+    │   │   ├── et-bottom-sheet-list.tsx
+    │   │   ├── et-bottom-sheet-list.types.ts
+    │   │   └── et-bottom-sheet-list.test.tsx
+    │   ├── section/
+    │   │   ├── index.ts
+    │   │   ├── et-bottom-sheet-section-list.tsx
+    │   │   ├── et-bottom-sheet-section-list.types.ts
+    │   │   └── et-bottom-sheet-section-list.test.tsx
+    │   └── flash/
+    │       ├── index.ts
+    │       ├── et-bottom-sheet-flash-list.tsx
+    │       ├── et-bottom-sheet-flash-list.types.ts
+    │       └── et-bottom-sheet-flash-list.test.tsx
+    └── footer/
+        ├── index.ts
+        ├── et-bottom-sheet-footer.tsx
+        └── et-bottom-sheet-footer.types.ts
+```
+
+## Known Limitations
+
+### TextInput Focus
+
+Regular `TextInput` components don't work properly inside the sheet due to gesture handling conflicts. Always use `BottomSheetTextInput` from `@gorhom/bottom-sheet`.
+
+### Virtualized Lists
+
+For large lists, use virtualized components for optimal performance:
+
+#### `EtBottomSheet.List` (FlatList-based)
+
+```tsx
+<EtBottomSheet bottomSheetRef={sheetRef} snapPoints={['50%', '90%']}>
+  <EtBottomSheet.Header>
+    <EtBottomSheet.Header.Title>Select Item</EtBottomSheet.Header.Title>
+  </EtBottomSheet.Header>
+  <EtBottomSheet.List
+    data={items}
+    renderItem={({ item }) => <ItemRow item={item} />}
+    keyExtractor={(item) => item.id}
+    ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+  />
+  <EtBottomSheet.Footer>
+    <EtButtonV2 variant="primary-filled" onPress={handleConfirm}>
+      Confirm
+    </EtButtonV2>
+  </EtBottomSheet.Footer>
+</EtBottomSheet>
+```
+
+#### `EtBottomSheet.SectionList` (Grouped data)
+
+```tsx
+<EtBottomSheet.SectionList
+  sections={[
+    { title: 'Favorites', data: favorites },
+    { title: 'Recent', data: recent },
+  ]}
+  renderItem={({ item }) => <ItemRow item={item} />}
+  renderSectionHeader={({ section }) => <SectionHeader title={section.title} />}
+  keyExtractor={(item) => item.id}
+/>
+```
+
+#### `EtBottomSheet.FlashList` (Best performance)
+
+For the best performance with very large lists (100+ items), use FlashList which provides cell recycling:
+
+```tsx
+<EtBottomSheet bottomSheetRef={sheetRef} snapPoints={['50%', '90%']}>
+  <EtBottomSheet.Header>
+    <EtBottomSheet.Header.Title>Select Asset</EtBottomSheet.Header.Title>
+  </EtBottomSheet.Header>
+  <EtBottomSheet.FlashList
+    data={assets}
+    renderItem={({ item }) => <AssetRow asset={item} />}
+    keyExtractor={(item) => item.id}
+  />
+</EtBottomSheet>
+```
+
+**FlashList Notes:**
+
+- **`keyExtractor` is required** - Enforced at compile-time to prevent visual glitches during upward scrolling
+- **Automatic size estimation** - No need to provide `estimatedItemSize`
+- **Improved blank cell handling** - Better algorithms for preventing blank cells
+- **Simplified API** - `overrideItemLayout` only supports `span` (size is automatic)
+
+**When to use each:**
+
+- **`EtBottomSheet.Content`** - Static content, forms (< 20 items)
+- **`EtBottomSheet.Content scrollable`** - Simple scrollable content (20-50 items)
+- **`EtBottomSheet.List`** - Standard virtualized lists (50-100 items)
+- **`EtBottomSheet.SectionList`** - Grouped/sectioned data (50-100 items)
+- **`EtBottomSheet.FlashList`** - Maximum performance (100+ items)
+
+**Note:** When using `EtBottomSheet.List`, `EtBottomSheet.SectionList`, or `EtBottomSheet.FlashList`, always provide `snapPoints`. The component will automatically disable dynamic sizing for virtualized lists and log a warning in development mode if `snapPoints` is not provided.
+
+### Close Callback Timing
+
+The component provides two close-related callbacks with different timing:
+
+- **`onBeforeClose`** - Fires BEFORE dismiss animation starts. Return `false` to prevent close.
+- **`onClose`** - Fires AFTER dismiss animation completes.
+
+```tsx
+<EtBottomSheet
+  onBeforeClose={() => {
+    if (hasUnsavedChanges) {
+      showConfirmation();
+      return false; // Prevent close
+    }
+  }}
+  onClose={() => {
+    // Cleanup after sheet is fully closed
+    resetForm();
+  }}
+/>
+```
+
+## Troubleshooting
+
+### Pressables/Touchables not working on Android
+
+Due to gesture handler wrapping, standard React Native touchables may not work. Use touchables from `@gorhom/bottom-sheet`:
+
+```tsx
+import { TouchableOpacity, TouchableHighlight, TouchableWithoutFeedback } from '@gorhom/bottom-sheet';
+```
+
+### Horizontal ScrollView/FlatList not working on Android
+
+Use `ScrollView` and `FlatList` from `react-native-gesture-handler` instead of `react-native`:
+
+```tsx
+import { ScrollView, FlatList } from 'react-native-gesture-handler';
+```
+
+### TextInput keyboard issues
+
+Always use `BottomSheetTextInput` instead of regular `TextInput`:
+
+```tsx
+import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
+
+<BottomSheetTextInput placeholder="Search..." value={text} onChangeText={setText} />;
+```
+
+### Content panning gesture conflicts with scrollable content
+
+The component auto-disables `enableContentPanningGesture` so the scroll container owns vertical gestures, but the rule is **platform + content-type specific**:
+
+| Content type | Detection | iOS | Android |
+| --- | --- | --- | --- |
+| Scrollable `Content` (`scrollable={true}`) | `isScrollable` | Content panning **disabled** (scroll view owns gestures) | Content panning **left enabled** — disabling it makes the backdrop's press-to-close win inner taps (PAH-430) |
+| Virtualized list (`List` / `SectionList` / `FlashList`) | `isVirtualizedList` | Default (enabled) | Content panning **disabled** — otherwise the sheet's content-pan gesture captures swipes before `BottomSheetFlatList` and the list cannot scroll |
+| Static `Content` (`BottomSheetView`) | neither | Default (enabled) | Default (enabled) |
+
+In all cases an explicit `enableContentPanningGesture` prop from the consumer wins. Users can still close via the handle or backdrop.
+
+**Why Android virtualized lists are special:** PAH-430 only mandates keeping content panning enabled for **static / scrollable-`Content`** layouts on Android. Virtualized lists are a separate code path (`renderBottomSheetLayout`) with the opposite symptom — leaving content panning enabled blocks list scroll — so they get their own Android rule.
+
+### Sheet not rendering
+
+Ensure you have wrapped your app with the required providers:
+
+```tsx
+<GestureHandlerRootView style={{ flex: 1 }}>
+  <BottomSheetModalProvider>
+    <YourApp />
+  </BottomSheetModalProvider>
+</GestureHandlerRootView>
+```
+
+### Dynamic sizing not working with lists
+
+Virtualized lists (List, SectionList, FlashList) require fixed `snapPoints` because their content height is not known upfront. **The component automatically disables dynamic sizing when virtualized lists are detected** and logs a warning in development mode.
+
+```tsx
+// WORKS but logs warning - dynamic sizing auto-disabled
+<EtBottomSheet bottomSheetRef={sheetRef}>
+  <EtBottomSheet.List data={items} ... />
+</EtBottomSheet>
+
+// RECOMMENDED - explicitly provide snapPoints
+<EtBottomSheet bottomSheetRef={sheetRef} snapPoints={['50%', '90%']}>
+  <EtBottomSheet.List data={items} ... />
+</EtBottomSheet>
+```
+
+### Gesture conflicts with custom components
+
+Wrap components that have their own gesture handling with `NativeViewGestureHandler`:
+
+```tsx
+import { NativeViewGestureHandler } from 'react-native-gesture-handler';
+
+<NativeViewGestureHandler disallowInterruption={true}>
+  <YourGestureComponent />
+</NativeViewGestureHandler>;
+```
+
+### Nested/Stacked Bottom Sheets
+
+When presenting multiple sheets, use the library's default stack behavior. Sheets presented via `present()` will automatically stack on top of each other. The `BottomSheetModalProvider` manages the stack order.
+
+## Accessibility
+
+The component provides comprehensive accessibility support:
+
+### Screen Reader Announcements
+
+The sheet automatically announces state changes to screen readers:
+
+- **On open**: Announces `"{sheetName} opened"` when the sheet becomes visible
+- **On close**: Announces `"{sheetName} closed"` after the dismiss animation completes
+
+The `sheetName` is derived from (in priority order):
+
+1. `accessibilityLabel` prop
+2. Title text from `EtBottomSheet.Header.Title` (auto-extracted)
+3. Fallback: "Bottom sheet"
+
+The "opened" announcement is delayed to ensure the sheet is visually present. Delay is preset-specific (`smooth`: 350ms, `bouncy`: 450ms, `fast`: 250ms) and instant when reduced motion is enabled. If preset spring configs change, update `ACCESSIBILITY_ANNOUNCEMENT_DELAYS` in `utils/et-bottom-sheet.const.ts`.
+
+### Modal Behavior
+
+The sheet uses `accessibilityViewIsModal={true}`, which:
+
+- Focuses screen reader on sheet content
+- Prevents interaction with content behind the sheet
+- Follows iOS VoiceOver and Android TalkBack best practices
+
+### Reduced Motion Support
+
+The component respects the user's reduced motion preference:
+
+- Uses `useReducedMotion` hook to detect system preference
+- Applies `REDUCED_MOTION_SPRING_CONFIG` regardless of `animationPreset` (faster, no bounce)
+- Maintains functionality while reducing visual motion
+
+### Animation Presets
+
+`animationPreset` controls spring physics for open, close, and snap transitions (distinct from `enableOverDrag`, which only affects manual drag past snap points):
+
+| Preset | Feel | `overshootClamping` |
+|--------|------|---------------------|
+| `bouncy` (default) | Slight overshoot on settle — v1 default | `false` |
+| `smooth` | Subtle spring, minimal bounce | `false` |
+| `fast` | Snappy, overdamped | `true` |
+
+Reduced motion overrides all presets.
+
+### Touch Targets
+
+All interactive elements use `Header.Action` which provides:
+
+- Minimum touch targets with proper hit slop configuration
+- `accessibilityRole="button"` by default
+- `accessibilityLabel` support
+
+## Design Decisions
+
+### No built-in haptic feedback
+
+The old `SimpleHeader` included `expo-haptics` (`Haptics.impactAsync(ImpactFeedbackStyle.Light)`) on close button press. This was intentionally removed during the compound header refactor. `Header.Action` is a generic pressable primitive — haptic feedback is a UX-level concern that belongs in the consumer's `onPress` handler, not baked into the component. Consumers that want haptics can add them explicitly:
+
+```tsx
+<EtBottomSheet.Header.Action
+  onPress={() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    sheetRef.current?.dismiss();
+  }}
+  accessibilityLabel="Close"
+>
+```
+
+## Development Notes
+
+### Internal Architecture
+
+The component uses utility functions for child processing:
+
+**`parseBottomSheetChildren`** - A pure utility function that separates children into header, content, and footer sections:
+
+- Validates that only one of each subcomponent type is present
+- Extracts metadata like `isScrollable` and `headerTitle` for accessibility
+- `headerTitle` is extracted by inspecting Header's children for a `Header.Title` subcomponent
+- **Error handling:**
+  - Uses `console.error` (not throw) to match React patterns - allows partial rendering
+  - In development: Also logs stack trace via `console.trace` for easier debugging
+  - Warns if sheet has no content at all (dev only)
+
+**`renderBottomSheetLayout`** - A render helper function (returns JSX but contains no hooks or state) that renders the appropriate layout structure based on content type:
+
+- **Virtualized list**: Header fixed, list handles scrolling, padding via `contentContainerStyle`
+- **Scrollable content**: Header fixed, `BottomSheetScrollView` for content, padding spacer as View
+- **Static content**: `BottomSheetView` for dynamic sizing, all content inline
+
+**Bottom padding behavior** (all layout modes):
+
+- With footer: Uses footer height as padding to prevent content from being hidden
+- Without footer: Uses `max(20px, bottomInset)` to ensure content clears the home indicator
+
+### Context Architecture
+
+The component uses a **split context pattern** for performance optimization:
+
+**`BottomSheetConfigContext`** - Static configuration (rarely changes):
+
+- `showHandle`, `closeOnBackdrop`, `enablePanDownToClose`
+- Theme colors (extracted subset, not entire colors object)
+- Components consuming only config won't re-render on state changes
+
+**`BottomSheetStateContext`** - Dynamic state (changes on interaction):
+
+- `isPresented`, `isLoading`
+- `dismiss()`, `handleClose()` callbacks
+- Components consuming state will re-render when presentation changes
+
+### Constants Architecture
+
+Constants are **co-located with their components** for better maintainability:
+
+**Shared constants** (`utils/et-bottom-sheet.const.ts`):
+
+- Animation configs (`BOUNCY_SPRING_CONFIG`, `SMOOTH_SPRING_CONFIG`, `FAST_SPRING_CONFIG`, `REDUCED_MOTION_SPRING_CONFIG`)
+- Layout (`PADDING_VERTICAL`, `SCROLLABLE_CONTENT_MAX_HEIGHT_RATIO`)
+
+**Component-specific constants** (co-located):
+
+- `header/et-bottom-sheet-header.const.ts`:
+  - `HEADER_PADDING_HORIZONTAL` (X6 / 24px)
+  - `HEADER_PADDING_VERTICAL` (X3 / 12px)
+  - `HEADER_MIN_HEIGHT` (44px — aligned with iOS HIG minimum touch target)
+
+### React 19 & React Compiler
+
+This component is designed for React 19 with React Compiler enabled.
+
+**React 19 patterns used:**
+
+- **Function components only**: No class components or legacy patterns
+- **Modern ref handling**: Uses `RefObject<BottomSheetModal | null>` with explicit null (React 19 strict mode compatible)
+- **JSX namespace**: Uses `React.JSX.Element` return type
+- **No `forwardRef`**: Refs passed via `bottomSheetRef` prop (recommended for imperative APIs in React 19)
+
+**React Compiler optimization:**
+
+This project has React Compiler enabled (`reactCompiler: true` in app.json).
+
+- Manual `useMemo`, `useCallback`, and `React.memo` calls have been **removed** from this component
+- The compiler automatically adds memoization where beneficial at build time
+- No manual memoization is needed - the compiler handles optimization
+
+## Dependencies
+
+### External
+
+- `@gorhom/bottom-sheet` v5+ - core implementation
+- `@shopify/flash-list` - high-performance virtualized lists
+- `react-native-reanimated` - animations
+- `react-native-gesture-handler` - gestures
+
+### Internal
+
+- `useEtoroTheme` - theme colors
+- `useReducedMotion` - accessibility preference detection
+- `EtText` - typography
+- `EtoroIcon` - icons
+
+## Related
+
+- `@gorhom/bottom-sheet` docs: [Documentation](https://gorhom.dev/react-native-bottom-sheet/)
+- `building-ui-components.mdc` - Design principles

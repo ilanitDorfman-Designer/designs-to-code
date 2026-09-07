@@ -1,0 +1,257 @@
+---
+description: Agent guide for EtUserProfileHeader - compound component displaying user profile info with avatar, name, username, copiers count, and formatted stats section
+alwaysApply: false
+---
+
+# EtUserProfileHeader Component
+
+## Purpose & Scope
+
+`EtUserProfileHeader` is a compound component for displaying user profile information and statistics. It uses a composition pattern for maximum extensibility.
+
+- **User profile display**: Avatar, name, username, copiers count
+- **Stats section**: AUM, Copiers, Followers, Following metrics
+- **Compound components**: `UserInfo`, `Stats`, `StatItem` subcomponents
+- **Context-based**: User data shared via React Context
+
+**Does NOT handle:**
+
+- Navigation logic
+- Press interactions
+- Follow/unfollow actions (use `EtSocialCard` for that)
+- Detailed user statistics or charts
+- Edit profile functionality
+
+## Entry Points & Contracts
+
+### `EtUserProfileHeader` (main component)
+
+```tsx
+<EtUserProfileHeader
+  user={user} // required - user profile info
+  accessibility={{
+    // optional - accessibility config
+    testID: 'user-profile-header',
+    accessibilityLabel: "Jessica's profile header",
+  }}
+>
+  <EtUserProfileHeader.UserInfo>
+    <EtUserProfileHeader.UserInfo.Avatar />
+    <EtUserProfileHeader.UserInfo.Name />
+    <EtUserProfileHeader.UserInfo.UserName />
+    <EtUserProfileHeader.UserInfo.Copiers />
+  </EtUserProfileHeader.UserInfo>
+  <EtUserProfileHeader.Stats>
+    <EtUserProfileHeader.StatItem label="AUM" value={user.stats.aum} />
+    <EtUserProfileHeader.StatItem label="Followers" value={user.stats.followers} />
+    <EtUserProfileHeader.StatItem label="Following" value={user.stats.following} />
+  </EtUserProfileHeader.Stats>
+</EtUserProfileHeader>
+```
+
+### Subcomponents
+
+| Subcomponent        | Props                                        | Description                                               |
+| ------------------- | -------------------------------------------- | --------------------------------------------------------- |
+| `UserInfo`          | `ViewProps` + `children`                     | Container for Avatar, Name, UserName, Copiers.            |
+| `UserInfo.Avatar`   | `alt: string`                                | Displays user avatar with translated accessibility label. |
+| `UserInfo.Name`     | none                                         | Displays user display name from context.                  |
+| `UserInfo.UserName` | none                                         | Displays username with @ prefix from context.             |
+| `UserInfo.Copiers`  | `text: string`                               | Displays formatted copiers text.                          |
+| `Stats`             | `ViewProps`                                  | Container for StatItem children with dividers.            |
+| `StatItem`          | `label: string, value: number` + `ViewProps` | Individual stat display with translated label.            |
+
+### Types
+
+| Type                     | Description                                            |
+| ------------------------ | ------------------------------------------------------ |
+| `UserProfileHeaderUser`  | `{ displayName, username, avatar, stats }`             |
+| `UserProfileHeaderStats` | `{ aum, copiers, followers, following }` - all numbers |
+| `UserInfoProps`          | `ViewProps` + `children`                               |
+| `AvatarProps`            | `{ alt }`                                              |
+| `CopiersProps`           | `{ text }`                                             |
+| `StatsProps`             | `ViewProps`                                            |
+| `StatItemProps`          | `{ label, value }` + `ViewProps`                       |
+
+## Usage Patterns
+
+### Standard usage (compound components)
+
+```tsx
+const user = {
+  displayName: 'Jessica Bale',
+  username: 'Jessicab',
+  avatar: 'https://example.com/avatar.jpg',
+  stats: {
+    aum: 1800000,
+    copiers: 38000,
+    followers: 42500,
+    following: 128,
+  },
+};
+
+<EtUserProfileHeader user={user}>
+  <EtUserProfileHeader.UserInfo>
+    <EtUserProfileHeader.UserInfo.Avatar alt="Jessica Bale's avatar" />
+    <EtUserProfileHeader.UserInfo.Name />
+    <EtUserProfileHeader.UserInfo.UserName />
+    <EtUserProfileHeader.UserInfo.Copiers text="38K copiers" />
+  </EtUserProfileHeader.UserInfo>
+  <EtUserProfileHeader.Stats>
+    <EtUserProfileHeader.StatItem label="AUM" value={user.stats.aum} />
+    <EtUserProfileHeader.StatItem label="Followers" value={user.stats.followers} />
+    <EtUserProfileHeader.StatItem label="Following" value={user.stats.following} />
+  </EtUserProfileHeader.Stats>
+</EtUserProfileHeader>;
+```
+
+### With custom styling and onLayout (for animations)
+
+```tsx
+<EtUserProfileHeader user={user}>
+  <EtUserProfileHeader.UserInfo style={{ marginBottom: 16 }} onLayout={(e) => console.log(e.nativeEvent.layout)}>
+    <EtUserProfileHeader.UserInfo.Avatar alt="User's avatar" />
+    <EtUserProfileHeader.UserInfo.Name />
+    <EtUserProfileHeader.UserInfo.UserName />
+    <EtUserProfileHeader.UserInfo.Copiers text="38K copiers" />
+  </EtUserProfileHeader.UserInfo>
+  <EtUserProfileHeader.Stats style={{ paddingHorizontal: 8 }} onLayout={(e) => console.log(e.nativeEvent.layout)} />
+</EtUserProfileHeader>
+```
+
+### Partial UserInfo (only name and username)
+
+```tsx
+<EtUserProfileHeader user={user}>
+  <EtUserProfileHeader.UserInfo>
+    <EtUserProfileHeader.UserInfo.Name />
+    <EtUserProfileHeader.UserInfo.UserName />
+  </EtUserProfileHeader.UserInfo>
+</EtUserProfileHeader>
+```
+
+### Custom stat items
+
+```tsx
+<EtUserProfileHeader user={user}>
+  <EtUserProfileHeader.UserInfo>
+    <EtUserProfileHeader.UserInfo.Avatar alt="User's avatar" />
+    <EtUserProfileHeader.UserInfo.Name />
+    <EtUserProfileHeader.UserInfo.UserName />
+    <EtUserProfileHeader.UserInfo.Copiers text="38K copiers" />
+  </EtUserProfileHeader.UserInfo>
+  <EtUserProfileHeader.Stats>
+    <EtUserProfileHeader.StatItem label="AUM" value={user.stats.aum} />
+    <EtUserProfileHeader.StatItem label="Copiers" value={user.stats.copiers} />
+  </EtUserProfileHeader.Stats>
+</EtUserProfileHeader>
+```
+
+## Anti-patterns
+
+### ❌ Passing formatted strings instead of numbers
+
+```tsx
+// BAD - pass raw numbers, not formatted strings
+stats: {
+  aum: '1.8M',      // ❌ should be 1800000
+  copiers: '38K',   // ❌ should be 38000
+}
+```
+
+**Fix:** Pass raw numbers. All values are auto-formatted using `formatNumber()`.
+
+### ❌ Using subcomponents outside provider
+
+```tsx
+// BAD - UserInfo must be inside EtUserProfileHeader
+<EtUserProfileHeader.UserInfo>
+  <EtUserProfileHeader.UserInfo.Avatar />
+</EtUserProfileHeader.UserInfo>
+```
+
+**Fix:** Always wrap subcomponents in `EtUserProfileHeader`.
+
+### ❌ Passing props to UserInfo subcomponents
+
+```tsx
+// BAD - subcomponents consume data from context, not props
+<EtUserProfileHeader.UserInfo.Name name={user.displayName} />
+<EtUserProfileHeader.UserInfo.Copiers count={user.stats.copiers} />
+```
+
+**Fix:** Subcomponents get data from context automatically. No props needed.
+
+```tsx
+// GOOD
+<EtUserProfileHeader user={user}>
+  <EtUserProfileHeader.UserInfo>
+    <EtUserProfileHeader.UserInfo.Name />
+    <EtUserProfileHeader.UserInfo.Copiers />
+  </EtUserProfileHeader.UserInfo>
+</EtUserProfileHeader>
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors
+- `EtText` - text component
+- `EtAvatar` - avatar component
+- `EtIconV2` - icon component (for dot separator)
+- `UserProfileContext` - shares user data to subcomponents
+- `formatNumber` - utility for K/M/B formatting
+- `getChildrenByType` - utility for filtering children by component type
+
+### External Dependencies
+
+- `react-native` - `View`, `StyleSheet`, `ViewProps`
+
+### Translation Keys (namespace: 'user')
+
+This component no longer uses translation keys directly. All text should be pre-translated and passed as props:
+
+- Avatar `alt` prop: Pass translated accessibility label
+- Copiers `text` prop: Pass formatted copiers text (e.g., "38K copiers")
+- StatItem `label` prop: Pass translated label text
+
+### Design System Integration
+
+- Colors from theme (`useEtoroTheme().colors`)
+- Background: `bgNeutralSecondary`
+- Text: `textPrimaryNeutral`, `textSecondaryNeutral`
+- Dividers: `dividerQuinarySecondary`
+- Avatar: `EtAvatar` (size 50)
+
+## Patterns & Pitfalls
+
+### Compound component pattern
+
+Subcomponents are exposed as static properties on the main component. User data is shared via React Context, so subcomponents don't need explicit user props.
+
+### UserInfo composition
+
+`UserInfo` uses `getChildrenByType` to filter and position its subcomponents:
+
+- `Avatar` is placed on the left
+- `Name`, `UserName`, and `Copiers` are placed in the details section
+- A dot separator (using `EtIconV2`) is automatically added between `UserName` and `Copiers`
+
+### All stat values are numbers
+
+All values (`aum`, `copiers`, `followers`, `following`) accept raw numbers and are auto-formatted.
+
+### Username without @
+
+Pass username without @ prefix. The component adds it automatically.
+
+### Extensibility via ViewProps
+
+All subcomponents extend `ViewProps`, allowing custom `style`, `onLayout`, `testID`, etc.
+
+## Related Context
+
+- `EtSocialCard (social/social-card/)` - Full social card with follow buttons
+- `EtAvatar (social/avatar/)` - Avatar component
+- `EtText (foundations/text/)` - Text component

@@ -1,0 +1,89 @@
+---
+description: Agent guide for EtAppLayout - web shell app-layout skeleton; pure slotted shell (SideMenu | TopPanel | Main | Aside) with the stable-navigator invariant
+alwaysApply: false
+---
+
+# EtAppLayout Component
+
+> Implementation status: skeleton + slots + the Aside rail/panel machine complete
+
+## Purpose & Scope
+
+`EtAppLayout` is the web shell's app-layout skeleton: left menu + top panel + main content + an optional right-side panel (aside), composed as slots. It is:
+
+- **Web-only by placement, not by code** — mounted from the shell's `.web.tsx` layout; no `Platform.OS` branches anywhere in the family.
+- **A pure slotted shell** — it does NOT render `EtSideMenu`/`EtTopPanel` internally. Their wiring (items config, handlers, analytics, i18n) is app logic and stays in the shell; the kit owns exactly what is new: the three-column skeleton, the `backgroundBase` page canvas, sibling-scoped z-placement, and the aside's geometry/animation machine.
+- **Content-agnostic** — every slot hosts arbitrary children; `Aside`'s `children` is the whole content-injection contract (real per-screen content later replaces the shell's mock without kit rework).
+
+## Architecture
+
+```text
+Row                                  ← backgroundBase page canvas, flex-row
+├─ SideMenu slot                     ← zIndex: Z_SHELL_MENU
+└─ Content column (flex:1)           ← Z_SHELL_CONTENT
+   ├─ TopPanel slot
+   └─ Body row (flex:1, flex-row)
+      ├─ Main (flex:1)               ← z 0
+      └─ Aside slot                  ← zIndex: Z_SHELL_ASIDE
+```
+
+- **Stable-navigator invariant (hard):** the root renders this full skeleton UNCONDITIONALLY — slot presence toggles content INSIDE stable Views, so crossing 768 / full-bleed routes / aside presence can never remount `Main`'s children (the navigator). Locked by the stable-skeleton tests; never make a skeleton View conditional.
+- **Slot classification via `__SLOT_TYPE` statics** (`hooks/use-app-layout-children.ts`, the `use-side-menu-children` precedent) — statics survive minification, unlike split-layout's older displayName matching. SideMenu/TopPanel/Main are pure content carriers (they render only their children); `Aside` is the rail/panel machine (`subcomponents/app-layout-aside.tsx`).
+- **Two sibling-scoped z scopes** (`core/styles/z-index.ts`): SideMenu slot vs content column (shell row), and Aside slot vs Main (Body row). On RNW every View is its own stacking context, so the values are meaningless outside their own sibling scope; the menu's fixed backdrop still out-paints the aside.
+
+## The Aside machine
+
+The `EtSideMenu` placeholder/surface pattern mirrored to the end edge, minus its hardest subsystems (no backdrop, no focusout close — outside clicks MUST land on main content). Escape DOES close the panel, but only in overlay mode (`<1440`, where it covers Main) and via the shared web dismiss stack (`core/web/use-dismissable` — topmost open layer only), reporting `'escape'` and returning focus to the toggle:
+
+```text
+Aside slot View (Z_SHELL_ASIDE)
+└─ placeholder                ← in-flow; width 60 (rail) / animated 60↔panelW when inline-open; marginStart = gap (8 overlay / 12 inline)
+   └─ surface                 ← absolute END-anchored (end:0), animated width, overflow hidden, start-corner radii 16, constant shadow
+      ├─ panel layer          ← fixed tier width, end-anchored, padding X8, backgroundElevated; hosts `children`; role="complementary"
+      ├─ rail layer           ← absolute fill Pressable (role button, press-to-expand), overlayBottom + backdrop-blur (web twin)
+      └─ toggle               ← ONE persistent button outside both layers; glyph+position interpolate on progress; aria-expanded
+```
+
+- **Controlled** (`expanded`/`onExpandedChange(next, 'button' | 'rail' | 'escape')`). Expand via toggle OR a press anywhere on the closed rail body; **close is button-only, plus Escape while in overlay mode**. The kit senses its own geometry: `useBreakpoint(BREAKPOINT_TABLET)` (self-suppression), `useBreakpoint(BREAKPOINT_ASIDE_INLINE)` (overlay/inline), `useBreakpointTier(ASIDE_WIDTH_TIERS)` (panel width).
+- **Overlay `<1440`**: the placeholder stays 60 wide, the surface grows leftward OVER Main — no backdrop, only the surface's own bounds catch pointer events. **Inline `≥1440`**: the placeholder width animates with the surface, reflowing Main responsively.
+- **Snap contract**: button/rail changes animate (280ms decelerate / 200ms accelerate, the left-menu constants); breakpoint-driven changes SNAP. A 1440 crossing snaps immediately, and `use-aside-animation` flags the shell's follow-up reset (`expanded := isInline`, one commit later) to snap too. **The shell MUST reset expanded to the breakpoint default on every crossing** — the kit's flag logic relies on that contract.
+- **Hover affordance**: closed-rail surface widens 60→68 (80ms in / 160ms out, `useHover` shared between rail and toggle); overlays the gap, never reflows Main.
+- **Layers stay permanently mounted**, crossfading with direction-aware progress windows; `aria-hidden`/`tabIndex`/`focusable` flip with the state (RNW ignores `focusable={false}` — explicit tabIndex, side-menu precedent), and so does the panel layer's `pointerEvents`. The RAIL layer's `pointerEvents` instead trails the GEOMETRY (`progress` back at 0, snap paths included): it fills the surface, which keeps covering Main for the length of a collapse, so a rail that went live with `expanded` would swallow content clicks and re-expand. After a rail-press expand the root moves focus to the persistent toggle (the rail went inert) and clears the hover state (a `pointerleave` at a just-inerted element is not guaranteed across engines). Reduced motion: geometry snaps + single 80ms crossfade.
+- **Documented deviation (the original design asked for `EtButton` Ghost/Small):** the toggle is a styled `Pressable` (`aside-toggle.tsx`, the side-menu-toggle precedent) because `EtButton` throws on any child that is not a string/`Label`/`Icon`/`IconV2` (`et-button.tsx:73-76`) and so cannot host the progress-driven animated glyph. Consequence: no EtButton Ghost hover/pressed feedback on the toggle.
+- **Panel children leave the tab order for real**: the panel layer goes `display: none` once the collapse SETTLES (driven by the same settled state as the rail's pointerEvents), and the whole surface is display-cut while suppressed. aria-hidden/pointerEvents alone do NOT remove descendants from the web tab order, and the panel hosts arbitrary app content the kit cannot tab-gate per element. The crossfade still sees the layer: the cut applies only at settle, and expand restores it synchronously (same render as `expanded` flipping).
+- **RTL**: logical start/end styles throughout; shadow x-offset, drift and glyph mirror via `useLayoutDirection()` sign. Radii use CSS-logical names (`borderStartStartRadius`) — reanimated's web driver drops RN-logical names on animated styles; the family never mixes conventions.
+- **testIDs**: placeholder = `testID`, plus `-surface` / `-rail` / `-panel` / `-toggle`.
+- **DOM-only mechanics** live in `subcomponents/web-styles.web.ts` (backdrop blur + `-webkit-` prefix) with a no-op base twin — never `Platform.OS`.
+
+## Entry Points & Contracts
+
+See `api/types.ts` for the full prop types. Public surface:
+
+| Export | Contract |
+| --- | --- |
+| `EtAppLayout` | root; props `{ children, style?, testID? }` — `style` lands on the root row |
+| `EtAppLayout.SideMenu` | optional slot `{ children, accessibilityLabel? }` — the shell's composed `EtSideMenu`; the slot View IS the labelled `navigation` landmark (default 'Main navigation', shell passes translated copy; `EtSideMenu` itself carries no landmark — nesting two doubles the AT entry) |
+| `EtAppLayout.TopPanel` | optional slot `{ children }` — the shell's composed `EtTopPanel` |
+| `EtAppLayout.Main` | required slot `{ children }` — the navigator / screen |
+| `EtAppLayout.Aside` | optional slot — the controlled rail/panel machine: `{ children, expanded, onExpandedChange, toggleAccessibilityLabels?, testID? }` |
+
+`AppLayoutAsideTrigger` (`'button' | 'rail' | 'escape'`) is exported for the shell's analytics funnel (the shell adds `breakpoint-default` itself — the kit only reports user-driven changes).
+
+Skeleton Views carry fixed testIDs: `et-app-layout-side-menu` / `-content` / `-top-panel` / `-body` / `-main` / `-aside`.
+
+## Aside width scale (constants.ts)
+
+The open-panel widths 344/360/368/376/384 (via `useBreakpointTier(ASIDE_WIDTH_TIERS)`), rail 60/68, and gaps 8 (`X2`, overlay) / 12 (`X3`, inline at `BREAKPOINT_ASIDE_INLINE` 1440) are a SECOND width scale keyed to existing breakpoint tokens but living in this family's `constants.ts` — the next panel must reuse it, not invent a third. Animation constants deliberately duplicate the left menu's values (side-menu keeps its own family-internal); the constants parity test locks them together.
+
+## Anti-Patterns
+
+- No `Platform.OS` branches — mount from `.web.tsx` layouts; DOM-only mechanics go in `.web.tsx` twins with no-op bases.
+- Don't render `EtSideMenu`/`EtTopPanel` inside the kit — slots only; wiring stays in the shell.
+- Don't make any skeleton View conditional on slot presence — the stable-navigator invariant.
+- No `entering`/`exiting` layout animations anywhere in this family (the split-layout crash vector).
+- Don't reuse `Z_SHELL_*` values outside their documented sibling scope.
+- No public context — two props don't justify one (v1 decision); internal animation context only if aside subcomponents need `progress`.
+
+## Test-coverage boundary
+
+Jest (kit preset, mocked theme): skeleton structure + z placement, slot classification (unknown/falsy/multiple children), stable-skeleton invariant (Main children never remount as slot presence toggles, including structurally different consumer JSX — the classifiers pin per-slot keys because `Children.toArray` auto-keys are positional; effect-count + fiber-instance probes), module-eval smoke (whole family imports under the RN preset — the native boot-crash guard for barrel eager-requires), aside machine structure + controlled contract (rail-press expand, button-only close, a11y/tabIndex flips, tier widths/gaps via `Dimensions.set`, sub-768 suppression). NOT coverable in Jest — Playwright hardening (later step): overlay click-through, hover 60→68, 1440 crossing snaps, reduced motion, backdrop-filter passthrough.

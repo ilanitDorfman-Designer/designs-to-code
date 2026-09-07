@@ -1,0 +1,349 @@
+---
+description: Agent guide for EtFooter - flexible page footer with Section/Scrollable/Link subcomponents for disclaimers, buttons, checkboxes, and horizontal pagination. e.g. use for form footers with continue button, terms acceptance with links, paginated onboarding steps
+alwaysApply: false
+---
+
+# EtFooter - Agent Guide
+
+> **AI Assistant Documentation**: This guide helps AI coding assistants understand and work with the EtFooter component.
+
+## Overview
+
+The `EtFooter` component is a flexible, compound component for building page footers in the eToro React Native application. It provides a consistent layout for disclaimers, buttons, checkboxes, pagination, and navigation links.
+
+## Key Architecture
+
+- **Compound Component Pattern**: `EtFooter.Section`, `EtFooter.Scrollable`, `EtFooter.Link`
+- **Section-Based Layout**: Children are stacked vertically with consistent spacing
+- **Scrollable Support**: Vertical scrolling for tall content or horizontal pagination with dots
+- **Theme Integration**: Uses `useEtoroTheme` for background color and link styling
+
+## Project Structure
+
+```text
+libs/etoro-ui/src/components/layout/footer/
+├── et-footer.tsx              # Main compound component
+├── index.ts                   # Public exports
+├── api/
+│   ├── index.ts               # Type exports
+│   └── types.ts               # TypeScript interfaces
+├── subcomponents/
+│   ├── index.ts               # Component exports
+│   ├── footer-section.tsx     # Section wrapper
+│   ├── footer-scrollable.tsx  # Scrollable container (vertical/horizontal)
+│   └── footer-link.tsx        # Individual link
+├── hooks/
+│   ├── index.ts               # Hook exports
+│   └── use-footer-scrollable.ts # Horizontal scroll state management
+├── __tests__/
+│   └── et-footer.test.tsx     # Component tests
+└── AGENTS.mdc                  # This file
+```
+
+## Usage Patterns
+
+### Links Only
+
+For links, use `EtFooter.Section` with a row layout style:
+
+```tsx
+const styles = StyleSheet.create({
+  linksRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+});
+
+<EtFooter>
+  <EtFooter.Section style={styles.linksRow}>
+    <EtFooter.Link onPress={handleTerms}>Terms</EtFooter.Link>
+    <EtFooter.Link onPress={handlePrivacy}>Privacy</EtFooter.Link>
+  </EtFooter.Section>
+</EtFooter>;
+```
+
+### With Disclaimer and Button
+
+```tsx
+<EtFooter>
+  <EtFooter.Section>
+    <EtText variant="body-tiny-regular">By continuing, you agree to our terms of service.</EtText>
+  </EtFooter.Section>
+  <EtFooter.Section>
+    <EtButton stretch onPress={handleContinue}>
+      Continue
+    </EtButton>
+  </EtFooter.Section>
+</EtFooter>
+```
+
+### Two Buttons (Main + Subtle)
+
+```tsx
+const styles = StyleSheet.create({
+  buttonsColumn: {
+    gap: 12,
+  },
+});
+
+<EtFooter>
+  <EtFooter.Section style={styles.buttonsColumn}>
+    <EtButton stretch onPress={handleConfirm}>
+      Confirm
+    </EtButton>
+    <EtButton stretch variant="primary-subtle" onPress={handleCancel}>
+      Cancel
+    </EtButton>
+  </EtFooter.Section>
+</EtFooter>;
+```
+
+### With Checkbox
+
+```tsx
+<EtFooter>
+  <EtFooter.Section>
+    <EtCheckbox value={checked} onChange={setChecked}>
+      <EtCheckbox.Label>I agree to the terms</EtCheckbox.Label>
+    </EtCheckbox>
+  </EtFooter.Section>
+  <EtFooter.Section>
+    <EtButton stretch onPress={handleSubmit} disabled={!checked}>
+      Submit
+    </EtButton>
+  </EtFooter.Section>
+</EtFooter>
+```
+
+### With Horizontal Pagination
+
+Use `direction="horizontal"` for paginated content with dots:
+
+```tsx
+const styles = StyleSheet.create({
+  noPadding: {
+    padding: 0,
+  },
+  footerActions: {
+    paddingHorizontal: 36,
+    paddingVertical: 24,
+  },
+});
+
+<EtFooter contentStyle={styles.noPadding}>
+  <EtFooter.Scrollable direction="horizontal">
+    <EtFooter.Section>
+      <EtText>Page 1 content</EtText>
+    </EtFooter.Section>
+    <EtFooter.Section>
+      <EtText>Page 2 content</EtText>
+    </EtFooter.Section>
+  </EtFooter.Scrollable>
+  <EtFooter.Section style={styles.footerActions}>
+    <EtButton stretch onPress={handleContinue}>
+      Continue
+    </EtButton>
+  </EtFooter.Section>
+</EtFooter>;
+```
+
+### With Vertical Scrolling
+
+Use default `direction="vertical"` (or omit) for tall content:
+
+```tsx
+<EtFooter>
+  <EtFooter.Scrollable>
+    <EtFooter.Section>
+      <EtText>Long disclaimer text that may need scrolling...</EtText>
+    </EtFooter.Section>
+  </EtFooter.Scrollable>
+  <EtFooter.Section>
+    <EtButton stretch onPress={handleAccept}>
+      Accept
+    </EtButton>
+  </EtFooter.Section>
+</EtFooter>
+```
+
+## Component API
+
+### EtFooter (Root)
+
+| Prop         | Type                 | Description                           |
+| ------------ | -------------------- | ------------------------------------- |
+| children     | ReactNode            | Footer content                        |
+| style        | StyleProp<ViewStyle> | Custom container styles               |
+| contentStyle | StyleProp<ViewStyle> | Custom styles for the content wrapper |
+| testID       | string               | Test identifier                       |
+| ...rest      | ViewProps            | Additional View props forwarded       |
+
+### EtFooter.Section
+
+| Prop     | Type                 | Description             |
+| -------- | -------------------- | ----------------------- |
+| children | ReactNode            | Content elements        |
+| style    | StyleProp<ViewStyle> | Custom container styles |
+| testID   | string               | Test identifier         |
+| ...rest  | ViewProps            | Additional View props   |
+
+**For links layout**, use this style:
+
+```tsx
+const styles = StyleSheet.create({
+  linksRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+  },
+});
+
+<EtFooter.Section style={styles.linksRow}>...</EtFooter.Section>;
+```
+
+### EtFooter.Scrollable
+
+| Prop         | Type                       | Default    | Description                            |
+| ------------ | -------------------------- | ---------- | -------------------------------------- |
+| children     | ReactNode                  | -          | Content (Sections for horizontal mode) |
+| direction    | 'vertical' \| 'horizontal' | 'vertical' | Scroll direction                       |
+| style        | StyleProp<ViewStyle>       | -          | Custom container styles                |
+| contentStyle | StyleProp<ViewStyle>       | -          | Content styles (vertical mode only)    |
+| testID       | string                     | -          | Test identifier                        |
+| ...rest      | ViewProps                  | -          | Additional View props                  |
+
+Features:
+
+- **Vertical mode** (default): Simple ScrollView for tall content
+- **Horizontal mode**: Paginated scroll with snap-to-page and pagination dots
+
+### EtFooter.Link
+
+| Prop     | Type                 | Description                |
+| -------- | -------------------- | -------------------------- |
+| children | ReactNode            | Link text                  |
+| onPress  | () => void           | Press handler              |
+| style    | StyleProp<ViewStyle> | Custom styles              |
+| testID   | string               | Test identifier            |
+| ...rest  | PressableProps       | Additional Pressable props |
+
+Features:
+
+- Brand-colored text
+- Touchable with padding for better hit area
+- `accessibilityRole="link"` for accessibility
+
+## Default Styling
+
+- **Container padding**: `paddingHorizontal: X9 (36)`, `paddingVertical: X6 (24)`
+- **Section gap**: `X4 (16)` between Section blocks
+- **Background**: `colors.backgroundBase` from theme
+
+## Common Tasks
+
+### Adding a New Subcomponent
+
+1. Create the component in `subcomponents/`:
+
+   ```typescript
+   export const FooterCustom = memo<FooterCustomProps>(({ children, style, ...rest }) => (
+     <View {...rest} style={[styles.container, style]}>{children}</View>
+   ));
+   FooterCustom.displayName = 'EtFooter.Custom';
+   ```
+
+2. Add props interface to `api/types.ts` (extend ViewProps)
+3. Export from `subcomponents/index.ts`
+4. Add to `EtFooter` compound component in `et-footer.tsx`
+
+### Customizing Content Padding
+
+Override via `contentStyle` prop:
+
+```tsx
+const styles = StyleSheet.create({
+  customPadding: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+});
+
+<EtFooter contentStyle={styles.customPadding}>...</EtFooter>;
+```
+
+### Removing Default Padding for Horizontal Scrollable Content
+
+When using `Scrollable direction="horizontal"`, remove root padding:
+
+```tsx
+const styles = StyleSheet.create({
+  noPadding: {
+    padding: 0,
+  },
+});
+
+<EtFooter contentStyle={styles.noPadding}>
+  <EtFooter.Scrollable direction="horizontal">...</EtFooter.Scrollable>
+</EtFooter>;
+```
+
+## Best Practices for AI Assistants
+
+1. **Use compound components**: Always use `EtFooter.Section`, `EtFooter.Link`, etc.
+2. **For links row layout**: Use `EtFooter.Section` with `styles.linksRow` (define in StyleSheet: `{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }`)
+3. **Add testIDs**: Include testID on root and key interactive elements
+4. **Use EtButton with stretch**: For full-width buttons in footers, use `stretch` prop
+5. **Place links at bottom**: Links typically go as the last Section block
+6. **Use Scrollable for pagination**: Use `direction="horizontal"` for paginated content with dots
+7. **Forward rest props**: All components support additional props via `...rest`
+8. **Respect default padding**: Only override when necessary for special layouts
+
+## Troubleshooting
+
+**Q: Pagination dots not showing**
+A: Ensure `Scrollable direction="horizontal"` has more than one `Section` child
+
+**Q: Section not full width**
+A: Section is centered by default; define `fullWidth: { width: '100%' }` in StyleSheet and apply via `style={styles.fullWidth}`
+
+**Q: Scrollable pages misaligned**
+A: Container width is measured on mount; ensure parent has fixed width
+
+**Q: Button not stretching**
+A: Add `stretch` prop to `EtButton` for full-width buttons
+
+**Q: Links not horizontal**
+A: Define `linksRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }` in StyleSheet and apply via `style={styles.linksRow}`
+
+## Dependencies
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors
+- `EtText` - text rendering in FooterLink
+- Spacing constants from `core/styles/spacing`
+- `useFooterScrollable` hook - horizontal scroll state management
+
+### External Dependencies
+
+- `react-native` - `View`, `ScrollView`, `FlatList`, `Pressable`, `StyleSheet`
+
+## Related Components
+
+- `EtButtonV2` - Primary action buttons in footer
+- `EtCheckbox` - Terms acceptance checkboxes
+- `EtText` - Disclaimer and body text
+
+## Design System Integration
+
+V1 → V2 mapping for `EtFooter` slots:
+
+| Slot | V1 token | V2 token |
+| --- | --- | --- |
+| Footer container background | `bgNeutralPrimary` | `backgroundBase` |
+| Scrollable pagination dot (active) | `statusPositive` | `verdictPositive600` |
+| Scrollable pagination dot (inactive) | `textTertiaryNeutral` | `carbon400` |
+| `EtFooter.Link` text | `actionBrandText` (brand intent) | `primary600` |

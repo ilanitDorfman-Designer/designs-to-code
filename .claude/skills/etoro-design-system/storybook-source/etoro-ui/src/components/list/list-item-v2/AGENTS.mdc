@@ -1,0 +1,234 @@
+---
+description: Agent guide for EtListItem V2 - generic slot-based list item container with Start/Middle/End content slots, optional Divider, and Skeleton loading variants. e.g. use for settings rows with toggle, list rows with label and value, rows with checkbox and divider
+alwaysApply: false
+---
+
+# EtListItem V2
+
+## Purpose
+
+Generic slot-based list item container for the eToro design system. Uses a flexible compound component pattern with Start/Middle/End content slots, an optional Divider, and a standalone Skeleton.
+
+For swipe-to-reveal actions, wrap `EtListItemV2` with `EtSwipeableRow` (see below).
+
+## Architecture
+
+```text
+et-list-item.tsx (main) → provides ListItemContext, single render path
+├── EtListItem.Start    → reads context for flex behavior, default left-aligned
+├── EtListItem.Middle   → reads context, default centered (3-slot mode only)
+├── EtListItem.End      → reads context for flex behavior, default right-aligned
+├── EtListItem.Divider  → hairline separator, composed as a child (no context needed)
+└── EtListItem.Skeleton → skeleton loading placeholder, composed as a child (inherits size from parent)
+
+EtSwipeableRow (public, standalone) → wraps any content to add swipe-to-reveal actions
+└── EtSwipeableRow.Action → action button subcomponents revealed on left swipe
+```
+
+### Slot Detection
+
+Slots are identified at runtime via a static `__SLOT_TYPE` property on each compound component (not `displayName`). Static properties survive minification, unlike `displayName` which is a debugging aid only.
+
+```tsx
+// Each compound component has:
+ListItemStart.__SLOT_TYPE = 'start';
+ListItemMiddle.__SLOT_TYPE = 'middle';
+ListItemEnd.__SLOT_TYPE = 'end';
+ListItemDivider.__SLOT_TYPE = 'divider';
+ListItemSkeleton.__SLOT_TYPE = 'skeleton';
+
+// useListItemChildren reads __SLOT_TYPE to classify children
+const getSlotType = (child: ReactNode): SlotType | undefined =>
+  isValidElement(child) ? (child.type as { __SLOT_TYPE?: SlotType }).__SLOT_TYPE : undefined;
+```
+
+### Single Render Path
+
+The root component has two render paths based on children:
+
+1. **Skeleton mode** – when `EtListItem.Skeleton` is a child, only the skeleton is rendered. Size, style, and testID are inherited from the parent `EtListItem` unless explicitly set on the skeleton.
+2. **Slot mode** – a column `View` containing a row of slots, plus an optional divider below. When `EtListItem.Divider` is present as a child, the container uses `paddingTop` only (divider sits at the bottom edge); otherwise `paddingVertical` applies normally.
+
+## API
+
+### Props
+
+| Prop                 | Type                   | Default   | Description                                               |
+| -------------------- | ---------------------- | --------- | --------------------------------------------------------- |
+| `children`           | `EtListItemChildren`   | -         | Compound children (Start, Middle, End, Divider, Skeleton) |
+| `size`               | `'large' \| 'small'`   | `'large'` | Vertical padding size                                     |
+| `style`              | `StyleProp<ViewStyle>` | -         | Container style override                                  |
+| `onPress`            | `() => void`           | -         | Press handler; renders content as Pressable when set      |
+| `disabled`           | `boolean`              | `false`   | Dims the row (0.5 opacity), suppresses `onPress`, and sets `accessibilityState.disabled` |
+| `testID`             | `string`               | -         | Test ID                                                   |
+| `accessibilityLabel` | `string`               | -         | Accessibility label (used when onPress is set)            |
+
+### Slot Subcomponents
+
+Each content slot accepts `children`, `style`, and `testID` props.
+
+| Slot     | Default Alignment   | 2-Slot Flex     | 3-Slot Flex |
+| -------- | ------------------- | --------------- | ----------- |
+| `Start`  | `flex-start` (left) | `flex: 1`       | `flex: 1`   |
+| `Middle` | `center`            | N/A             | `flex: 1`   |
+| `End`    | `flex-end` (right)  | `flexShrink: 0` | `flex: 1`   |
+
+### EtListItem.Divider
+
+Hairline separator rendered below the slot row. Accepts `style` and `testID` props.
+
+### EtListItem.Skeleton
+
+Compound subcomponent for skeleton loading states. Must be used within `EtListItem`. Inherits `size`, `style`, and `testID` from the parent unless explicitly overridden. Does not use ListItemContext.
+
+| Prop      | Type                                                         | Default   | Description              |
+| --------- | ------------------------------------------------------------ | --------- | ------------------------ |
+| `variant` | `'1-line' \| '2-lines' \| 'asset-1-line' \| 'asset-2-lines'` | -         | Skeleton layout variant  |
+| `size`    | `'large' \| 'small'`                                         | `'large'` | Vertical padding size    |
+| `style`   | `StyleProp<ViewStyle>`                                       | -         | Container style override |
+| `testID`  | `string`                                                     | -         | Test ID                  |
+
+Skeleton variants:
+
+- `'1-line'` - Single bar left + small bar right
+- `'2-lines'` - Two bars left + one bar right
+- `'asset-1-line'` - Small square + bar left + small bar right
+- `'asset-2-lines'` - Large square + two bars left + bar right
+
+## Swipe-to-Reveal Actions
+
+Use `EtSwipeableRow` from `etoro-ui` to add swipe actions to any content. Place the content element first, then compose `EtSwipeableRow.Action` subcomponents as direct children after it.
+
+```tsx
+import { EtListItemV2, EtSwipeableRow } from 'etoro-ui';
+
+<EtSwipeableRow
+  isDragging={isAnyItemDragging}
+  onSwipeStart={(close) => {
+    if (activeCloseRef.current && activeCloseRef.current !== close) {
+      activeCloseRef.current();
+    }
+    activeCloseRef.current = close;
+  }}
+>
+  <EtListItemV2 onPress={handleNavigate} accessibilityLabel="AAPL">
+    <EtListItemV2.Start>
+      <AssetInfo />
+    </EtListItemV2.Start>
+    <EtListItemV2.Middle>
+      <SparkChart />
+    </EtListItemV2.Middle>
+    <EtListItemV2.End>
+      <PriceDisplay />
+    </EtListItemV2.End>
+    <EtListItemV2.Divider />
+  </EtListItemV2>
+  <EtSwipeableRow.Action onPress={handleTrade} style={{ backgroundColor: '#4ECDC4' }} accessibilityLabel="Trade">
+    <TradeIcon />
+  </EtSwipeableRow.Action>
+  <EtSwipeableRow.Action onPress={handleRemove} style={{ backgroundColor: '#FF6B6B' }} width={80} accessibilityLabel="Delete">
+    <TrashIcon />
+  </EtSwipeableRow.Action>
+</EtSwipeableRow>;
+```
+
+### EtSwipeableRow Props
+
+| Prop                    | Type                               | Default | Description                                         |
+| ----------------------- | ---------------------------------- | ------- | --------------------------------------------------- |
+| `children`              | `ReactNode`                        | -       | Content element followed by Action subcomponents    |
+| `isDragging`            | `boolean`                          | -       | Whether parent list is dragging (auto-closes swipe) |
+| `onSwipeStart`          | `(closeSwipe: () => void) => void` | -       | Called when swipe starts; receives close function   |
+| `contentContainerStyle` | `StyleProp<ViewStyle>`             | -       | Style applied to the sliding content container      |
+
+### EtSwipeableRow.Action Props
+
+| Prop                 | Type                   | Default | Description                                       |
+| -------------------- | ---------------------- | ------- | ------------------------------------------------- |
+| `children`           | `ReactNode`            | -       | Content rendered inside the action                |
+| `onPress`            | `() => void`           | -       | Called when tapped; swipe auto-closes after press |
+| `width`              | `number`               | `70`    | Width in pixels; affects total snap distance      |
+| `style`              | `StyleProp<ViewStyle>` | -       | Container style (use backgroundColor)             |
+| `accessibilityLabel` | `string`               | -       | Accessibility label for screen readers            |
+
+## Layout Rules
+
+1. **Start only** - Start slot takes full width (flex: 1), left-aligned
+2. **Start + End** - content-based widths (Start flex: 1, End sizes to content), **12px gap (X3)**
+3. **Start + Middle + End** - equal width distribution (all flex: 1), **8px gap (X2)**
+4. **Divider** - when `EtListItem.Divider` is a child, renders below slots with size-based spacing
+
+## Usage Examples
+
+```tsx
+// Start only
+<EtListItem size="large">
+  <EtListItem.Start><MyContent /></EtListItem.Start>
+</EtListItem>
+
+// Start + End with divider
+<EtListItem size="small">
+  <EtListItem.Start><Label>Name</Label></EtListItem.Start>
+  <EtListItem.End><Price>$186.79</Price></EtListItem.End>
+  <EtListItem.Divider />
+</EtListItem>
+
+// Start + Middle + End (equal widths)
+<EtListItem size="large">
+  <EtListItem.Start><Col1 /></EtListItem.Start>
+  <EtListItem.Middle><Col2 /></EtListItem.Middle>
+  <EtListItem.End><Col3 /></EtListItem.End>
+</EtListItem>
+
+// Checkbox variant (composition)
+<EtListItem size="large">
+  <EtListItem.Start><SettingLabel /></EtListItem.Start>
+  <EtListItem.End><EtCheckbox value={on} onChange={toggle} /></EtListItem.End>
+  <EtListItem.Divider />
+</EtListItem>
+
+// Toggle variant (composition)
+<EtListItem size="large" style={selected && { backgroundColor: 'rgba(204,204,204,0.15)' }}>
+  <EtListItem.Start><SettingLabel /></EtListItem.Start>
+  <EtListItem.End><EtToggle value={on} onChange={toggle} /></EtListItem.End>
+  <EtListItem.Divider />
+</EtListItem>
+
+// Skeleton loading
+<EtListItem size="large">
+  <EtListItem.Skeleton variant="asset-2-lines" />
+</EtListItem>
+```
+
+## Anti-Patterns
+
+- **Do NOT** use `displayName` for slot detection logic — use `__SLOT_TYPE` static property instead. `displayName` is for DevTools only.
+- **Do NOT** use `EtListItem.Middle` without also providing `Start` and `End`
+- **Do NOT** nest `EtListItem` inside another `EtListItem`
+- **Do NOT** use subcomponents outside of `EtListItem` (slots will throw, skeleton must be composed as a child)
+- **Do NOT** use `EtListItem.Skeleton` as a standalone component — always wrap it in `<EtListItem>`
+- **Do NOT** put layout/flex styles on the root when using slots (use slot `style` prop instead)
+- **Do NOT** add boolean props that create branching render paths — compose with compound subcomponents instead
+- **Do NOT** add swipe props directly to `EtListItemV2` — use `EtSwipeableRow` as a wrapper instead
+- **Do NOT** wrap `EtListItemV2` in a raw `Pressable` when using `EtSwipeableRow` — swipe gestures conflict. Use the `onPress` prop on `EtListItemV2` instead
+
+## Dependencies
+
+- `useEtoroTheme` - for divider colors
+- Spacing constants: `X2`, `X3`, `X4`, `X6` from `core/styles/spacing`
+- `EtSkeleton` - for skeleton shimmer animation
+- No additional third-party dependencies (all entries above are internal components/utilities)
+
+## Design System Integration
+
+`EtListItem` is a structural compound component — `Start`, `Middle`, `End`, and `Skeleton` slots don't apply explicit color tokens (consumers compose their own content). The only theme color the component itself reads is for the divider:
+
+| Slot | V2 token |
+| --- | --- |
+| `EtListItem.Divider` ([`list-item-divider.tsx`](libs/etoro-ui/src/components/list/list-item-v2/subcomponents/list-item-divider.tsx)) | `carbonSecondaryDivider` (matches Figma's `var(--primary-divider)` hex `#B2B2B226`) |
+
+### Behavior delta (V1 → V2)
+
+The strict-Figma migration to V2 (`38622:337490`) introduced one user-visible change:
+
+- **Divider hue** flips from a solid neutral (`dividerSenary` — `#F2F2F2` light / `#333333` dark) to a translucent grey (`carbonSecondaryDivider` — `#B2B2B226`, both modes). Visually similar on plain backgrounds; reads as a translucent overlay on busier surfaces. Identical to the divider treatment now in `EtAssetItem` — the two list components share the same divider hex.

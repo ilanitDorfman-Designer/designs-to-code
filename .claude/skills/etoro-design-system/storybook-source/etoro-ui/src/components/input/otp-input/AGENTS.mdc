@@ -1,0 +1,250 @@
+---
+description: Agent guide for EtOtpInput - OTP/PIN code entry compound component with configurable length, auto-resolved sizes, show/hide toggle, error message, and iOS SMS autofill
+alwaysApply: false
+---
+
+# EtOtpInput Component
+
+## Purpose & Scope
+
+`EtOtpInput` is a compound component for OTP / PIN code entry in the eToro design system. It provides:
+
+- **Configurable length**: 2–9 character slots
+- **Cell sizes (`OtpInputSize`)**: `large` \| `medium` \| `small` — auto from `length`, or optional `size` override
+- **Show/hide toggle**: Optional `EtOtpInput.Toggle` subcomponent for secure entry
+- **Error message**: Optional `EtOtpInput.ErrorMessage` subcomponent for displaying error text below cells
+- **Built-in states**: focus, error, disabled, secure entry
+- **Hidden TextInput**: A single invisible `TextInput` handles keyboard input; visual cells are rendered on top
+- **iOS SMS autofill**: Uses `textContentType="oneTimeCode"` and `autoComplete="one-time-code"`
+- **Controlled & uncontrolled modes**: Supports `value` (controlled) and `defaultValue` (uncontrolled)
+
+**Does NOT handle:**
+
+- Form validation logic (handle in parent)
+- Resend code / timer logic (handle in parent)
+- Navigation after completion (handle via `onComplete` callback)
+
+## Entry Points & Contracts
+
+### `EtOtpInput` (root component)
+
+```tsx
+<EtOtpInput
+  length={6}                              // Required: 2–9 characters
+  value?: string                          // Controlled mode
+  defaultValue?: string                   // Uncontrolled mode
+  onChangeText?: (text: string) => void   // Fires on every character change
+  onComplete?: (code: string) => void     // Fires when all cells are filled
+  error?: boolean                         // Error state (red styling)
+  disabled?: boolean                      // Prevents input
+  secureEntry?: boolean                   // Show dots instead of digits
+  autoFocus?: boolean                     // Focus on mount (default: false)
+  haptics?: boolean                       // Haptic feedback (default: true)
+  keyboardType?: KeyboardTypeOptions      // Default: 'number-pad'
+  size?: 'large' | 'medium' | 'small'     // Optional; default from length
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}   {/* Optional: EtOtpInput.Toggle, EtOtpInput.ErrorMessage */}
+</EtOtpInput>
+```
+
+### Size (default from length, optional override)
+
+Default cell size follows `length` (same as always). Pass `size` only when you need a tier that does not match length (e.g. Storybook / dev previews).
+
+| Length | `OtpInputSize` | Cell Width | Cell Height | TextVariant     | Dot Size  |
+| ------ | -------------- | ---------- | ----------- | --------------- | --------- |
+| 2–3    | `large`        | X15 (60px) | X17 (68px)  | `num-xl-medium` | X4 (16px) |
+| 4–6    | `medium`       | X12 (48px) | X13 (52px)  | `num-l-medium`  | X3 (12px) |
+| 7–9    | `small`        | X8 (32px)  | X13 (52px)  | `num-ml-medium` | X3 (12px) |
+
+Gap between cells is X1 (4px) for all sizes.
+
+### `EtOtpInput.Toggle`
+
+```tsx
+<EtOtpInput.Toggle
+  accessibilityLabel?: string   // Custom label (defaults to 'Show code' / 'Hide code')
+  testID?: string
+/>
+```
+
+- Must be used inside `<EtOtpInput>`.
+- Reads and toggles `isSecure` state from context.
+- Renders `eye` / `eye-slash` icon via `EtIconV2`.
+
+### `EtOtpInput.ErrorMessage`
+
+```tsx
+<EtOtpInput.ErrorMessage
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}   // Error message text (ReactNode)
+</EtOtpInput.ErrorMessage>
+```
+
+- Must be used inside `<EtOtpInput>`.
+- Renders below the OTP cells (automatically separated from the cell row via child filtering).
+- Uses `colors.actionBrandVarText` (red) for error text color.
+- Uses `EtText` with `body-tiny-regular` variant.
+- Has `accessibilityRole="alert"` (iOS VoiceOver) and `accessibilityLiveRegion="polite"` (Android TalkBack) for screen reader announcement.
+- Consumer controls visibility — wrap in a conditional to show/hide.
+
+## Usage Patterns
+
+### Basic OTP (6-digit, auto `medium`)
+
+```tsx
+<EtOtpInput length={6} onComplete={handleComplete} />
+```
+
+### Short PIN (3-digit, auto `large`)
+
+```tsx
+<EtOtpInput length={3} onComplete={handleComplete} />
+```
+
+### Long code with toggle (8-digit, auto `small`)
+
+```tsx
+<EtOtpInput length={8} secureEntry onComplete={handleComplete}>
+  <EtOtpInput.Toggle />
+</EtOtpInput>
+```
+
+### Error state, controlled
+
+```tsx
+<EtOtpInput length={4} value={otp} onChangeText={setOtp} error onComplete={handleComplete}>
+  <EtOtpInput.Toggle />
+</EtOtpInput>
+```
+
+### Error state with error message
+
+```tsx
+<EtOtpInput length={6} error onComplete={handleComplete}>
+  <EtOtpInput.Toggle />
+  <EtOtpInput.ErrorMessage>Invalid verification code</EtOtpInput.ErrorMessage>
+</EtOtpInput>
+```
+
+### Conditional error message (consumer-controlled)
+
+```tsx
+<EtOtpInput length={6} error={hasError} onComplete={handleComplete}>
+  {hasError && <EtOtpInput.ErrorMessage>The code you entered is incorrect</EtOtpInput.ErrorMessage>}
+</EtOtpInput>
+```
+
+### Disabled
+
+```tsx
+<EtOtpInput length={6} disabled defaultValue="123456" />
+```
+
+## Anti-patterns
+
+### Using Toggle outside EtOtpInput
+
+```tsx
+// BAD — will throw a runtime error
+<EtOtpInput.Toggle />
+```
+
+**Fix:** Always wrap inside `<EtOtpInput>`.
+
+### Providing both value and defaultValue
+
+```tsx
+// BAD — conflicting controlled/uncontrolled
+<EtOtpInput length={4} value={otp} defaultValue="1234" />
+```
+
+**Fix:** Use only `value` (controlled) or `defaultValue` (uncontrolled), not both.
+
+## Architecture
+
+### Hidden TextInput Technique
+
+A single hidden `TextInput` (opacity 0, 1x1px) captures all keyboard input. Tapping the visible cell row focuses this hidden input. Each visual cell reads its character from the current value string.
+
+### Context
+
+Single `OtpContext` shares all state with subcomponents:
+
+| Field          | Type                             | Description                    |
+| -------------- | -------------------------------- | ------------------------------ |
+| `value`        | `string`                         | Current input value            |
+| `isFocused`    | `boolean`                        | Whether hidden input has focus |
+| `isSecure`     | `boolean`                        | Whether to show dots           |
+| `error`        | `boolean`                        | Error state                    |
+| `disabled`     | `boolean`                        | Disabled state                 |
+| `size`         | `'large' \| 'medium' \| 'small'` | Resolved tier (from `length` or `size` prop) |
+| `length`       | `number`                         | Number of cells                |
+| `toggleSecure` | `() => void`                     | Toggle show/hide               |
+
+No split context needed — OTP updates are bounded (max 9 chars), re-renders are cheap.
+
+### Hooks
+
+- **`useOtpConfig`**: Props + theme → resolved cell config (dimensions, colors, typography). Pure computation, `useMemo`-wrapped.
+- **`useOtpState`**: Manages internal state (value, focus, secure toggle, TextInput ref). Returns state + handlers.
+- **Digit typography**: `small` → `num-ml-medium`, `medium` → `num-l-medium`, `large` → `num-xl-medium` (Figma Num ML/L/XL at medium weight).
+
+- **`getOtpSize`**: Pure function that maps length → `large` / `medium` / `small`.
+
+### Input behavior
+
+- **Digits only**: `onChangeText` output is stripped to `[0-9]` and clamped to `length` (paste-safe).
+- **Focus**: tapping the cell row focuses the hidden input; the active cell is always the **next empty** slot (`min(value.length, length - 1)`), sequential entry only.
+
+### Cell Styling (Figma phone digits)
+
+- **Default / filled / focused active slot**: same fill — `colors.bgNeutralGreyPrimary`
+- **Active cell** (focused caret slot): `1px` `colors.dividerPrimary` only (or error color when `error`); background unchanged
+- **Border**: only on the active cell when the hidden input is focused; `borderWidth` 0 otherwise
+- **Radii**: `small` / `medium` → X2 (8px); `large` → ~9.5px
+
+## Dependencies
+
+### Internal
+
+- `useEtoroTheme` — theme colors
+- `EtText` — digit text rendering
+- `EtIconV2` — eye/eye-slash icons in Toggle
+- Spacing constants (`X1`, `X2`, `X3`, `X4`, `X8`, `X12`, `X13`, `X15`, `X17`)
+
+### External
+
+- `expo-haptics` — haptic feedback on focus and toggle
+- `react-native` — `TextInput`, `View`, `Pressable`, `StyleSheet`
+
+## File Structure
+
+```text
+otp-input/
+├── api/
+│   ├── index.ts          # Re-export types
+│   └── types.ts          # EtOtpInputProps, OtpToggleProps, OtpErrorMessageProps, OtpContextValue
+├── context/
+│   ├── index.ts          # Re-export context + hook + provider
+│   ├── otp-context.tsx   # OtpContext + useOtpContext
+│   └── otp-provider.tsx  # OtpProvider
+├── hooks/
+│   ├── index.ts
+│   ├── use-otp-config.ts # Props → dimensions, colors, typography + getOtpSize()
+│   └── use-otp-state.ts  # Value, focus, secure toggle, handlers
+├── subcomponents/
+│   ├── index.ts
+│   ├── otp-cell.tsx           # Single box cell (all states)
+│   ├── otp-error-message.tsx  # Error message below cells
+│   └── otp-toggle.tsx         # Show/hide toggle
+├── et-otp-input.tsx      # Main component
+├── et-otp-input.test.tsx # Tests
+├── index.ts              # Public exports
+└── AGENTS.mdc             # This file
+```

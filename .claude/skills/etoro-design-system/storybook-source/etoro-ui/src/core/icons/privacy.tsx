@@ -1,0 +1,21 @@
+import { View } from 'react-native';
+import Svg, { G, Path } from 'react-native-svg';
+
+import { useEtoroTheme } from '../../core/hooks';
+import { IconProps } from './models/icon-props';
+
+function Privacy({ size = 24, hasFill = false, fill, color }: IconProps) {
+  const { colors } = useEtoroTheme();
+  return (
+    <View>
+      <Svg width={size} height={size} viewBox="0 0 24 24">
+        <G fill={hasFill ? fill : 'none'} stroke={color || colors.textPrimaryNeutral} strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+          <Path d="M16 8V7a4 4 0 0 0-4-4v0a4 4 0 0 0-4 4v1" />
+          <Path d="M3.879 7.879C3 8.757 3 10.172 3 13v1c0 3.771 0 5.657 1.172 6.828S7.229 22 11 22h2c3.771 0 5.657 0 6.828-1.172S21 17.771 21 14v-1c0-2.828 0-4.243-.879-5.121C19.243 7 17.828 7 15 7H9c-2.828 0-4.243 0-5.121.879M12 15a1 1 0 1 0 0-2a1 1 0 0 0 0 2m3-1a3 3 0 0 1-2 2.83V19h-2v-2.17A3.001 3.001 0 1 1 15 14" />
+        </G>
+      </Svg>
+    </View>
+  );
+}
+
+export default Privacy;

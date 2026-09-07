@@ -1,0 +1,21 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_cx)">
+<g transform="translate(-7.2, 0) scale(1.8000)">
+<path id="Rectangle-77" d="M26 0H2C0.89543 0 0 0.89543 0 2V18C0 19.1046 0.89543 20 2 20H26C27.1046 20 28 19.1046 28 18V2C28 0.89543 27.1046 0 26 0Z" fill="white"/>
+<path id="Rectangle-119-Copy" d="M28 0H0V20H28V0Z" fill="#0021AD"/>
+<path id="Rectangle-28-Copy" d="M5.25 8.33333H3.5V10H5.25V8.33333Z" fill="white"/>
+<path id="Rectangle-28-Copy-4" d="M3.5 11.6667H1.75V13.3333H3.5V11.6667Z" fill="white"/>
+<path id="Rectangle-28-Copy-5" d="M8.75 11.6667H7V13.3333H8.75V11.6667Z" fill="white"/>
+<path id="Rectangle-28-Copy-7" d="M7 13.3333H5.25V15H7V13.3333Z" fill="white"/>
+<path id="Rectangle-28-Copy-6" d="M5.25 16.6667H3.5V18.3333H5.25V16.6667Z" fill="white"/>
+<path id="Rectangle-119-Copy-86" fill-rule="evenodd" clip-rule="evenodd" d="M0 0H28V20L0 0Z" fill="#1C8A42"/>
+<path id="Combined-Shape" d="M23.1873 6.34785C21.5548 7.35545 19.8552 8.12497 19.0058 8.12497V9.79163C21.1034 9.79163 25.6727 7.14957 27.7208 4.95496L26.4123 3.8479C26.1755 4.10168 25.8944 4.36518 25.5818 4.63113C25.363 2.73938 24.7529 1.20067 23.6987 0.667526L22.8775 2.13945C23.2444 2.32498 23.5928 3.25032 23.7806 4.449C22.565 3.08905 22.3595 2.93168 21.6111 2.75356L21.1866 4.37046C21.4378 4.43026 21.6753 4.65987 22.7648 5.88536C22.9161 6.05556 23.0554 6.20851 23.1873 6.34785Z" fill="#FFC639"/>
+<path id="Oval-34" d="M14 13.3333C15.933 13.3333 17.5 11.8409 17.5 10C17.5 8.15905 15.933 6.66667 14 6.66667C12.067 6.66667 10.5 8.15905 10.5 10C10.5 11.8409 12.067 13.3333 14 13.3333Z" fill="#FFC639"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_cx">
+<circle cx="18" cy="18" r="18" fill="white"/>
+</clipPath>
+</defs>
+</svg>

@@ -1,0 +1,454 @@
+---
+description: Agent guide for EtChip - selectable chip with compound Label/Icon subcomponents, selection state via context, press animations, and haptic feedback
+alwaysApply: false
+---
+
+# EtChip Component
+
+## Purpose & Scope
+
+`EtChip` is a selectable chip component for the eToro design system. It provides a flexible, accessible chip with:
+
+- **Compound component pattern**: `EtChip.Label` and `EtChip.Icon` subcomponents
+- **Selection states**: neutral (unselected) and selected with clear visual feedback
+- **Built-in animations**: scale animation on press for tactile feedback
+- **Haptic feedback**: enabled by default
+- **Context-based state sharing**: selection state shared via React Context to subcomponents
+- **Flexible interaction**: supports both action chips (`onPress`) and selection chips (`onSelectionChange`)
+
+**Does NOT handle:**
+
+- Navigation logic (use with router/navigation handlers)
+- Multiple chip group management (handle selection state in parent)
+
+## Entry Points & Contracts
+
+### `EtChip` (main component)
+
+```tsx
+<EtChip
+  selected?: boolean              // default: false
+  disabled?: boolean              // default: false
+  onPress?: () => void
+  onSelectionChange?: (selected: boolean) => void
+  haptics?: boolean                // default: true
+  showCloseOnSelected?: boolean    // default: false — reveals close icon when selected
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}
+</EtChip>
+```
+
+**Children constraints:**
+
+- Must contain at least one of: `EtChip.Label` or `EtChip.Icon`
+- Can contain both `EtChip.Label` and `EtChip.Icon` in any order
+- Order of children determines visual layout (icon before label = leading icon, label before icon = trailing icon)
+- No string shorthand - must use compound components
+
+**Interaction behavior:**
+
+- Chip is interactive only if `onPress` or `onSelectionChange` is provided
+- When interactive, chip is pressable and shows press animations
+- When non-interactive (no handlers), chip is disabled and shows static state
+
+### `EtChip.Label`
+
+```tsx
+<EtChip.Label
+  style?: StyleProp<TextStyle>
+>
+  {ReactNode}
+</EtChip.Label>
+```
+
+**Behavior:**
+
+- Automatically styled based on parent chip's `selected` and `disabled` state
+- Text color: default = `carbon900`, selected = `carbon050`, disabled = `carbon300` (overrides selected)
+- Uses `body-tiny-medium` text variant
+- Receives selection + disabled state via `ChipContext` (no prop drilling needed)
+
+### `EtChip.Icon`
+
+```tsx
+<EtChip.Icon
+  iconName:IconName // required - icon from icon library
+/>
+```
+
+**Behavior:**
+
+- Automatically colored based on parent chip's `selected` and `disabled` state
+- Icon color: default = `carbon900`, selected = `carbon050`, disabled = `carbon300` (overrides selected)
+- Fixed size: 16px
+- Receives selection + disabled state via `ChipContext` (no prop drilling needed)
+
+## Usage Patterns
+
+### Basic chip (neutral state)
+
+```tsx
+<EtChip selected={false}>
+  <EtChip.Label>Technology</EtChip.Label>
+</EtChip>
+```
+
+### Selected chip
+
+```tsx
+<EtChip selected={true}>
+  <EtChip.Label>Technology</EtChip.Label>
+</EtChip>
+```
+
+### Chip with leading icon
+
+```tsx
+<EtChip selected={false}>
+  <EtChip.Icon iconName="heart" />
+  <EtChip.Label>Favorites</EtChip.Label>
+</EtChip>
+```
+
+### Chip with trailing icon
+
+```tsx
+<EtChip selected={true}>
+  <EtChip.Label>Watchlist</EtChip.Label>
+  <EtChip.Icon iconName="watched" />
+</EtChip>
+```
+
+### Single selection pattern
+
+```tsx
+const [selectedCategory, setSelectedCategory] = useState('Technology');
+
+const categories = ['Technology', 'Finance', 'Healthcare', 'Energy'];
+
+{
+  categories.map((category) => (
+    <EtChip key={category} selected={selectedCategory === category} onSelectionChange={() => setSelectedCategory(category)}>
+      <EtChip.Label>{category}</EtChip.Label>
+    </EtChip>
+  ));
+}
+```
+
+### Multi-selection pattern
+
+```tsx
+const [selectedChips, setSelectedChips] = useState<string[]>(['Technology']);
+
+const toggleChip = (label: string) => {
+  setSelectedChips((prev) => (prev.includes(label) ? prev.filter((item) => item !== label) : [...prev, label]));
+};
+
+{
+  categories.map((category) => (
+    <EtChip key={category} selected={selectedChips.includes(category)} onSelectionChange={() => toggleChip(category)}>
+      <EtChip.Label>{category}</EtChip.Label>
+    </EtChip>
+  ));
+}
+```
+
+### Action chip (non-selection)
+
+```tsx
+<EtChip selected={false} onPress={() => handleAddToWatchlist()}>
+  <EtChip.Icon iconName="plus" />
+  <EtChip.Label>Add to Watchlist</EtChip.Label>
+</EtChip>
+```
+
+### Chip with expandable close icon (filter chips)
+
+```tsx
+<EtChip
+  selected={isSelected}
+  showCloseOnSelected
+  onSelectionChange={(selected) => setIsSelected(selected)}
+>
+  <EtChip.Label>Technology</EtChip.Label>
+</EtChip>
+```
+
+When `showCloseOnSelected` is true, the close slot is always mounted and its `width` (`0` to `22`) + `opacity` animate from `selectedProgress` with `overflow: 'hidden'`. The chip width therefore changes on the UI thread, so sibling chips in a group reflow smoothly each frame — no `LinearTransition` / layout animation. Pressing anywhere on the chip (including the icon) toggles selection via `onSelectionChange`.
+
+### Disabled chip
+
+```tsx
+<EtChip selected={false} disabled={true} onPress={() => handlePress()}>
+  <EtChip.Label>Disabled Action</EtChip.Label>
+</EtChip>
+```
+
+**Note:** Use `disabled` to explicitly prevent interaction on chips that have handlers. This is useful for conditional disabling based on app state.
+
+### Combined onPress and onSelectionChange
+
+```tsx
+<EtChip
+  selected={isSelected}
+  onPress={() => console.log('Chip pressed')}
+  onSelectionChange={(selected) => {
+    setIsSelected(selected);
+    console.log('Selection changed:', selected);
+  }}
+>
+  <EtChip.Label>Toggle</EtChip.Label>
+</EtChip>
+```
+
+**Note:** Both handlers can be used together. `onSelectionChange` is called first (with toggled state), then `onPress` is called.
+
+## Anti-patterns
+
+### ❌ Using string children (not supported)
+
+```tsx
+// BAD - EtChip doesn't support string shorthand like EtButton
+<EtChip selected={false}>Technology</EtChip>
+```
+
+**Fix:** Always use compound components:
+
+```tsx
+<EtChip selected={false}>
+  <EtChip.Label>Technology</EtChip.Label>
+</EtChip>
+```
+
+### ❌ Using subcomponents outside of EtChip
+
+```tsx
+// BAD - will throw runtime error
+<EtChip.Label>Label</EtChip.Label>
+
+// BAD - will throw runtime error
+<EtChip.Icon iconName="star" />
+```
+
+**Fix:** Always wrap subcomponents inside `<EtChip>`.
+
+### ❌ Manually styling colors
+
+```tsx
+// BAD - bypasses design system and context
+<EtChip.Label style={{ color: 'red' }}>Label</EtChip.Label>
+```
+
+**Fix:** Colors are automatically managed based on `selected` state via context. Use `style` prop only for layout adjustments, not color overrides.
+
+### ❌ Using arbitrary components as children
+
+```tsx
+// BAD - only EtChip.Label and EtChip.Icon are valid children
+<EtChip selected={false}>
+  <View>
+    <Text>Custom content</Text>
+  </View>
+</EtChip>
+```
+
+**Fix:** Use only `EtChip.Label` and `EtChip.Icon` as children.
+
+### ❌ Managing selection state incorrectly
+
+```tsx
+// BAD - onSelectionChange provides the new state, don't toggle again
+<EtChip
+  selected={isSelected}
+  onSelectionChange={() => setIsSelected(!isSelected)} // Wrong!
+>
+  <EtChip.Label>Toggle</EtChip.Label>
+</EtChip>
+```
+
+**Fix:** `onSelectionChange` receives the new selected state as a parameter:
+
+```tsx
+<EtChip selected={isSelected} onSelectionChange={(selected) => setIsSelected(selected)}>
+  <EtChip.Label>Toggle</EtChip.Label>
+</EtChip>
+```
+
+### ❌ Disabling haptics unnecessarily
+
+Only disable haptics when explicitly required (e.g., rapid-fire actions or accessibility preferences):
+
+```tsx
+// OK - rapid toggle doesn't need haptics
+<EtChip haptics={false} onPress={handleQuickToggle}>
+  <EtChip.Label>Toggle</EtChip.Label>
+</EtChip>
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for styling (border, background, text colors)
+- `EtText` - underlying text component for `EtChip.Label`
+- `EtoroIcon` - underlying icon component for `EtChip.Icon`
+- `ChipContext` - React context for sharing `selected` state with subcomponents
+- `ChipProvider` - context provider that wraps the chip container
+- `useChipState` - hook managing press handlers, animations, and haptics
+
+### External Dependencies
+
+- `expo-haptics` - haptic feedback on press
+- `react-native` - `Pressable`, `View`, `StyleSheet`
+- `react-native-reanimated` - scale animation on press (Animated.View, useSharedValue, useAnimatedStyle, withSpring)
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`) — V2 tokens:
+  - Border: `carbon300` (all states)
+  - Background: `carbon900` (selected) or `transparent` (default / disabled)
+  - Text / Icon: `carbon300` (disabled) → `carbon050` (selected) → `carbon900` (default)
+- Typography: `body-tiny-medium` variant for label
+- Spacing: `gap: 8`, `paddingHorizontal: 16`, `paddingVertical: 6`
+- Border radius: `20` (pill shape)
+- Icon size: fixed at `16px`
+
+## Patterns & Pitfalls
+
+### Context Architecture
+
+The chip uses a simple context pattern to share selection state:
+
+- `ChipProvider` wraps the container and provides `selected` state via `ChipContext`
+- `EtChip.Label` and `EtChip.Icon` use `useChipContext()` to access selection state
+- This eliminates prop drilling and ensures subcomponents automatically style based on selection
+
+**File structure:**
+
+```
+context/
+├── chip-context.tsx      # ChipContext + useChipContext hook
+└── chip-provider.tsx     # ChipProvider component
+```
+
+### Selection State Management
+
+The chip supports two interaction patterns:
+
+1. **Selection chips**: Use `onSelectionChange` to manage selection state
+   - Handler receives the new `selected` boolean value
+   - Parent should update state based on this value
+   - Visual state updates **optimistically on press** (background, label/icon colors, close icon) before the parent re-renders; reconciles when the `selected` prop confirms
+   - Parent `onSelectionChange` is invoked inside `startTransition` so heavy consumer work does not block the optimistic paint
+   - Useful for single or multi-selection scenarios
+
+2. **Action chips**: Use `onPress` for non-selection actions
+   - Handler is called on press
+   - `selected` prop can be used for visual state (e.g., "added to favorites")
+   - Useful for actions like "Add to Watchlist", "Remove", etc.
+
+3. **Combined**: Both handlers can be used together
+   - `onSelectionChange` is called first with toggled state
+   - `onPress` is called after
+   - Useful when you need both selection tracking and side effects
+
+### Interactive vs Non-Interactive
+
+The chip becomes non-interactive (disabled) when:
+
+- Neither `onPress` nor `onSelectionChange` is provided (implicit)
+- The `disabled` prop is set to `true` (explicit)
+
+When non-interactive:
+
+- `Pressable` has `disabled={true}`
+- No press animations occur
+- No haptic feedback
+- Chip displays as a static visual element
+
+Use the `disabled` prop to explicitly disable a chip that has handlers attached (e.g., based on app state).
+
+### Animation Behavior
+
+Every selection visual is driven on the UI thread by a single `selectedProgress` shared value (`0` = unselected, `1` = selected), so React re-renders never interrupt the motion:
+
+- **Press in / out**: Scales to `0.975` and back with spring animation (`damping: 50`, `stiffness: 500`)
+- **Selection transition** (`withTiming`, 200ms):
+  - **Background**: `interpolateColor(selectedProgress)` from `transparent` to `carbon900`
+  - **Label color** (`EtChip.Label`): `Animated.Text` with `interpolateColor(selectedProgress)` from `carbon900` to `carbon050` (static `carbon300` when disabled)
+  - **Icon color** (`EtChip.Icon`): two stacked icon layers (`carbon900` + `carbon050`) cross-faded by opacity from `selectedProgress` (SVG fill is a prop, not animatable, so a cross-fade is used). Disabled renders a single static `carbon300` icon
+  - **Close icon reveal** (`showCloseOnSelected`): the close slot is always mounted and its `width` (`0` to `22`) + `opacity` animate from `selectedProgress` with `overflow: 'hidden'`. The chip width therefore changes on the UI thread, so sibling chips in a group reflow smoothly each frame — no `LinearTransition` / layout animation
+- `selectedProgress` is animated imperatively on press (immediate, UI thread) and reconciled to the confirmed `selected` prop; optimistic React state only feeds `accessibilityState.selected`
+- Animation is handled by `useChipState`, `EtChipRoot`, and the `EtChip.Label` / `EtChip.Icon` subcomponents using `react-native-reanimated`
+
+### Haptic Feedback
+
+Haptic feedback is enabled by default (`haptics={true}`):
+
+- Triggers `ImpactFeedbackStyle.Light` on press
+- Only fires when chip is interactive (has `onPress` or `onSelectionChange`)
+- Can be disabled with `haptics={false}` prop
+
+### Accessibility
+
+The chip includes built-in accessibility support:
+
+- `accessibilityRole="button"` - announces as button to screen readers
+- `accessibilityState={{ selected }}` - communicates selection state
+- `accessibilityLabel` - custom label for screen readers
+- `testID` - for testing purposes
+
+### Visual States
+
+The chip has three visual states:
+
+1. **Neutral (unselected)**:
+   - Border: `carbon300`
+   - Background: `transparent`
+   - Text/Icon: `carbon900`
+
+2. **Selected**:
+   - Border: `carbon300`
+   - Background: `carbon900`
+   - Text/Icon: `carbon050`
+
+3. **Disabled** (only when `disabled={true}` is passed explicitly):
+   - Border: `carbon300`
+   - Background: `transparent` (selected variant also collapses to transparent visually because text/icon flatten to `carbon300`)
+   - Text/Icon: `carbon300`
+
+Colors automatically switch based on `selected` and `disabled` props, and subcomponents receive both via context. A chip that is non-interactive only because no handler was passed (a "static" chip) keeps the default colors — only the explicit `disabled` prop triggers the disabled visuals.
+
+### Children Order Matters
+
+The order of `EtChip.Icon` and `EtChip.Label` children determines visual layout:
+
+- Icon before Label = leading icon (icon on left)
+- Label before Icon = trailing icon (icon on right)
+
+The chip uses `flexDirection: 'row'` with `gap: 8` for spacing.
+
+## Related Context
+
+- `EtChipsGroupV2 (chips-group-v2/)` - **Use for chip groups** with built-in selection logic, scroll/wrap layouts, and fade overlays. Recommended over manually mapping `EtChip` for common filter/category patterns.
+- `EtText (et-text.tsx)` - EtText component used internally for `EtChip.Label`
+- `EtoroIcon (et-icon.tsx)` - EtoroIcon component used internally for `EtChip.Icon`
+- `EtButton (button/et-button.tsx)` - Similar compound component pattern (but supports string shorthand)
+- `api/types.ts` - Type definitions for `EtChipProps`, `ChipIconProps`, `ChipLabelProps`, `EtChipChildren`
+- `context/` - Context architecture for state sharing
+- `hooks/use-chip-handlers.ts` - State management and animation logic
+
+### When to Use EtChip vs EtChipsGroupV2
+
+| Scenario                      | Component        |
+| ----------------------------- | ---------------- |
+| Single standalone chip        | `EtChip`         |
+| Action chip (button-like)     | `EtChip`         |
+| Custom layout/behavior needed | `EtChip`         |
+| Group of filter chips         | `EtChipsGroupV2` |
+| Category selector             | `EtChipsGroupV2` |
+| Horizontal scrolling list     | `EtChipsGroupV2` |
+| Multi-row wrapped chips       | `EtChipsGroupV2` |

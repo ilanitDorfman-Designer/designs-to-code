@@ -1,0 +1,68 @@
+---
+description: Agent guide for EtIconV2 — supports Zappicons CDN, bundled DS — React SVGs from the registry (with placeholders for unregistered sheet names), and optional renderIcon; props include variant, size, color, and optional onPress for interactive icon buttons
+alwaysApply: false
+---
+
+# EtIconV2
+
+Single icon component: **Zappicons CDN**, **DS — React (Figma)** via registry, or **`renderIcon`** for inline SVG.
+
+## Resolution order
+
+1. **`renderIcon`** — e.g. `<EtIconV2 name="custom" renderIcon={({ size, color }) => <MySvg width={size} height={size} color={color} />} />` (name still used for a11y / theme).
+2. Else **`name` in `DS_REACT_ICON_REGISTRY`** — bundled `react-native-svg` for that DS symbol.
+3. Else **`name` is a DS — React symbol** (see `DS_REACT_ICON_GALLERY`) — fall back to **Zappicons CDN** (`name` + `variant`) when not bundled locally.
+4. Else **Zappicons CDN** (`name` + `variant`).
+
+[Figma DS — React](https://www.figma.com/design/cMyPhFndkPeXR6UkIuZujT/DS---React?node-id=37481-148641)
+
+## Props
+
+```tsx
+<EtIconV2
+  name="settings" // required
+  variant={IconVariant.Regular}
+  size="md" // xs(12) | sm(16) | md(20) | lg(24) | xl(32) | 2xl(48) | number
+  color="#FF0000"
+  onPress={() => {}}
+  renderIcon={({ size, color }) => <MyIcon width={size} height={size} color={color} />}
+/>
+```
+
+## CDN URL (non-DS names only)
+
+```
+https://etoro-cdn.etorostatic.com/web-client/et-plus/zappicons/{name}/{variant}/{name}-{variant}.svg
+```
+
+Register DS SVGs in `libs/etoro-ui/src/components/et-icon-v2/ds-react/ds-react-icon-registry.ts`.
+
+## Utilities (documentation only, don't use on client app)
+
+```tsx
+import {
+  getOrFetchIconMetadata,
+  getIconMetadata,
+  getAllIconNames,
+  getIconsByCategory,
+  searchIcons,
+} from 'etoro-ui/components/et-icon-v2';
+```
+
+## Limitations
+
+- DS / `renderIcon`: single tint via `color` unless your SVG handles more.
+- CDN: single tintColor.
+- Static SVGs only (no animations).
+
+## Design System Integration
+
+`useIconTheme` resolves explicit icon color overrides and otherwise defaults every icon to `carbon900`.
+
+| V1 token | V2 token | Used by case |
+| --- | --- | --- |
+| `textPrimaryNeutral` | `carbon900` | `default` |
+
+## Behavior deltas vs production
+
+Icons no longer apply name-based contextual default colors. Pass the `color` prop when an icon needs a brand, status, or warning color.

@@ -1,0 +1,89 @@
+---
+description: Agent guide for EtSideMenu - web-only shell left navigation; collapsed rail ↔ expanded 280px panel morph, fully controlled, navigation-agnostic compound family
+alwaysApply: false
+---
+
+# EtSideMenu Component
+
+> Implementation status: complete — root, subcomponents, hooks, tests, and stories are all on disk
+
+## Purpose & Scope
+
+`EtSideMenu` is the web shell's left navigation menu: a collapsed icon rail (72/80/84px by breakpoint tier) that morphs into a 280px expanded panel. It is:
+
+- **Web-only by placement, not by code** — mounted from `.web.tsx` layouts; the kit component itself has no `Platform.OS` branches except the two documented web-mechanism escapes below.
+- **Fully controlled** — `tier`, `expanded`, `activeItemId` are props; the kit holds no menu state. `onExpandedChange(next, reason)` reports every transition with its cause.
+- **Navigation-agnostic** — item ids in, `onItemPress(id)` out. No router, no BL, no facade imports. The shell owns routing and analytics.
+
+`EtSideMenuTrigger` is a context-free opener button for the hidden tier's top panel.
+
+## Architecture
+
+```text
+placeholder (in-flow, width = railWidthForTier(tier), zIndex Z_SHELL_MENU)
+├── backdrop (web-only, position:fixed, mounted only while expanded — sibling BELOW surface)
+└── surface (absolute, animated width railWidth→280, END-corner radii 0→32, overflow hidden)
+    ├── rail layer  (absolute, rail width;  not rendered at tier -1)   ← LayerContext 'rail'
+    └── panel layer (fixed 280 width so labels never re-wrap)          ← LayerContext 'panel'
+```
+
+- **Children are rendered twice.** The root parses slots once (`__SLOT_TYPE` statics: `header` | `profile` | `tile` | `section` | `footer`; `Item` carries none — classified by its parent Section), then renders them into both layers under `SideMenuLayerContext`. Each subcomponent reads the layer and renders its per-layer form or `null` (e.g. secondary sections and the footer's panel form).
+- **Nothing mounts/unmounts during animation** — opacity/transform/width only. `pointerEvents` flips immediately on state change: panel layer `'none'` while collapsed, rail layer `'none'` while expanded.
+- **No navigation landmark on the surface** — `EtAppLayout` stamps the labelled `navigation` role on its SideMenu slot (`accessibilityLabel`, default 'Main navigation'). A second one here would nest two navigation landmarks and double the entry in the AT landmark list.
+- **The inactive layer is fully hidden, not just transparent**: it gets `aria-hidden` (flips with `expanded`, like pointerEvents) and every Pressable inside drives `focusable` from layer × expanded — otherwise Tab lands on invisible controls and screen readers announce each item twice.
+- **`testID` is layer-suffixed** on dual-layer subcomponents (Header/Profile/Section/Item): a consumer `testID="x"` mounts as `x-rail` and `x-panel` so selectors are never ambiguous. Footer (rail-only), Tile (panel-only — `x-panel`, `x-skeleton` while loading) and the root placeholder keep one instance each.
+- **Context split**: `SideMenuConfigContext` (static: tier, railWidth, activeItemId, handlers, reducedMotion, plus `setInitialFocus(handle | null)` — a setter, not a raw ref, so consumers never mutate context objects; the panel Header toggle registers itself as the focus-on-open target through it) + `SideMenuStateContext` (expanded, progress/crossfade/isExpanding SharedValues, toggle, requestClose). Hooks throw the canonical `'EtSideMenu compound components must be used within <EtSideMenu>'` outside the root; `useSideMenuLayer` defaults to `'panel'` and never throws.
+
+## Z model
+
+`Z_SHELL_MENU` sits on the ROOT placeholder and is **sibling-scoped**: RNW gives every View `position: relative; z-index: 0`, so the value is only meaningful among direct children of the shell row. Content-column z-indexes can never win over the menu, and the constant is meaningless outside the shell.
+
+## Animation contract
+
+- One `progress` SharedValue (0 rail … 1 panel) drives every derived style; direction-aware interpolation windows (expand 280ms decelerate / collapse 200ms accelerate; hidden tier 300/220ms) are selected via the `isExpanding` SharedValue. The window fractions cut the EASED progress axis — their design-sheet ms provenance is not wall-clock (see the note atop `use-side-menu-animation.ts`).
+- **NEVER add `entering`/`exiting` layout animations** — anything mounted/unmounted across breakpoints with layout animations is the split-layout crash vector (see `components/layout/split-layout/AGENTS.md`). Everything stays mounted; style-driven only.
+- Reduced motion: geometry snaps (progress jumps), the `crossfade` SharedValue provides a single 80ms opacity swap between layers.
+- Tier width changes while collapsed are NOT animated — `railWidth` is a plain prop-derived number; `progress` stays 0.
+- Hover = full-bleed overlay `colors.carbon900` at animated opacity 0→0.03 (80ms in / 160ms out), driven by `useHover().isHovered`. Active = `ActiveIndicator` (a full-row `carbon900` 3% band — the same fill-layer structure as hover — plus a 2px vertical gradient bar `primary600`→`verdictPositive400Static` flush to the surface's start edge, exactly the band's height) plus the instant `IconVariant.Filled` swap where an icon renders, plus `aria-current="page"` on both Item instances (visual cues alone are invisible to AT). Figma layers a blend-mode glow around the bar — deliberately not built (blend modes are unreliable on RNW).
+- The rail Header control doubles as the brand mark: `EtoroMark` (the `<e>` glyph, 36px, `actionBrandText`) at rest, swapping to the expand glyph on mouse hover OR keyboard focus — there is no separate rail toggle button.
+
+## Backdrop
+
+Web-only `position: 'fixed'` Pressable (plain `'absolute'` would size to the rail-width placeholder). No scrim color; it closes by swallowing the outside click (`requestClose('outside')`). It is `focusable={false}` — RNW Pressables default to tabIndex 0, which would make it an invisible full-viewport tab stop and misroute outside-clicks into `'focusout'` closes. The keyboard counterpart is focusout-close — and the surface carries `tabIndex={-1}` so a click on NON-focusable panel content (padding, headings, the loading tile) focuses the surface instead of blurring to body, which would read as a null-relatedTarget focusout and close the panel (also keeps Safari item presses inside: its buttons are not mouse-focusable). Escape closes via the shared web dismiss stack (`core/web/use-dismissable`) — every open overlay registers while active and only the TOPMOST one receives an Escape, so stacked layers (panel + overlay aside + FAB menu) can never double-close. Focus restore on close skips the case where focus already moved deliberately to another element (ARIA APG: never yank focus back on a focus-driven dismiss); unmount-while-expanded restores via effect cleanup.
+
+## Entry Points & Contracts
+
+See `api/types.ts` for the full prop/context types. Public surface:
+
+| Export | Contract |
+| --- | --- |
+| `EtSideMenu` | root; props `{ tier, expanded, onExpandedChange, activeItemId?, onItemPress?, children, style?, testID? }` |
+| `EtSideMenu.Header` | rail: the `<e>` mark doubling as the expand toggle (hover/focus swaps the glyph); panel: logo row + collapse toggle. `{ logo?, toggleAccessibilityLabels?: { expand?, collapse? }, testID? }` |
+| `EtSideMenu.Profile` | rail: avatar only; panel: avatar + name/handle (36px row). `{ avatar, name?, handle?, onPress?, testID? }` |
+| `EtSideMenu.Tile` | panel-only Club card between Profile and the menu. `{ icon?, title, subtitle?, onPress?, loading?, testID? }` — dumb slot; the shell resolves copy, data and navigation. A press also collapses the panel via `requestClose('item')`, same contract as `Item` |
+| `EtSideMenu.Section` | `{ label?, secondary?, children }` — secondary ⇒ null in rail, 40px icon+label rows + optional "More" divider in panel |
+| `EtSideMenu.Item` | `{ id, label, icon?, iconColor?, badge?, disabled?, testID? }` — label always required (rail a11y); panel primary rows are text-only (icons show in the rail and in secondary rows) |
+| `EtSideMenu.Footer` | rail-only bottom group; renders `null` in the panel layer |
+| `EtSideMenuTrigger` | context-free opener `{ onPress, accessibilityLabel?, testID? }` |
+| constants | `RAIL_WIDTH_BY_TIER`, `railWidthForTier`, `PANEL_WIDTH`, `WORDMARK_GLYPH_HEIGHT` (pass to `EtoroWordmark size`) — top-panel heights live in the sibling `top-panel/` family (`TOP_PANEL_HEIGHT_REGULAR`/`_TALL`) |
+
+`onExpandedChange` reasons: `'open' | 'toggle' | 'outside' | 'escape' | 'focusout' | 'item'`.
+
+## Design tokens & pixel constants
+
+Colors via `useEtoroTheme().colors` only: `backgroundBase` (surface), `carbon900` (icons/labels/hover fill/active band), `carbon700` ("More" title), `carbon600` (@handle, tile subtitle), `cardDefault` (tile card), `primary600`→`verdictPositive400Static` (active bar gradient), `actionBrandText` (wordmark + `<e>` mark default). No color literals.
+
+Geometry lives in `constants.ts` (spacing tokens where on-scale): rail widths 72/80/84, panel 280, end radius 32, v-pad 24, h-pad 32, rail cell 60, rows 40/40, icon 20, toggle 36 circular (glyph 24; Figma icon-button radius 60 — hover overlay clips round), avatar 36, header row 36, header→profile gap 64, panel block gap 24, active bar 2×row radius 4, tile gutter 24 / padding 16 / radius 8, wordmark glyph height 13.3 (`WORDMARK_GLYPH_HEIGHT`, exported).
+
+## Anti-Patterns
+
+- No `Platform.OS` branches by consumers — mount from `.web.tsx` layouts (width tokens / `.web.ts` splits only). The kit-internal exceptions are the fixed backdrop and the web-close hook, both documented above.
+- Don't feed BL/router/facade objects into the kit — ids and callbacks only.
+- Don't use `core/utils/rtl.ts` here (dead on RNW) — use `useLayoutDirection` from `core/hooks` for `dirSign`.
+- Don't animate the placeholder width — only the absolute surface animates; the placeholder reserves rail width.
+- Don't reuse `DrawerScene`/drawer machinery anywhere near this.
+- No `entering`/`exiting` — repeated on purpose.
+
+## Test-coverage boundary
+
+Jest (kit preset, mocked theme/foundations hooks): placeholder widths per tier, slot classification, context throw, backdrop press, Escape via the dismiss stack (`core/web/use-dismissable.web.test.ts` + `shell/tests/escape-dismiss.test.tsx` — one Escape closes only the topmost layer), toggle/item wiring, the three Item render modes, the mark↔expand-glyph hover/focus swap, active band+bar, tile content/skeleton/press. NOT coverable in Jest — Playwright hardening task: real hover/focusout/focus-restore DOM semantics, fixed-backdrop viewport geometry, animation timing/stagger visuals, RTL end-to-end, reduced motion via real `matchMedia`.

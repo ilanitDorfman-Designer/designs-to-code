@@ -1,0 +1,78 @@
+---
+description: Agent guide for EtRange - static read-only range indicator visualizing a numeric value between min/max with gradient cursor and edge-aligned labels
+alwaysApply: false
+---
+
+# EtRange Component
+
+## Purpose & Scope
+
+`EtRange` is a **static, read-only** indicator that visualizes a numeric value between `min` and `max`. It renders edge-aligned labels, a center track, and a non-interactive gradient cursor. It does **not** allow user dragging or gesture input.
+
+- Displays min/max labels at the exact track edges
+- Positions a gradient cursor for the provided `value`
+- Supports positive (green) or negative (red) cursor styling
+- Handles zero-span ranges by centering the cursor
+- Auto-measures width when set to `auto`; accepts explicit width
+
+**Does NOT handle:**
+
+- User interaction/dragging (use a future slider component for that)
+- Showing the numeric value above the track (expose via props/format only)
+- Internal state management beyond layout measurement
+
+## Entry Points & Props
+
+### `EtRange`
+
+```tsx
+<EtRange
+  min?: number               // default: 0
+  max?: number               // default: 100
+  value?: number             // default: midpoint between min/max
+  cursorColor?: 'green' | 'red' // default: 'green'; controls gradient preset
+  width?: number | 'auto'    // default: 'auto' (fills container)
+  cursorHeight?: number      // default: 37 (SVG native height)
+  formatValue?: (value: number) => string // default: value.toFixed(2)
+/>
+```
+
+## Usage Patterns
+
+- **Basic**
+  ```tsx
+  <EtRange min={0} max={100} value={42} />
+  ```
+- **Negative cursor**
+  ```tsx
+  <EtRange min={-10} max={10} value={-6} cursorColor="red" />
+  ```
+- **Custom width & formatting**
+  ```tsx
+  <EtRange width={180} min={0} max={1} value={0.25} formatValue={(v) => `${(v * 100).toFixed(0)}%`} />
+  ```
+
+## Behaviors & Rules
+
+- Value is normalized and clamped to `[0,1]`; if `min === max`, cursor is centered.
+- Labels always align to track edges; when `width='auto'`, the measured container width is used.
+- Cursor size scales with `cursorHeight`; width is proportional to the source SVG.
+- Track uses theme `colors.bgActionDisabled`; cursor applies gradient + drop shadow per `cursorColor`.
+- Component is purely presentational; parent owns the value.
+
+## Dependencies
+
+- Internal: `RangeTrack`, `RangeCursor`, `RangeLabel`, `range-utils` (`clamp01`, `defaultRangeFormatValue`)
+- Theme: `useEtoroTheme` for colors; `EtText` for labels typography
+- External: `react-native-svg` for the cursor shape
+
+## Anti-patterns
+
+- ❌ Expecting drag/gestures — this component is static; build a slider for interaction.
+- ❌ Passing non-numeric `min`, `max`, or `value` — values must be numbers; NaN yields clamped behavior.
+- ❌ Relying on cursor color outside `'green' | 'red'` — only these presets are supported.
+
+## Testing Notes
+
+- Snapshot/behavior: renders labels, centers cursor when `min === max`, clamps value inside range.
+- Styling: verify cursor gradient switches with `cursorColor`, labels stick to edges for both numeric and auto widths.

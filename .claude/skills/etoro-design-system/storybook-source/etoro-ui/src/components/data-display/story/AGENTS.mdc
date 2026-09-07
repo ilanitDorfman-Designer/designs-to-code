@@ -1,0 +1,238 @@
+---
+description: Agent guide for EtStory - circular avatar component with label, watched/unwatched ring indicator, loading animation, and instrument variant for story-style displays
+alwaysApply: false
+---
+
+# EtStory Component
+
+## Purpose & Scope
+
+`EtStory` is a circular avatar component for the eToro design system. It displays a circular avatar (for instruments or users) with a label below, supporting a "watched" state indicator via a green ring border.
+
+**Features:**
+
+- **Circular avatar**: 56x56px avatar with image (uses `EtAvatar` internally)
+- **Variant support**: `default` (no overlay, for users) or `instrument` (gradient overlay, for stocks/crypto)
+- **Unwatched indicator**: Green ring border (64x64px) when story hasn't been watched yet
+- **Loading state**: Animated rotating arc while content is loading
+- **Loading complete animation**: Avatar "pop" scale animation when loading finishes
+- **Label support**: Text label below avatar (e.g., "TSLA")
+- **Press interaction**: Optional onPress callback
+- **Compound component pattern**: `EtStory.Label` subcomponent
+
+**Does NOT handle:**
+
+- Navigation logic (use with router/navigation handlers)
+- Story content/preview (handle in parent)
+- Multiple story management (handle selection state in parent)
+
+## Entry Points & Contracts
+
+### `EtStory` (main component)
+
+```tsx
+<EtStory
+  imageSource: string           // required - image URL for avatar
+  variant?: 'default' | 'instrument'  // default: 'default' - 'instrument' adds gradient overlay
+  watched?: boolean             // default: false - ring shows when false (unwatched)
+  loading?: boolean             // default: false - shows animated loading ring
+  onPress?: () => void         // optional - callback when pressed
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  <EtStory.Label>{children}</EtStory.Label>  // required
+</EtStory>
+```
+
+**Children constraints:**
+
+- Required: `EtStory.Label` must be provided as child
+- Only `EtStory.Label` is allowed as child (throws error for other children)
+- Label text is extracted from `EtStory.Label` for accessibility purposes
+
+### `EtStory.Label`
+
+```tsx
+<EtStory.Label
+  style?: StyleProp<TextStyle>
+>
+  {ReactNode}
+</EtStory.Label>
+```
+
+## Usage Patterns
+
+### User story (default variant)
+
+```tsx
+<EtStory imageSource="https://example.com/user.jpg" onPress={() => console.log('Story pressed')}>
+  <EtStory.Label>Sarah</EtStory.Label>
+</EtStory>
+```
+
+### Instrument story (with gradient overlay)
+
+```tsx
+<EtStory imageSource="https://example.com/tsla.png" variant="instrument" onPress={() => console.log('Story pressed')}>
+  <EtStory.Label>TSLA</EtStory.Label>
+</EtStory>
+```
+
+### Watched state
+
+```tsx
+<EtStory imageSource="https://example.com/tsla.png" variant="instrument" watched={true}>
+  <EtStory.Label>TSLA</EtStory.Label>
+</EtStory>
+```
+
+### Multiple stories (typical use case)
+
+```tsx
+const stories = [
+  { id: '1', image: 'tsla.png', label: 'TSLA', watched: false, variant: 'instrument' },
+  { id: '2', image: 'user.jpg', label: 'John', watched: true, variant: 'default' },
+];
+
+{
+  stories.map((story) => (
+    <EtStory key={story.id} imageSource={story.image} variant={story.variant} watched={story.watched} onPress={() => handleStoryPress(story.id)}>
+      <EtStory.Label>{story.label}</EtStory.Label>
+    </EtStory>
+  ));
+}
+```
+
+## Anti-patterns
+
+### ❌ Using EtStory without EtStory.Label
+
+```tsx
+// BAD - EtStory.Label is required
+<EtStory imageSource="https://example.com/tsla.png" />
+```
+
+**Fix:** Always provide EtStory.Label as child:
+
+```tsx
+<EtStory imageSource="https://example.com/tsla.png">
+  <EtStory.Label>TSLA</EtStory.Label>
+</EtStory>
+```
+
+### ❌ Using invalid children
+
+```tsx
+// BAD - only EtStory.Label is allowed
+<EtStory imageSource="https://example.com/tsla.png">
+  <Text>TSLA</Text>
+</EtStory>
+```
+
+**Fix:** Use EtStory.Label for the label:
+
+```tsx
+<EtStory imageSource="https://example.com/tsla.png">
+  <EtStory.Label>TSLA</EtStory.Label>
+</EtStory>
+```
+
+### ❌ Manually styling colors
+
+```tsx
+// BAD - bypasses design system
+<EtStory.Label style={{ color: 'red' }}>TSLA</EtStory.Label>
+```
+
+**Fix:** Colors are automatically managed based on theme.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for styling
+- `EtText` - underlying text component for `StoryLabel`
+- `EtAvatar` - used for avatar rendering with variant support (handles gradient overlay internally)
+
+### External Dependencies
+
+- `react-native` - `Pressable`, `View`, `StyleSheet`
+- `react-native-reanimated` - avatar pop animation
+- `react-native-svg` - gradient ring indicators
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`):
+  - Ring gradient: `colors.positiveGradientPrimary50` to `colors.positiveGradientPrimary70`
+  - Label color: `colors.textPrimaryNeutral`
+  - Avatar background: `colors.bgNeutralTertiary` (theme-aware)
+  - Gradient overlay (instrument variant): handled by `EtAvatar` with `variant="instrument"`
+- Sizes:
+  - Avatar: 56x56px
+  - Ring: 64x64px (2px gap + 2px border on each side)
+  - Container: 64px wide
+- Typography: `num-xxs` variant with `weight="semiBold"` (10px, semibold, primary color)
+
+## Patterns & Pitfalls
+
+### Watched State
+
+The watched state is controlled by the `watched` prop:
+
+- `watched={false}` - shows green ring border (story is unwatched/new)
+- `watched={true}` - no ring (story has been watched)
+
+The ring acts as an "unread indicator" - it appears when the story hasn't been watched yet and disappears once the user has watched it. The ring is positioned absolutely behind the avatar.
+
+### Loading State
+
+The loading state shows an animated spinner ring (similar to Instagram):
+
+- `loading={true}` - shows animated rotating arc
+- `loading={false}` - normal behavior (based on watched state)
+
+**Loading takes precedence over watched state.** When loading, the animated ring is always shown regardless of the `watched` value.
+
+While loading:
+
+- The component is non-interactive (onPress won't fire)
+- Accessibility state includes `busy: true`
+
+**Loading complete animation:** When `loading` transitions from `true` to `false`, the avatar plays a subtle "pop" animation (scales up to 1.08x then back to 1x) to provide feedback that loading has finished.
+
+### Press Handling
+
+- `onPress` is optional - if not provided, component is not pressable
+- Component uses `Pressable` with `accessibilityRole="button"`
+
+### Image Loading
+
+- Uses `EtAvatar` with `EtAvatar.Image` and `contentFit="cover"`
+- Handles invalid URLs gracefully (does not crash)
+- Avatar uses a theme-aware background color (`colors.bgNeutralTertiary`) that shows if the image fails to load
+
+### Variant
+
+The `variant` prop controls the avatar styling:
+
+- `variant="default"` (default) - No gradient overlay, suitable for user avatars
+- `variant="instrument"` - Adds gradient overlay, suitable for instrument/stock logos
+
+This prop is passed directly to the underlying `EtAvatar` component.
+
+### Label Rendering
+
+- `EtStory.Label` is required as child
+- Label is centered below avatar with 5px spacing
+- Label text is truncated to single line with `numberOfLines={1}`
+- Label text is extracted for accessibility label generation
+
+## Related Context
+
+- `EtAvatar (social/avatar/)` - Avatar component used internally for rendering the avatar with variant support
+- `EtCheckbox (controls/checkbox/)` - Similar compound component pattern
+- `api/types.ts` - Type definitions for props (includes `StoryVariant` type)
+- `subcomponents/story-label.tsx` - Label subcomponent
+- `components/story-ring.tsx` - Static ring indicator for unwatched state
+- `components/loading-ring.tsx` - Animated ring indicator for loading state

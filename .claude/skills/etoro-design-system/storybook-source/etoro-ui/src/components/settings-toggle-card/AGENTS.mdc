@@ -1,0 +1,36 @@
+# EtSettingsToggleCard
+
+A presentational settings card with a primary on/off toggle and an optional
+action row that is revealed only while the toggle is on.
+
+## When to use
+
+A settings group that pairs a single boolean toggle (title + supporting
+subtitle) with a follow-up action that is only relevant once the toggle is
+enabled — e.g. "Advanced view" + "Manage columns". Originally extracted to
+de-duplicate the identical card in the portfolio and watchlist settings sheets.
+
+## API
+
+| Prop                       | Type                          | Notes                                                    |
+| -------------------------- | ----------------------------- | -------------------------------------------------------- |
+| `title`                    | `string`                      | Heading next to the toggle.                              |
+| `subtitle`                 | `string`                      | Supporting copy under the heading.                       |
+| `value`                    | `boolean`                     | Controlled toggle state.                                 |
+| `onValueChange`            | `(value: boolean) => void`    | Fired on toggle.                                         |
+| `action`                   | `EtSettingsToggleCardAction?` | Revealed row, shown only while `value` is `true`.        |
+| `style`                    | `StyleProp<ViewStyle>`        | Outer card override — keep margins at the call site.     |
+| `accessibilityLabel`       | `string?`                     | Card container label.                                    |
+| `toggleAccessibilityLabel` | `string?`                     | Defaults to `title`.                                     |
+| `toggleAccessibilityHint`  | `string?`                     | Defaults to `subtitle`.                                  |
+| `testID` / `toggleTestID`  | `string?`                     | Toggle row / switch test ids.                            |
+
+`EtSettingsToggleCardAction`: `{ label; onPress?; iconName? (default 'nut'); testID? }`.
+
+## Notes
+
+- Dumb/themeable: reads `cardDefault`, text, and `dividerQuinary` via
+  `useEtoroTheme`; all copy, values, and handlers come from props.
+- Margins are intentionally NOT baked in — pass `style` for spacing so each
+  host sheet controls its own layout.
+- Built from kit primitives: `EtText`, `EtToggleSwitch`, `EtListItem`, `EtIconV2`.

@@ -1,0 +1,78 @@
+---
+description: Agent guide for EtTopPanel - web-only shell global top panel; controlled-height three-zone bar (Leading | centered Search + ToriBadge | Actions), navigation/data/analytics-free compound family
+alwaysApply: false
+---
+
+# EtTopPanel Component
+
+> Implementation status: kit family complete — root, subcomponents, constants, stories, tests
+
+## Purpose & Scope
+
+`EtTopPanel` is the web shell's global top panel (≥768 only — below that the mobile chrome owns navigation). A single horizontal bar hosting the menu opener slot, the global search pill with the "Ask Tori" badge, and the actions cluster. It is:
+
+- **Web-only by placement, not by code** — mounted from the shell's `.web.tsx` layout; no `Platform.OS` branches anywhere in the family.
+- **Fully controlled** — height comes from the `tall` prop (`false` ⇒ 76px, `true` ⇒ 84px); the shell passes `useBreakpoint(BREAKPOINT_DESKTOP_S)` (1280). The kit never measures the window.
+- **Slot-based and dumb** — no navigation, no data, no analytics. The shell composes `EtSideMenuTrigger` into Leading, wires `Search.onPress`, mounts the ToriBadge, and drops the notifications bell into Actions.
+
+## Architecture
+
+```text
+EtTopPanel (row, height 76/84, ps 24 pe 40, bg backgroundBase, no border)
+├── Leading    44-tall hug — opener at tier -1 + screen hand-up; NOTHING when empty
+├── (centered) Search 280×40 · gap 10 · ToriBadge   ← one group, flex-1 zone
+└── Actions    hug ×44 — [handed-up action] + bell, 36×36 slots, padding 4
+```
+
+- **Children are classified by a `__SLOT_TYPE` static** (same pattern as `EtSideMenu`): Leading and Actions hug their edges, Search + ToriBadge are re-parented into the centered flexible zone. Composition order in JSX doesn't matter; statics survive minification where displayName doesn't.
+- **The search group is CENTERED in the free span** between the edge clusters — the simple-rule reading of Figma's content-column centering (the DS symbol centers search+badge over the main content column and right-aligns the bell over the aside strip; with hugging edge zones the free-span center approximates that at every width, aside or not).
+- **Search is a press target, not a `TextInput`** (D4): it mimics the DS Search Field rest state (radius 100, `carbon900` @ 8% background layer, primary-color text, rest-visible clear icon in `carbon400`) but must never focus a keyboard — the shell navigates to the search screen on press. Don't swap in `EtSearchInput`.
+- The trailing `xmark-circle-fill` is rendered **decorative and hidden from AT** (D5) — it is explicit in the DS rest-state variant; its semantics are a design ticket, not a code decision.
+- **ToriBadge** is the "Ask Tori" pill: `accentE100` tint, the `tori-logo` registry icon, and the label as ONE gradient run — `carbon900` → `verdictPositive600`, fully green from 35.577% of the text width (`TORI_LABEL_GRADIENT_STOP`; Figma's raw text fill — it merely READS as two-tone). Every gradient stop is a theme token, so dark/light flips automatically: the icon's knot runs `carbonPrimaryDivider` → `carbon800` and reads the theme itself (ignoring the registry's `color` prop by design); the label is a platform pair — CSS `background-clip: text` on web (`tori-badge-label.web.tsx`; MaskedView's web build is a no-op passthrough), MaskedView + expo-linear-gradient on native. The badge is a button only when `onPress` is given — the shell wires the Tori surface when it exists. `loading` swaps a same-footprint skeleton (104×40 r100) so the centered group cannot shift when availability resolves.
+
+## Geometry rules
+
+- **No invisible spacers anywhere.** The old equal-gap scheme needed a load-bearing empty Leading slot and a hidden first Actions slot (old D7); centered-zone geometry killed both. An empty Leading renders `null`; Actions hugs its content.
+- **Handed-up content is never boxed.** A screen may hand up content that renders null under the frame (Home's superseded capsules do): `Actions.leading` renders RAW before the bell, and Leading has no minimum width — a fixed box around either would re-create phantom geometry that shifts the centered group. The cluster grows leftward with real content; the bell keeps its 40px distance to the bar edge.
+- Emptiness in Leading uses `Children.toArray` (strips booleans/null), so `{cond && <Trigger/>}` and `{cond ? <Trigger/> : null}` both register as empty when false.
+
+## Radius ownership (D8)
+
+`EtTopPanel` has **no corner radius**. If a card treatment ever ships, the radius belongs to the **shell's content wrapper**, not this component — `overflow: clip` on the bar itself would clip future popovers/badges (bell dropdown, search suggestions).
+
+## Entry Points & Contracts
+
+See `api/types.ts` for the full prop types. Public surface:
+
+| Export | Contract |
+| --- | --- |
+| `EtTopPanel` | root; props `{ tall, children, style?, testID? }` |
+| `EtTopPanel.Leading` | start slot `{ children?, testID? }` — empty ⇒ renders nothing |
+| `EtTopPanel.Search` | pressable pill `{ placeholder, onPress, accessibilityLabel?, testID? }` (label defaults to placeholder; `{testID}-clear` on the hidden xmark) |
+| `EtTopPanel.ToriBadge` | `{ label, accentLabel, loading?, onPress?, accessibilityLabel?, testID? }` — button only with `onPress` (`accessibilityLabel` applies to the button form only; the plain view carries NO container label — its text announces itself, and a label on a role-less element is invalid ARIA); `{testID}-skeleton` while loading |
+| `EtTopPanel.Actions` | trailing hug cluster `{ children?, leading?, testID? }` — `leading` renders raw, `children` in the 36×36 bell slot |
+| constants | `TOP_PANEL_HEIGHT_REGULAR` (76), `TOP_PANEL_HEIGHT_TALL` (84) |
+
+The height flip point `BREAKPOINT_DESKTOP_S = 1280` lives in `core/styles/breakpoints.ts` and is deliberately **NOT** a `SHELL_TIERS` entry (adding it would renumber the shipped `SideMenuTier` API — see the doc comment there). The height change at 1280 is not animated (tracks the breakpoint like rail widths).
+
+## Design tokens & pixel constants
+
+Colors via `useEtoroTheme().colors` only: `backgroundBase` (panel fill), `carbon900` (icons, search text, the 8% background layer, badge-label gradient start), `carbon400` (clear icon), `accentE100` (badge tint), `verdictPositive600` (badge-label gradient end), `carbonPrimaryDivider` → `carbon800` (the tori-logo knot gradient). No color literals. No border — the bar sits flush on the content surface (checked with design). Geometry lives in `constants.ts` with the full Figma pixel table (heights 76/84 = `X19`/`X21`, paddings 24/40 = `X6`/`X10`, pill 280×40 r100 px12, icons 16/20, badge h40 px12 py4 gap4 logo24, group gap 10 — off-scale in Figma, actions slots 36 pad 4).
+
+The blur effects the DS symbol binds (bar background blur 20, badge backdrop-blur 10) are **deliberately not implemented** — invisible over the opaque `backgroundBase` bar; revisit only when translucency is actually designed.
+
+## Anti-Patterns
+
+- No `Platform.OS` branches — mount from `.web.tsx` layouts.
+- Don't feed router/BL/facade/analytics objects into the kit — strings and callbacks only.
+- Don't replace `EtTopPanel.Search` with `EtSearchInput` — the pill must never focus a keyboard.
+- Don't re-add invisible spacers to Leading/Actions — centered-zone geometry needs none.
+- Don't add a corner radius or `overflow` clipping to the bar — see "Radius ownership".
+- Don't tint the `tori-logo` icon — its gradient is token-bound and theme-read internally; the registry passes `color` and the icon ignores it by design.
+- Don't split the badge label into two colored spans — Figma's fill is one gradient run; the split-span look is an artifact of the 35.577% stop.
+- No `entering`/`exiting` animations; the 76→84 height change snaps with the breakpoint.
+- `EtIconV2` only — never legacy `EtoroIcon`.
+
+## Test-coverage boundary
+
+Jest (kit preset, mocked theme/EtText/EtIconV2/EtSkeleton): zone structure + slot classification, height by `tall`, empty-Leading renders nothing, search press + a11y role/label + primary-color text, xmark hidden from AT, badge gradient stops/locations + press gating + skeleton footprint, actions hug + hand-up slot. NOT coverable in Jest — Playwright hardening (shell stage): real heights at 1200/1400, group centered in the free span, bell 40px off the bar edge, trigger flow at 800.

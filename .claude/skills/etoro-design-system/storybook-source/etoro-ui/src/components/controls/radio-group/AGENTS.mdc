@@ -1,0 +1,273 @@
+---
+description: Agent guide for EtRadioGroup - controlled radio group with compound Option subcomponent, vertical/horizontal layout, animated transitions, error state, and single-selection semantics
+alwaysApply: false
+---
+
+# EtRadioGroup Component
+
+## Purpose & Scope
+
+`EtRadioGroup` is a controlled radio group component for the eToro design system. It provides a flexible, accessible radio group with:
+
+- **Compound component pattern**: `EtRadioGroup.Option` subcomponent
+- **Single selection**: Only one option can be selected at a time
+- **Cannot unselect**: Clicking a selected option does nothing
+- **Direction prop**: `'vertical'` (default) or `'horizontal'` layout
+- **Group-level states**: disabled, error
+- **Animated transitions**: smooth border color and inner circle animations
+- **Haptic feedback**: enabled by default
+
+**Does NOT handle:**
+
+- Form validation logic (handle in parent)
+- Multi-selection (use checkboxes instead)
+
+## Entry Points & Contracts
+
+### `EtRadioGroup` (main component)
+
+```tsx
+<EtRadioGroup
+  value: string | null        // required - currently selected value
+  onChange: (value: string) => void  // required - selection callback
+  direction?: 'vertical' | 'horizontal'  // default: 'vertical'
+  disabled?: boolean          // default: false - group-level disabled
+  error?: boolean             // default: false - group-level error
+  haptics?: boolean           // default: true
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}
+</EtRadioGroup>
+```
+
+### `EtRadioGroup.Option`
+
+```tsx
+<EtRadioGroup.Option
+  value: string               // required - unique value for this option
+  disabled?: boolean          // default: false - option-level disabled
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}                  // string - label text
+</EtRadioGroup.Option>
+```
+
+## Usage Patterns
+
+### Basic (vertical layout - default)
+
+```tsx
+const [selected, setSelected] = useState<string | null>(null);
+
+<EtRadioGroup value={selected} onChange={setSelected}>
+  <EtRadioGroup.Option value="option1">Option 1</EtRadioGroup.Option>
+  <EtRadioGroup.Option value="option2">Option 2</EtRadioGroup.Option>
+  <EtRadioGroup.Option value="option3">Option 3</EtRadioGroup.Option>
+</EtRadioGroup>;
+```
+
+### Horizontal layout
+
+```tsx
+<EtRadioGroup value={selected} onChange={setSelected} direction="horizontal">
+  <EtRadioGroup.Option value="small">Small</EtRadioGroup.Option>
+  <EtRadioGroup.Option value="medium">Medium</EtRadioGroup.Option>
+  <EtRadioGroup.Option value="large">Large</EtRadioGroup.Option>
+</EtRadioGroup>
+```
+
+### With error state
+
+```tsx
+<EtRadioGroup value={selected} onChange={setSelected} error>
+  <EtRadioGroup.Option value="opt1">Required option 1</EtRadioGroup.Option>
+  <EtRadioGroup.Option value="opt2">Required option 2</EtRadioGroup.Option>
+</EtRadioGroup>
+```
+
+### Group disabled
+
+```tsx
+<EtRadioGroup value={selected} onChange={setSelected} disabled>
+  <EtRadioGroup.Option value="opt1">Disabled option 1</EtRadioGroup.Option>
+  <EtRadioGroup.Option value="opt2">Disabled option 2</EtRadioGroup.Option>
+</EtRadioGroup>
+```
+
+### Individual option disabled
+
+```tsx
+<EtRadioGroup value={selected} onChange={setSelected}>
+  <EtRadioGroup.Option value="enabled">Enabled option</EtRadioGroup.Option>
+  <EtRadioGroup.Option value="disabled" disabled>
+    Disabled option
+  </EtRadioGroup.Option>
+</EtRadioGroup>
+```
+
+## Anti-patterns
+
+### ❌ Using Option outside of RadioGroup
+
+```tsx
+// Throws runtime error
+<EtRadioGroup.Option value="opt1">Option 1</EtRadioGroup.Option>
+```
+
+**Fix:** Always wrap Options inside `<EtRadioGroup>`.
+
+### ❌ Expecting toggle behavior
+
+```tsx
+// BAD - radio buttons cannot be unselected
+<EtRadioGroup
+  value={selected}
+  onChange={(val) => setSelected(selected === val ? null : val)} // Wrong!
+>
+```
+
+**Fix:** Radio buttons can only select, not unselect. Use checkboxes for toggle behavior.
+
+### ❌ Duplicate values
+
+```tsx
+// BAD - values must be unique
+<EtRadioGroup value={selected} onChange={setSelected}>
+  <EtRadioGroup.Option value="same">Option A</EtRadioGroup.Option>
+  <EtRadioGroup.Option value="same">Option B</EtRadioGroup.Option>
+</EtRadioGroup>
+```
+
+**Fix:** Each option must have a unique value.
+
+### ❌ Using RadioGroup for multi-select
+
+```tsx
+// BAD - use checkboxes instead
+const [selections, setSelections] = useState<string[]>([]);
+```
+
+**Fix:** Use `EtCheckbox` components for multi-selection scenarios.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `RadioGroupContext` - React context for sharing group state with options
+- `RadioGroupProvider` - Context provider component (handles memoization)
+- `RadioIndicator` - Visual radio circle with animations (in `components/`)
+- `useEtoroTheme` - provides theme colors for styling
+- `getRadioColors` - utility for mapping theme colors to radio states
+- Animation constants from checkbox (`ANIMATION_DURATION`, `EASING`)
+
+### External Dependencies
+
+- `expo-haptics` - haptic feedback on selection
+- `react-native` - `Pressable`, `View`, `StyleSheet`
+- `react-native-reanimated` - animations for border color and inner circle
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`) — V2 tokens:
+  - Unselected border: `carbon400`
+  - Selected border: `carbon600`
+  - Selected fill: `primary600` (green)
+  - Error border: `verdictNegative600`
+  - Disabled background: `carbon050`
+  - Disabled border: `carbon400`
+  - Label (default): `carbon900`
+  - Label (disabled): `carbon400`
+- Size: 20×20 with 14×14 inner circle
+- Gap between indicator and label: 12px
+- **Layout gaps (from Figma):**
+  - Vertical: 12px between options
+  - Horizontal: 24px between options
+
+## Patterns & Pitfalls
+
+### Layout Configuration
+
+The group handles layout internally via the `direction` prop with StyleSheet styles:
+
+```typescript
+const styles = StyleSheet.create({
+  containerVertical: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+  containerHorizontal: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+});
+```
+
+Gap values are from the Figma design system (vertical: 12px, horizontal: 24px).
+
+### Context Architecture
+
+The group uses context to share state with options (follows EtChip pattern):
+
+- `RadioGroupContext` - defines the context shape
+- `RadioGroupProvider` - wraps children and provides memoized context value
+- Context provides: `value`, `onSelect`, `disabled`, `error`
+- Options use `useRadioGroupContext()` hook to access group state
+- Options determine if they're selected by comparing their value to group value
+
+**File structure:**
+
+```text
+context/
+├── radio-group-context.tsx   # Context + useRadioGroupContext hook
+└── radio-group-provider.tsx  # RadioGroupProvider component
+```
+
+### Selection Behavior
+
+Radio buttons have specific selection semantics:
+
+| Action                  | Result              |
+| ----------------------- | ------------------- |
+| Click unselected option | Selects that option |
+| Click selected option   | Nothing happens     |
+| Click disabled option   | Nothing happens     |
+
+### Error State
+
+Error state applies to unselected options only:
+
+- Unselected options show red border when `error={true}`
+- Selected option shows normal selected styling (green inner circle)
+- Selecting an option visually "clears" the error for that option
+
+### Visual States
+
+| State              | Border Color   | Inner Circle | Background  |
+| ------------------ | -------------- | ------------ | ----------- |
+| Unselected         | Gray (#B2B2B2) | Hidden       | Transparent |
+| Selected           | Dark gray      | Green        | Transparent |
+| Unselected + Error | Red (#D12515)  | Hidden       | Transparent |
+| Selected + Error   | Dark gray      | Green        | Transparent |
+| Disabled           | Gray (#8C8C8C) | Based on val | Gray fill   |
+
+### Accessibility
+
+Built-in accessibility support:
+
+- Group: `accessibilityRole="radiogroup"`
+- Options: `accessibilityRole="radio"`
+- `accessibilityState={{ selected, disabled }}`
+- `accessibilityLabel` prop for custom screen reader text
+- `hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}` for easier touch
+
+## Related Context
+
+- `EtCheckbox (controls/checkbox/)` - For multi-selection scenarios
+- `EtChip (controls/chips/)` - Similar compound component pattern with context + provider
+- `api/types.ts` - Type definitions for props and context value
+- `context/` - Context and provider for state sharing
+- `components/radio-indicator.tsx` - Internal animated radio circle
+- `utils/get-radio-colors.ts` - Theme color mapping utility

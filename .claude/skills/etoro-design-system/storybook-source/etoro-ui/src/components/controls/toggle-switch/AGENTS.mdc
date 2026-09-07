@@ -1,0 +1,221 @@
+---
+description: Agent guide for EtToggleSwitch - controlled toggle switch extending native Switch API with two sizes, haptic feedback, theme-aware colors, and gesture handler integration for drawer compatibility
+alwaysApply: false
+---
+
+# EtToggleSwitch Component
+
+## Purpose & Scope
+
+`EtToggleSwitch` is a controlled toggle switch component for the eToro design system. It provides a flexible, accessible switch with:
+
+- **Two sizes**: small (~75% scale) and medium (default, native size, 100% scale)
+- **Extends native Switch API**: familiar `value`/`onValueChange` pattern for easy migration
+- **Native animations**: uses platform-native Switch animations
+- **Haptic feedback**: enabled by default
+- **Theme-aware colors**: automatically uses design system colors
+- **Gesture handler integration**: uses `Switch` from `react-native-gesture-handler` for proper touch handling inside drawer navigators
+
+**Does NOT handle:**
+
+- Form validation logic (handle in parent)
+- Label text (use external EtText or ListItem wrapper)
+- Uncontrolled mode (always requires `value` + `onValueChange`)
+
+## Entry Points & Contracts
+
+### `EtToggleSwitch` (main component)
+
+```tsx
+<EtToggleSwitch
+  value: boolean                    // required - controlled state
+  onValueChange: (value: boolean) => void  // required - toggle callback
+  size?: 'small' | 'medium'         // default: 'medium'
+  disabled?: boolean                // default: false
+  haptics?: boolean                 // default: true
+  forceNativeSync?: boolean         // default: false - use in bottom sheets
+  trackColor?: { false?: string; true?: string }  // optional overrides
+  thumbColor?: string               // optional override
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+/>
+```
+
+### Types
+
+| Type               | Values                  |
+| ------------------ | ----------------------- |
+| `ToggleSwitchSize` | `'small'` \| `'medium'` |
+
+## Usage Patterns
+
+### Basic usage
+
+```tsx
+const [on, setOn] = useState(false);
+<EtToggleSwitch value={on} onValueChange={setOn} />;
+```
+
+### Medium size
+
+```tsx
+<EtToggleSwitch value={on} onValueChange={setOn} size="medium" />
+```
+
+### Disabled state
+
+```tsx
+<EtToggleSwitch value={on} onValueChange={setOn} disabled />
+```
+
+### Custom colors (optional - uses theme by default)
+
+```tsx
+<EtToggleSwitch value={on} onValueChange={setOn} trackColor={{ true: '#0eb12e', false: '#ccc' }} thumbColor="#fff" />
+```
+
+### In a settings list
+
+```tsx
+<ListItem
+  title="Push Notifications"
+  subtitle="Receive alerts for price movements"
+  right={<EtToggleSwitch value={notifications} onValueChange={setNotifications} />}
+/>
+```
+
+### Inside bottom sheets (iOS fix)
+
+```tsx
+// When using EtToggleSwitch inside @gorhom/bottom-sheet,
+// enable forceNativeSync to fix iOS native Switch visual sync issues
+const [isAdvancedView, setIsAdvancedView] = useState(false);
+<EtToggleSwitch value={isAdvancedView} onValueChange={setIsAdvancedView} forceNativeSync />;
+```
+
+## Anti-patterns
+
+### ❌ Using without controlled state
+
+```tsx
+// BAD - no state management
+<EtToggleSwitch onValueChange={handleChange} />
+```
+
+**Fix:** Always provide `value` prop with controlled state:
+
+```tsx
+const [on, setOn] = useState(false);
+<EtToggleSwitch value={on} onValueChange={setOn} />;
+```
+
+### ❌ Using old EtToggle props
+
+```tsx
+// BAD - old API
+<EtToggleSwitch trackColorOn="#green" trackColorOff="#gray" thumbColorDisabled="#999" />
+```
+
+**Fix:** Use native Switch prop format with valid hex or named colors:
+
+```tsx
+<EtToggleSwitch value={on} onValueChange={setOn} trackColor={{ true: '#0eb12e', false: '#cccccc' }} thumbColor="#ffffff" />
+```
+
+### ❌ Adding inline labels
+
+```tsx
+// BAD - component doesn't support labels
+<EtToggleSwitch>Enable notifications</EtToggleSwitch>
+```
+
+**Fix:** Use external text or list item wrapper:
+
+```tsx
+<View style={styles.row}>
+  <EtText>Enable notifications</EtText>
+  <EtToggleSwitch value={on} onValueChange={setOn} />
+</View>
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for styling
+- Hooks:
+  - `useToggleSwitchConfig` - derives colors from props and theme
+
+### External Dependencies
+
+- `expo-haptics` - haptic feedback on press
+- `react-native-gesture-handler` - `Switch` component (used instead of `react-native` Switch for proper gesture coordination with drawer navigators)
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`):
+  - Track On: `actionBrandText` (brand green)
+  - Track Off: `bgGreyPrimary` (gray)
+  - Track Disabled: `bgActionDisabled`
+  - Thumb: white (`#ffffff`)
+  - Thumb Disabled: `#bfbfbf`
+- Sizes use scale transforms on native Switch (~51x31 iOS):
+  - Small: 75% scale
+  - Medium: 100% scale (native size, default)
+
+## Patterns & Pitfalls
+
+### Controlled Component Pattern
+
+The switch is always controlled - parent owns state via `value` + `onValueChange`:
+
+- `value` determines visual state
+- `onValueChange` receives toggled boolean
+- By default, never stores internal state (except when `forceNativeSync` is enabled)
+
+### iOS Bottom Sheet Compatibility
+
+When using EtToggleSwitch inside `@gorhom/bottom-sheet`, the native iOS Switch may not visually update when the value prop changes programmatically. This is a known React Native iOS bug ([#31975](https://github.com/facebook/react-native/issues/31975), [#50026](https://github.com/facebook/react-native/issues/50026)).
+
+**Solution:** Enable `forceNativeSync` prop:
+
+```tsx
+<EtToggleSwitch value={on} onValueChange={setOn} forceNativeSync />
+```
+
+This enables internal state management that keeps the native Switch in sync while preserving smooth animations.
+
+### Android Drawer Navigator Compatibility
+
+On Android, the native `Switch` from `react-native` doesn't coordinate properly with `react-native-gesture-handler` used by drawer navigators (React Navigation/Expo Router). This causes touches to be intercepted by the drawer's gesture handler instead of reaching the Switch.
+
+**Solution:** The component uses `Switch` from `react-native-gesture-handler` instead of the native `react-native` Switch. This ensures proper gesture coordination with drawer navigators on Android - no additional props or wrappers needed.
+
+### Extends Native SwitchProps
+
+For easy migration from native Switch or existing EtToggle:
+
+- Same `value`/`onValueChange` signature
+- Same `trackColor`/`thumbColor` prop format
+- Added `size` and `haptics` as eToro-specific enhancements
+
+### Animation Behavior
+
+Uses the platform-native Switch animations for consistent, performant behavior on iOS and Android.
+
+### Accessibility
+
+Built-in accessibility support via native Switch:
+
+- Native Switch provides `switch` accessibility role automatically
+- `accessibilityLabel` prop for custom screen reader text (defaults to "Toggle switch on/off")
+- Native Switch handles `disabled` state accessibility
+
+## Related Context
+
+- `EtToggle (controls/toggle/)` - DEPRECATED predecessor, use EtToggleSwitch instead
+- `EtCheckbox (controls/checkbox/)` - Similar compound pattern for checkboxes
+- `api/types.ts` - Type definitions for props
+- `hooks/` - State management and configuration hooks
+- `utils/` - Size config and color utilities

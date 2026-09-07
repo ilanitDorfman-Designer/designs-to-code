@@ -1,0 +1,118 @@
+---
+description: Agent guide for EtStepIndicator - horizontal onboarding step indicator with a progress track, step dots and labels underneath (e.g. Profile → Verification → Deposit)
+alwaysApply: false
+---
+
+# EtStepIndicator - Agent Guide
+
+> **AI Assistant Documentation**: This guide helps AI coding assistants understand and work with the EtStepIndicator component.
+
+## Overview
+
+`EtStepIndicator` renders a horizontal step/progress indicator: a thin track with a dot per step and a label under each dot. The filled portion of the track (and every dot it reaches) is tinted in the fill color; the active step gets a larger dot and an emphasized (semibold) label. Designed for onboarding flows (Profile → Verification → Deposit) but fully generic.
+
+## Key Architecture
+
+- **Measured track**: the track spans from the first dot center to the last dot center. Dot centers are measured via `onLayout` on each step column, so the geometry adapts to any label widths — nothing is hardcoded.
+- **Piecewise fill**: dots are positioned by their label columns and are therefore NOT evenly spaced along the track. The fill width is interpolated between the two surrounding measured dot centers (`progress * (steps - 1)` in "step units"), so integer step positions land exactly on their dots — never short of or past one.
+- **Layout per Figma**: the first step column is start-aligned (dot above the label start); all other columns center the dot above the label. Columns are spread with `justifyContent: 'space-between'`.
+- **Animated fill**: fill-width changes slide with an ease-out `withTiming` (reanimated). The first measured frame snaps so mounting shows no unwanted slide.
+- **Theme integration**: defaults come from `useEtoroTheme` and every color is overridable via props.
+- **Memoized**: main component and the `StepIndicatorStep` subcomponent use `React.memo`.
+
+## Project Structure
+
+```text
+libs/etoro-ui/src/components/status/step-indicator/
+├── et-step-indicator.tsx             # Main component (track + fill + steps row)
+├── index.ts                          # Public exports
+├── api/
+│   ├── index.ts                      # Type + animation exports
+│   ├── animations.ts                 # Fill timing config
+│   └── types.ts                      # TypeScript interfaces
+├── subcomponents/
+│   ├── index.ts
+│   └── step-indicator-step.tsx       # One step: dot + label column
+├── __tests__/
+│   └── et-step-indicator.test.tsx    # Component tests
+└── AGENTS.mdc                        # This file
+```
+
+## Usage Patterns
+
+### Basic (fill up to the active step)
+
+```tsx
+<EtStepIndicator steps={['Profile', 'Verification', 'Deposit']} currentStep={1} />
+```
+
+By default the fill reaches the active step's dot: `progress = currentStep / (steps.length - 1)`.
+
+### Explicit fill (Figma onboarding card)
+
+```tsx
+<EtStepIndicator steps={['Profile', 'Verification', 'Deposit']} currentStep={0} progress={0.5} />
+```
+
+`progress` decouples the fill from the active step — here "Profile" is active while the fill already reaches the "Verification" dot.
+
+### Custom colors (on a gradient/dark card)
+
+```tsx
+<EtStepIndicator
+  steps={['Profile', 'Verification', 'Deposit']}
+  currentStep={0}
+  progress={0.5}
+  trackColor="rgba(255, 255, 255, 0.25)"
+  labelColor="rgba(255, 255, 255, 0.55)"
+/>
+```
+
+## Component API
+
+| Prop             | Type                   | Default                          | Description                                                          |
+| ---------------- | ---------------------- | -------------------------------- | -------------------------------------------------------------------- |
+| steps            | string[]               | (required)                       | Ordered step labels (min 2)                                          |
+| currentStep      | number                 | (required)                       | 0-based active step — larger dot + semibold label (dot tint follows fill reach) |
+| progress         | number                 | currentStep / (steps.length - 1) | Track fill 0-1; dots the fill reaches are tinted in the fill color   |
+| size             | number                 | 10                               | Active dot diameter; inactive dots 0.75x, track thickness 0.25x      |
+| color            | string                 | primaryV2[400] (#6EFF8B)         | Fill color: progress line and reached dots                           |
+| trackColor       | string                 | colors.dividerQuinary            | Unfilled line + unreached dots                                       |
+| activeLabelColor | string                 | colors.textPrimaryNeutral        | Active step label color                                              |
+| labelColor       | string                 | body-tiny variant default        | Inactive step label color                                            |
+| style            | StyleProp\<ViewStyle\> | -                                | Custom container styles                                              |
+| testID           | string                 | -                                | Test identifier                                                      |
+
+### testID scheme
+
+`{testID}-track`, `{testID}-fill`, `{testID}-step-{i}`, `{testID}-step-{i}-dot`, `{testID}-step-{i}-label`.
+
+## Default Styling
+
+- **Geometry scales from `size`** (default 10 — the active dot diameter): inactive dots `size * 0.75`, track thickness `size * 0.25`, pill radius, all vertically centered on the dot row
+- **Dot → label gap**: 6px
+- **Labels**: `EtText` `body-tiny-regular` (12px/16); active label uses `weight="semiBold"`
+- **Fill color**: `primaryV2[400]` primitive (#6EFF8B — the Figma `Primary/600` bright green), theme-independent
+
+## Best Practices for AI Assistants
+
+1. **At least 2 steps** — the component warns in `__DEV__` otherwise
+2. **Dot semantics**: a dot is "reached" (fill-colored) when `progress * (steps.length - 1) >= index`. The active step is larger + bold label; its dot stays track-colored until the fill reaches it (so fill never ends short of a green "done" dot)
+3. **Don't hardcode hex colors** in consumers on standard surfaces — the theme defaults already match the design system; only override on custom backgrounds (gradient cards)
+4. **Add testIDs** for testing and accessibility
+5. **Related components**: `EtProgressV2` (percentage bars/circles without labels), `EtTopbar.StepProgress` (segmented wizard top bar)
+
+## Troubleshooting
+
+**Q: Track/fill not rendering in tests**
+A: The track renders only after every step column reports layout. Fire `layout` events on all `{testID}-step-{i}` views.
+
+**Q: Fill doesn't reach the last dot at progress={1}**
+A: Ensure no extra horizontal padding wraps individual steps; the track is computed from measured step column positions.
+
+## Dependencies
+
+- `useEtoroTheme` — theme colors
+- `EtText` — step labels
+- Spacing constants (`HALF`, `X1`, `X2`)
+- `react-native-reanimated` — fill slide animation

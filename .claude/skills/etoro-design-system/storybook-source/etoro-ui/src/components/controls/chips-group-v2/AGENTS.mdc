@@ -1,0 +1,257 @@
+---
+description: Agent guide for EtChipsGroupV2 - data-driven chip group with none/single/multi selection modes, horizontal scroll with fade overlays or wrapped layout, and RTL support
+alwaysApply: false
+---
+
+# EtChipsGroupV2 Component
+
+## Purpose & Scope
+
+`EtChipsGroupV2` is a group component for displaying and managing selectable chips in the eToro design system. It provides:
+
+- **Data-driven API**: items array prop pattern (like `EtTextToggle`/`TimeFrameSelector`)
+- **Three selection modes**: none (display-only), single (radio-like), multi (checkbox-like)
+- **Two layout modes**: horizontal scroll with fade overlays, or wrapped multi-row
+- **Controlled-only state**: no uncontrolled/defaultValue mode
+- **RTL support**: fade overlays automatically flip for right-to-left layouts
+- **Haptic feedback**: enabled by default on selection
+
+**Does NOT handle:**
+
+- Uncontrolled state management (always use `value`/`onChange`)
+- Navigation logic (use with router/navigation handlers)
+- Custom chip variants (uses standard `EtChip` internally)
+
+## Entry Points & Contracts
+
+### `EtChipsGroupV2` (main component)
+
+```tsx
+// Non-selectable mode (display only)
+<EtChipsGroupV2
+  items: ChipsGroupItem[]          // required
+  selectionMode?: 'none'           // default: 'none'
+  layout?: 'scroll' | 'wrap'       // default: 'scroll'
+  gap?: number                     // default: 8
+  fadeColor?: string               // background color for fade (defaults to theme bgNeutralPrimary)
+  haptics?: boolean                // default: true
+  style?: StyleProp<ViewStyle>
+  contentContainerStyle?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+/>
+
+// Single selection mode (controlled)
+<EtChipsGroupV2
+  items: ChipsGroupItem[]
+  selectionMode: 'single'
+  value: string | null             // required for single mode
+  onChange: (value: string | null) => void  // required
+  // ... other props
+/>
+
+// Multi selection mode (controlled)
+<EtChipsGroupV2
+  items: ChipsGroupItem[]
+  selectionMode: 'multi'
+  value: string[]                  // required for multi mode
+  onChange: (value: string[]) => void  // required
+  // ... other props
+/>
+```
+
+### `ChipsGroupItem` interface
+
+```typescript
+interface ChipsGroupItem {
+  id: string; // Unique identifier
+  label: string; // Display label
+  icon?: IconName; // Optional leading icon
+}
+```
+
+## Usage Patterns
+
+### Non-selectable (display only)
+
+```tsx
+const categories = [
+  { id: '1', label: 'Technology' },
+  { id: '2', label: 'Finance' },
+  { id: '3', label: 'Healthcare' },
+];
+
+<EtChipsGroupV2 items={categories} selectionMode="none" />;
+```
+
+### Single selection
+
+```tsx
+const [selected, setSelected] = useState<string | null>(null);
+const filters = [
+  { id: 'all', label: 'All' },
+  { id: 'stocks', label: 'Stocks' },
+  { id: 'crypto', label: 'Crypto' },
+];
+
+<EtChipsGroupV2 items={filters} selectionMode="single" value={selected} onChange={setSelected} />;
+```
+
+### Multi selection
+
+```tsx
+const [selected, setSelected] = useState<string[]>([]);
+const tags = [
+  { id: 'tech', label: 'Technology' },
+  { id: 'finance', label: 'Finance' },
+  { id: 'energy', label: 'Energy' },
+];
+
+<EtChipsGroupV2 items={tags} selectionMode="multi" value={selected} onChange={setSelected} />;
+```
+
+### Wrapped layout
+
+```tsx
+<EtChipsGroupV2 items={categories} selectionMode="multi" value={selected} onChange={setSelected} layout="wrap" />
+```
+
+### With icons
+
+```tsx
+const items = [
+  { id: '1', label: 'Favorites', icon: 'heart' },
+  { id: '2', label: 'Watchlist', icon: 'watched' },
+];
+
+<EtChipsGroupV2 items={items} selectionMode="single" value={selected} onChange={setSelected} />;
+```
+
+### Custom fade color (for non-white backgrounds)
+
+```tsx
+const { colors } = useEtoroTheme();
+
+// When placed on a gray background, use fadeColor to match
+<View style={{ backgroundColor: colors.bgNeutralSecondary }}>
+  <EtChipsGroupV2 items={filters} selectionMode="single" value={selected} onChange={setSelected} fadeColor={colors.bgNeutralSecondary} />
+</View>;
+```
+
+## Anti-patterns
+
+### ❌ Using uncontrolled state
+
+```tsx
+// BAD - no defaultValue support, use controlled state
+<EtChipsGroupV2
+  items={items}
+  selectionMode="single"
+  defaultValue="1" // This prop doesn't exist!
+/>
+```
+
+**Fix:** Always provide `value` and `onChange` for single/multi modes:
+
+```tsx
+const [selected, setSelected] = useState<string | null>('1');
+
+<EtChipsGroupV2 items={items} selectionMode="single" value={selected} onChange={setSelected} />;
+```
+
+### ❌ Missing value/onChange for selectable modes
+
+```tsx
+// BAD - single/multi modes require value and onChange
+<EtChipsGroupV2
+  items={items}
+  selectionMode="single"
+  // Missing value and onChange!
+/>
+```
+
+**Fix:** TypeScript will enforce this - always provide both props:
+
+```tsx
+<EtChipsGroupV2 items={items} selectionMode="single" value={selected} onChange={setSelected} />
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `EtChip` - individual chip rendering
+- `useChipsGroupConfig` - selection logic hook
+- `useScrollFade` - scroll position and overflow detection
+- `ScrollFadeOverlay` - animated fade gradient overlays
+
+### External Dependencies
+
+- `expo-haptics` - haptic feedback on selection
+- `expo-linear-gradient` - fade overlay gradients
+- `react-native` - `ScrollView`, `View`, `Animated`, `I18nManager`
+
+### Design System Integration
+
+- Uses `EtChip` component with all its styling
+- Gap default: 8px (matches chip spacing in Figma)
+- Fade overlay width: 48px (matches design specs)
+- Fade animation: 60fps UI-thread animations using Reanimated SharedValues
+- Fade opacity interpolates smoothly based on scroll position (0-20px range)
+
+## Patterns & Pitfalls
+
+### Controlled-Only State
+
+This component is **controlled-only** - no internal state management:
+
+- Single mode: parent manages `string | null`
+- Multi mode: parent manages `string[]`
+- None mode: no value props needed
+
+### RTL Support
+
+Fade overlays automatically adapt to RTL:
+
+- `position="start"` renders on left (LTR) or right (RTL)
+- `position="end"` renders on right (LTR) or left (RTL)
+- Gradient direction flips accordingly
+
+### Selection Mode Behavior
+
+| Mode   | Clicking unselected | Clicking selected  | Value type       |
+| ------ | ------------------- | ------------------ | ---------------- |
+| none   | No action           | No action          | N/A              |
+| single | Selects it          | Deselects (null)   | `string \| null` |
+| multi  | Adds to array       | Removes from array | `string[]`       |
+
+### Scroll Fade Logic
+
+- Fade overlays are always enabled for scroll layout (automatically hidden when no overflow)
+- Start fade: hidden at scroll position 0, fades in over 0-20px scroll
+- End fade: shown initially when content overflows, fades out over last 20px of scroll
+- No fade overlays appear when content fits within the container (no scrollable content)
+- Use `fadeColor` prop when placed on non-white backgrounds to match the container's background color
+
+## Related Context
+
+- `EtChip (chips/)` - Underlying chip component. Use directly for single standalone chips, action chips, or when custom layout is needed
+- `EtRadioGroup` - Similar selection pattern (single only)
+- `EtTextToggle` - Similar data-driven API pattern
+- `TimeFrameSelector` - Similar horizontal selector pattern
+
+### Relationship to EtChip
+
+`EtChipsGroupV2` is a **composite component** that uses `EtChip` internally. It provides:
+
+- Data-driven API (pass `items` array instead of rendering children)
+- Built-in selection state management (single/multi/none modes)
+- Built-in layouts (horizontal scroll with fade overlays, or wrapped grid)
+- Proper accessibility roles for the group (`radiogroup` for single, `group` for multi)
+
+Use `EtChip` directly when you need:
+
+- A single standalone chip
+- Action chips (non-selection buttons with `onPress`)
+- Custom layout or behavior not covered by `EtChipsGroupV2`
+- Flexibility with compound children (custom icon placement)

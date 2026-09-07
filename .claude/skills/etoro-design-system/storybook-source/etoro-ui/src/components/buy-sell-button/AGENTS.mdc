@@ -1,0 +1,274 @@
+---
+description: Agent guide for EtBuySellButton - specialized trading button displaying buy/sell letter, divider, and price with seven visual states and four sizes
+alwaysApply: false
+---
+
+# EtBuySellButton Component
+
+## Purpose & Scope
+
+`EtBuySellButton` is a specialized button component for buy/sell trading actions. It displays a letter (B/S), divider, and price in a unified pill-shaped button.
+
+**Features:**
+
+- Two types: `buy` and `sell`
+- Seven visual states: default, pressed, one-click trading, one-click trading pressed, positive indication, negative indication, disabled
+- Four sizes: tiny, small, medium, large
+- Haptic feedback (enabled by default)
+- Memoized for performance
+
+**Does NOT handle:**
+
+- Trade execution logic (handle in parent)
+- Price updates/streaming (pass updated price prop)
+- State management (parent controls via props)
+
+## File Structure
+
+```text
+buy-sell-button/
+├── index.ts                    # Public exports
+├── et-buy-sell-button.tsx      # Main component
+├── AGENTS.mdc                   # This file
+├── api/
+│   ├── index.ts                # Type exports
+│   └── types.ts                # Type definitions
+├── hooks/
+│   ├── index.ts                          # Hook exports
+│   ├── use-buy-sell-button-config.ts     # State/style resolution
+│   └── use-buy-sell-button-interaction.ts # Haptics, a11y label, price formatting
+└── utils/
+    ├── index.ts                # Utility exports
+    └── styles.ts               # Size configs, state styles, formatPrice
+```
+
+## Architecture Overview
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ EtBuySellButton (memo)                                      │
+│   Uses: useBuySellButtonInteraction(props)                  │
+│   Returns: { handlePress, accessibilityLabel,               │
+│              formattedPrice }                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ Pressable                                               │ │
+│ │   onPress={handlePress}                                 │ │
+│ │   accessibilityLabel={resolvedAccessibilityLabel}       │ │
+│ │   children={({ pressed }) => <ButtonContent />}         │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ ButtonContent (memo) — purely presentational                │
+│   Uses: useBuySellButtonConfig(props)                       │
+│   Returns: { sizeConfig, stateStyles, letter }              │
+│   Receives: formattedPrice as a string prop                 │
+│                                                             │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ View (container with dynamic styles from sizeConfig)   │ │
+│ │   ┌─────────┐  ┌─────────┐  ┌─────────────────────┐    │ │
+│ │   │ EtText  │  │  View   │  │      EtText         │    │ │
+│ │   │ (B/S)   │  │(divider)│  │  (formattedPrice)   │    │ │
+│ │   └─────────┘  └─────────┘  └─────────────────────┘    │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Props Interface
+
+```tsx
+interface EtBuySellButtonProps {
+  // Required
+  type: 'buy' | 'sell'; // Determines letter (B/S) and color scheme
+  price: number; // Formatted with 2 decimals automatically
+
+  // State
+  disabled?: boolean; // default: false
+  oneClickTrading?: boolean; // default: false
+
+  // Appearance
+  size?: 'tiny' | 'small' | 'medium' | 'large'; // default: 'medium'
+  positiveIndication?: boolean; // default: false - green filled
+  negativeIndication?: boolean; // default: false - red filled
+
+  // Interaction
+  haptics?: boolean; // default: true
+  onPress?: (event: GestureResponderEvent) => void;
+  style?: StyleProp<ViewStyle>;
+
+  // Accessibility
+  testID?: string;
+  accessibilityLabel?: string; // Auto-generated if not provided
+}
+```
+
+## Visual States
+
+| State                     | Background        | Letter/Divider/Price Colors        | Border          |
+| ------------------------- | ----------------- | ---------------------------------- | --------------- |
+| Default                   | bgNeutralPrimary  | Letter: type color, Price: neutral | dividerTertiary |
+| Pressed                   | bgNeutralPrimary  | Same as default                    | type color      |
+| One-click trading         | bgActionInfo      | All: inverted neutral              | transparent     |
+| One-click trading pressed | bgActionInfoHover | All: inverted neutral              | transparent     |
+| Positive indication       | bgActionBrand     | All: inverted neutral              | transparent     |
+| Negative indication       | bgActionBrandVar  | All: inverted neutral              | transparent     |
+| Disabled                  | bgActionDisabled  | All: disabled text                 | transparent     |
+
+**State Priority:** `disabled` > `positiveIndication` > `negativeIndication` > `oneClickTrading` > `default`
+
+## Size Configuration
+
+Height is determined by padding + content (not hardcoded).
+
+| Size   | paddingVertical | paddingHorizontal | gap       |
+| ------ | --------------- | ----------------- | --------- |
+| tiny   | X1 (4px)        | X3 (12px)         | X2 (8px)  |
+| small  | X1 (4px)        | X3 (12px)         | X2 (8px)  |
+| medium | X2 (8px)        | X3 (12px)         | X2 (8px)  |
+| large  | X2 (8px)        | X4 (16px)         | X3 (12px) |
+
+**Border radius:** 50px for all sizes (pill shape)
+**Divider:** 1px width × X3 (12px) height
+
+## Typography Variants
+
+**Letter (B/S):**
+
+| Size   | Variant                 |
+| ------ | ----------------------- |
+| tiny   | label-tertiary-semibold |
+| small  | label-secondary-bold    |
+| medium | label-primary-semibold  |
+| large  | heading-base            |
+
+**Price:**
+
+| Size   | Variant |
+| ------ | ------- |
+| tiny   | num-xs  |
+| small  | num-s   |
+| medium | num-sm  |
+| large  | num-md  |
+
+## Key Implementation Details
+
+### Memoization
+
+Both `EtBuySellButton` and `ButtonContent` are wrapped with `memo()` to prevent unnecessary re-renders.
+
+### Pressable Style
+
+The Pressable's `style` prop uses a simple array `[styles.pressable, style]` (not a function) since pressed state styling is handled in `ButtonContent`.
+
+### Border Layout Stability
+
+All states use `borderWidth: 1`. Default state uses `borderColor: colors.dividerTertiary`; pressed state uses the type color for the border. Keeping a consistent border width prevents layout shift when switching between states.
+
+### Interaction Hook (`useBuySellButtonInteraction`)
+
+All interaction, formatting, and accessibility concerns live in this hook rather than inline in the component. It accepts `{ type, price, accessibilityLabel, onPress, haptics }` and returns:
+
+- `handlePress` — wraps `onPress` with optional haptic feedback (`expo-haptics`, `ImpactFeedbackStyle.Light`)
+- `accessibilityLabel` — auto-generates "Buy at {price}" / "Sell at {price}" when not provided
+- `formattedPrice` — `formatPrice(price)` → `price.toFixed(2)` or `'--'` for non-finite values
+
+This keeps the component file purely presentational.
+
+## Usage Examples
+
+```tsx
+// Default
+<EtBuySellButton type="buy" price={11756.62} onPress={handleBuy} />
+<EtBuySellButton type="sell" price={11756.62} onPress={handleSell} />
+
+// One-click trading
+<EtBuySellButton type="buy" price={11756.62} oneClickTrading onPress={handleQuickBuy} />
+
+// Price indications
+<EtBuySellButton type="buy" price={11756.62} positiveIndication />
+<EtBuySellButton type="sell" price={11756.62} negativeIndication />
+
+// Sizes
+<EtBuySellButton type="buy" price={100.00} size="tiny" />
+<EtBuySellButton type="buy" price={100.00} size="large" />
+
+// Disabled
+<EtBuySellButton type="buy" price={11756.62} disabled />
+```
+
+## Anti-patterns
+
+```tsx
+// ❌ Both indications - positiveIndication wins by priority
+<EtBuySellButton type="buy" price={100} positiveIndication negativeIndication />
+
+// ❌ Pre-formatted price - pass raw number
+<EtBuySellButton type="buy" price="1,234.56" />
+
+// ❌ Using indication for type coloring - default state already colors by type
+<EtBuySellButton type="buy" positiveIndication />
+```
+
+## Dependencies
+
+**External:**
+
+- `expo-haptics` - haptic feedback
+- `react-native` - Pressable, View, StyleSheet
+
+**Internal:**
+
+- `EtText` - design system text component
+- `useEtoroTheme` - theme colors (used inside `useBuySellButtonConfig`)
+- Spacing constants: X1, X2, X3, X4 from `etoro-ui/core/styles/spacing`
+
+**Hooks:**
+
+- `useBuySellButtonConfig` - resolves visual state, size config, and state styles
+- `useBuySellButtonInteraction` - handles haptics, accessibility label, price formatting
+
+## Theme Colors Used
+
+| Token                      | Usage                                    |
+| -------------------------- | ---------------------------------------- |
+| bgNeutralPrimary           | Default background                       |
+| bgActionInfo               | One-click trading background             |
+| bgActionInfoHover          | One-click trading pressed background     |
+| bgActionBrand              | Positive indication background           |
+| bgActionBrandVar           | Negative indication background           |
+| bgActionDisabled           | Disabled background                      |
+| actionBrandText            | Buy type color (green)                   |
+| actionBrandVarText         | Sell type color (red)                    |
+| textPrimaryNeutral         | Default price color                      |
+| textInvertedPrimaryNeutral | Text on filled backgrounds               |
+| actionDisabledText         | Disabled text color                      |
+| dividerTertiary            | Default divider and default state border |
+
+## Re-implementation Checklist
+
+1. **Create types** (`api/types.ts`):
+   - `BuySellButtonType`, `BuySellButtonSize`, `SizeConfig`, `ButtonVisualState`, `EtBuySellButtonProps`
+
+2. **Create style utilities** (`utils/styles.ts`):
+   - `DIVIDER_WIDTH`, `DIVIDER_HEIGHT`, `BUTTON_BORDER_RADIUS`
+   - `SIZE_CONFIGS` (internal, not exported), `getSizeConfig()` (public API)
+   - `StateStyleConfig` interface
+   - `resolveVisualState()` - priority-based state resolution
+   - `getStateStyles()` - returns colors/border for each state
+   - `formatPrice()` - formats to 2 decimals
+
+3. **Create config hook** (`hooks/use-buy-sell-button-config.ts`):
+   - `useBuySellButtonConfig()` - combines sizeConfig, stateStyles, letter
+
+4. **Create interaction hook** (`hooks/use-buy-sell-button-interaction.ts`):
+   - `useBuySellButtonInteraction()` - haptics press handler, a11y label, price formatting
+
+5. **Create component** (`et-buy-sell-button.tsx`):
+   - `LETTER_VARIANTS` and `PRICE_VARIANTS` mappings
+   - `EtBuySellButtonBase` - main component with Pressable
+   - `ButtonContent` (memo) - renders content with state styles
+   - Export `EtBuySellButton = memo(EtBuySellButtonBase)`
+
+6. **Create exports** (`index.ts`):
+   - Export component and types only (utils are internal)

@@ -1,0 +1,85 @@
+---
+description: Agent guide for EtIllustration — CDN-backed DS illustrations with light/dark assets, name-based API similar to EtIconV2
+alwaysApply: false
+---
+
+# EtIllustration
+
+Renders Design System illustrations from Figma
+([Illustrations — Images — 2026](https://www.figma.com/design/dbI2fqZ3Gngs1PWBawWEXu/Illustrations---Images---2026?node-id=226-36472)).
+
+Assets live on the CDN under
+`https://etoro-cdn.etorostatic.com/web-client/et-plus/etoro/illustrations/`
+as `{name}_{size}_{theme}.{png|svg}`. The component loads them with `expo-image`
+via `getIllustrationUrl` — no local SVG/PNG baking at runtime.
+
+Theme is resolved from `useEtoroTheme().dark` unless `theme` is passed explicitly.
+Both light and dark CDN files MUST exist for every registered base and size-variant
+key listed in `ILLUSTRATION_META` / `ILLUSTRATION_ASSET_FORMAT`.
+
+## Usage
+
+```tsx
+import { EtIllustration } from 'etoro-ui';
+
+<EtIllustration name="error" size="m" />
+<EtIllustration name="paper_plane" size="xxl" />
+<EtIllustration name="success" size="xl" theme="dark" />
+```
+
+## Props
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `IllustrationName` | required | Kebab-case Figma illustration name |
+| `size` | `'s' \| 'm' \| 'xl' \| 'xxl'` | Figma native size for `name` | Loads a size-specific CDN variant if one exists, else scales the base asset to fit the token box |
+| `theme` | `'light' \| 'dark'` | from app theme | Force light/dark asset |
+| `width` / `height` | `number` | intrinsic | Optional overrides (aspect ratio preserved if one set) |
+| `testID` | `string` | — | Test id |
+| `accessibilityLabel` | `string` | `name` | A11y label |
+
+## Size tokens (Figma)
+
+Every illustration has a **base** CDN asset per theme. By default `size` scales that
+asset to *fit* the token's nominal box (aspect preserved). The default per illustration
+is its Figma native size in `ILLUSTRATION_META[name].defaultSize` (e.g. `coupon` → `s`,
+status icons → `m`, coast-to-coast → `xxl`).
+
+**Size-specific variants**: some illustrations also ship a dedicated asset for a given
+size — a genuinely different layout. Passing that `size` loads the variant URL instead
+of scaling the base. Current variants:
+- **Status set** (`error`, `success`, `connection_error`, `warning`, `pending`) — wide **XL**
+
+Dedicated variants render at their own intrinsic dimensions from
+`ILLUSTRATION_META[name].variants[size]`.
+
+| Token | Nominal box | Typical use |
+| --- | --- | --- |
+| `s` | 124×124 | CMS / cards |
+| `m` | 152×152 | Drawer / empty |
+| `xl` | 375×158 | Status banners |
+| `xxl` | 375×230 | UX / screens (coast-to-coast) |
+
+## CDN assets & formats
+
+- **URL**: `{cdn}/etoro/illustrations/{name}_{assetSize}_{theme}.{format}`
+- **Format map**: `illustration-assets.generated.ts` (`ILLUSTRATION_ASSET_FORMAT`)
+  — `png` for illustrations that need `feTurbulence` stipple/glow (native RN-SVG cannot
+  render it); `svg` for flat line art.
+- **Meta**: `illustration-meta.ts` — `defaultSize`, intrinsic dims, optional `variants`.
+- **Resolver**: `utils/get-illustration-url.ts`.
+
+PNG files uploaded to the CDN MUST be **transparent** (no baked `#F5F5F5` canvas).
+Export SVG from Figma, strip the background/annotation rects, then bake through
+headless Chromium when `feTurbulence` is present — never use Figma's opaque PNG export
+for dark surfaces.
+
+To add/update an illustration:
+
+1. Upload light + dark files to the CDN with the `name_size_theme` naming.
+2. Add/update `ILLUSTRATION_META` and `ILLUSTRATION_ASSET_FORMAT` (and `IllustrationName` if new).
+3. Cover the new URL/size behavior in `et-illustration.test.tsx`.
+
+## Related
+
+- Similar name-based API: `EtIconV2`

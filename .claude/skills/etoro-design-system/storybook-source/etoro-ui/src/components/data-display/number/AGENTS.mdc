@@ -1,0 +1,392 @@
+---
+description: Agent guide for EtNumber - compound data-display component for formatted numeric values with directional arrow indicator, supporting currency, percentage, number, and compact formats with sign-based coloring, null/undefined handling, and fallback text
+alwaysApply: false
+---
+
+# EtNumber Component
+
+## Purpose & Scope
+
+`EtNumber` is a compound data-display component for rendering a numeric value with optional directional indicator and formatting. It provides:
+
+- **Compound component pattern**: `EtNumber.Arrow` and `EtNumber.Value` subcomponents
+- **Context-driven configuration**: Root passes `value` (and optional `currencyCode`) plus format/display props; subcomponents read resolved values via context (no prop drilling)
+- **Multiple format types**: `currency`, `percentage`, plain `number`, or `compact` (K/M suffixes), with options passed through to `@etoro/common/utils` formatters
+- **Null/undefined safety**: `value` accepts `number | null | undefined`; subcomponents render nothing (or the `fallback` text) when value is missing or non-finite
+- **Sign-based styling**: When `isColored` is true — positive → green (up arrow / text), negative → red (down arrow / text), zero → green/up. When `isColored` is false or `color` is set, neutral or custom color applies
+- **Design-system integration**: Uses theme colors (`statusPositive`, `statusNegative`, `textPrimaryNeutral`), `EtText`, `EtoroIcon`, and spacing tokens (e.g. `X1`)
+
+**Does NOT handle:**
+
+- Input or editing of numbers (display only)
+- Validation or business rules (caller provides `value`)
+- Fetching or loading state (caller owns value)
+- Navigation or press handlers (presentational only)
+
+## When to Use EtNumber vs Raw Formatters
+
+**Use `EtNumber` (from `etoro-ui`) when rendering a number in React Native JSX.** It integrates with the design system (theme colors, typography variants, spacing tokens) and handles null/NaN gracefully.
+
+**Use raw formatters from `@etoro/common/utils` when you need a formatted string outside of JSX** — in MobX stores, BL services, utility functions, or test assertions.
+
+| Context | Use |
+| --- | --- |
+| Rendering a number in a component or screen | `EtNumber` |
+| Preparing a string value in a store/BL/facade | `formatCurrency`, `formatPercent`, `formatCompactNumber`, etc. |
+| Inside `etoro-ui` itself (building `EtNumber`) | Raw formatters |
+| Test assertions on formatted strings | Raw formatters |
+
+### Anti-pattern: raw formatter + EtText in JSX
+
+```tsx
+// BAD — bypasses theme color, NaN handling, and sign support
+import { formatCurrency } from '@etoro/common/utils';
+<EtText variant="num-ml">{formatCurrency(price)}</EtText>
+
+// GOOD
+<EtNumber value={price} format="currency" symbol="$">
+  <EtNumber.Value variant="num-ml" />
+</EtNumber>
+```
+
+```tsx
+// BAD — bypasses compact formatting and NaN handling
+import { formatCompactNumber } from '@etoro/common/utils';
+<EtText variant="heading-base">{formatCompactNumber(followers)}</EtText>
+
+// GOOD
+<EtNumber value={followers} format="compact">
+  <EtNumber.Value variant="heading-base" />
+</EtNumber>
+```
+
+## Entry Points & Contracts
+
+### `EtNumber` (main component – context provider)
+
+```tsx
+<EtNumber
+  value={number | null | undefined} // Required – primary numeric value (null/undefined → fallback or nothing)
+  currencyCode?: string              // Optional – e.g. 'USD', for formatting/display
+  format?: EtNumberFormatType        // default: 'number'
+  symbol?: string                    // for format === 'currency'
+  minDecimals?: number
+  maxDecimals?: number
+  locale?: string                    // default: 'en-US'
+  useGrouping?: boolean              // default: true – thousand-separator grouping (maps to Intl useGrouping)
+  showAbsoluteValue?: boolean        // default: false – display |value|; color/arrow still from sign
+  showSign?: boolean                 // default: false – prepends an explicit sign based on the raw value
+  hasParentheses?: boolean           // default: false – wraps formatted value in parentheses, e.g. (20.43%)
+  isColored?: boolean                // default: false – sign-based green/red for value and arrow
+  isMasked?: boolean                 // default: false – privacy mask instead of formatted value; hides Arrow unless Arrow opts in
+  maskLength?: number                // default: 7 – number of asterisks when isMasked is true
+  color?: string                     // when set, overrides sign/neutral for both arrow and value
+  fallback?: string                  // text shown by EtNumber.Value when value is null/undefined/NaN
+  style?: StyleProp<ViewStyle>
+  testID?: string                    // applied to the root container
+>
+  {children}
+</EtNumber>
+```
+
+**Children:** Optional. Use `EtNumber.Arrow` and/or `EtNumber.Value` in any order. Order in JSX determines layout (container is `flexDirection: 'row'`, `alignItems: 'center'`).
+
+### `EtNumber.Arrow`
+
+```tsx
+<EtNumber.Arrow showWhenMasked />
+```
+
+- Reads `value` from context.
+- Renders directional icon: `caretUp` when `value >= 0`, `caretDown` when `value < 0`.
+- Color: root `color` → that color; else `isColored` → sign-based (green/red); else neutral.
+- Renders **nothing** when `value` is `null`, `undefined`, `NaN`, or non-finite. The `fallback` prop has no effect on `EtNumber.Arrow`.
+- Renders **nothing** while `isMasked` is true unless `showWhenMasked` is true. Use `showWhenMasked` only when revealing direction is intended for that UI.
+- Uses `EtoroIcon` with `size: 8` by default, and `marginRight: X1`.
+
+### `EtNumber.Value`
+
+```tsx
+<EtNumber.Value
+  style?: StyleProp<TextStyle>
+  variant?: TextVariant          // default: 'label-primary-semibold'
+  fallbackVariant?: TextVariant  // default: the value's `variant`
+/>
+```
+
+- Reads `value`, `format`, `symbol`, `minDecimals`, `maxDecimals`, `locale`, `useGrouping`, `showAbsoluteValue`, `showSign`, `hasParentheses`, `fallback` from context.
+- Formats the value, then optionally prepends an explicit sign (when `showSign`), then optionally wraps in parentheses (when `hasParentheses`). Color always follows `value` sign when `isColored`, or root `color`, or neutral.
+- Formats with `@etoro/common/utils`: `formatCurrency`, `formatPercent`, `formatNumberWithDecimals`, or `formatCompactNumber` depending on `format`.
+- When `value` is `null`, `undefined`, `NaN`, or non-finite: renders the `fallback` text using `fallbackVariant` (if provided) or `variant` as the typography; renders **nothing** if no `fallback` was provided.
+- Uses `EtText` with the given `variant` (defaults to `label-primary-semibold`) and `lineHeight: 20`.
+- Pass a `num-*` variant (e.g. `num-ml`) when embedding inside composite components that need different typographic scale.
+- Uses proportional figures by default so digit glyphs match the design system (e.g. the distinctive "1"). Callers can opt into `fontVariant: ['tabular-nums']` via the `style` prop when fixed-width digits are required.
+
+### Types
+
+| Type                 | Values                                                          |
+| -------------------- | --------------------------------------------------------------- |
+| `EtNumberFormatType` | `'currency'` \| `'percentage'` \| `'number'` \| `'compact'`    |
+
+Root-level props: `value` (required, `number | null | undefined`), `currencyCode`, `format`, `symbol`, `minDecimals`, `maxDecimals`, `locale`, `useGrouping`, `showAbsoluteValue`, `showSign`, `hasParentheses`, `isColored`, `color`, `fallback`. See `EtNumberProps` in `api/types.ts`.
+
+## Usage Patterns
+
+### Percentage with arrow (default neutral)
+
+```tsx
+<EtNumber value={0.2043} format="percentage">
+  <EtNumber.Arrow />
+  <EtNumber.Value />
+</EtNumber>
+```
+
+### Currency with sign colors
+
+```tsx
+<EtNumber value={-2.95} format="currency" symbol="$" isColored>
+  <EtNumber.Arrow />
+  <EtNumber.Value />
+</EtNumber>
+```
+
+### Value only (no arrow)
+
+```tsx
+<EtNumber value={1234.56} format="currency" symbol="$">
+  <EtNumber.Value />
+</EtNumber>
+```
+
+### Plain number
+
+```tsx
+<EtNumber value={42} format="number">
+  <EtNumber.Value />
+</EtNumber>
+```
+
+### Custom color (overrides sign/neutral)
+
+```tsx
+<EtNumber value={-2.95} format="currency" symbol="$" color={eToroLightColors.colors.carbon500}>
+  <EtNumber.Arrow />
+  <EtNumber.Value />
+</EtNumber>
+```
+
+### Show explicit sign
+
+When `showSign` is true, positive values are prefixed with `+`. Negative values keep or receive a `-` prefix, including when `showAbsoluteValue` is true. Combine with `hasParentheses` for patterns like `(+0.86%)`.
+
+```tsx
+<EtNumber value={0.2043} format="percentage" showSign isColored>
+  <EtNumber.Value />
+</EtNumber>
+// Renders: +20.43% in green
+```
+
+### Parentheses around value
+
+When `hasParentheses` is true, the formatted value string is wrapped in `(...)`. Works with all format types and combines with `showAbsoluteValue`, `isColored`, etc.
+
+```tsx
+<EtNumber value={-0.1523} format="percentage" hasParentheses isColored showAbsoluteValue>
+  <EtNumber.Arrow />
+  <EtNumber.Value />
+</EtNumber>
+// Renders: ▼ (15.23%) in red
+```
+
+### With decimals and locale
+
+```tsx
+<EtNumber value={0.5} format="percentage" minDecimals={2} maxDecimals={2} locale="en-GB">
+  <EtNumber.Arrow />
+  <EtNumber.Value />
+</EtNumber>
+```
+
+### Value before arrow (order in JSX)
+
+Child order determines layout; container is a row.
+
+```tsx
+<EtNumber value={-0.05} format="percentage">
+  <EtNumber.Value />
+  <EtNumber.Arrow />
+</EtNumber>
+```
+
+### Custom typography variant
+
+When embedding inside a composite component that requires a different typographic scale, pass a `variant` directly to `EtNumber.Value`. Color and formatting are still resolved from context.
+
+```tsx
+<EtNumber value={113.24} format="number" minDecimals={0} maxDecimals={2}>
+  <EtNumber.Value variant="num-ml" />
+</EtNumber>
+```
+
+### Compact format (K / M suffixes)
+
+Use `format="compact"` for follower counts, copier counts, or any social/engagement metric where space is limited.
+
+```tsx
+// 1500 → "1.5K", 2500000 → "2.5M", 999 → "999"
+<EtNumber value={followers} format="compact">
+  <EtNumber.Value variant="heading-base" />
+</EtNumber>
+```
+
+### Disable thousand-separator grouping
+
+Use `useGrouping={false}` for price displays where separators are not desired (e.g. `EtPrice`).
+
+```tsx
+// 1234.56 → "1234.56" instead of "1,234.56"
+<EtNumber value={price} format="number" useGrouping={false} minDecimals={0} maxDecimals={5}>
+  <EtNumber.Value variant="num-ml" />
+</EtNumber>
+```
+
+### Fallback for null / undefined / NaN
+
+Use `fallback` to display a placeholder string when the value is not yet available or invalid. `EtNumber.Arrow` always hides for invalid values regardless of `fallback`.
+
+```tsx
+<EtNumber value={maybeNull} format="currency" symbol="$" fallback="--">
+  <EtNumber.Value variant="num-ml" />
+</EtNumber>
+// Renders "--" when maybeNull is null, undefined, or NaN
+```
+
+Use `fallbackVariant` on `EtNumber.Value` when the placeholder should use a different typography than the real number (e.g. a smaller or lighter style).
+
+```tsx
+<EtNumber value={maybeNull} format="currency" symbol="$" fallback="--">
+  <EtNumber.Value variant="num-ml" fallbackVariant="label-tertiary-regular" />
+</EtNumber>
+// Real value renders in num-ml; "--" renders in label-tertiary-regular
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` – theme colors in `useColor` (`statusPositive`, `statusNegative`, `textPrimaryNeutral`)
+- `EtText` – used by `EtNumber.Value`
+- `EtoroIcon` – used by `EtNumber.Arrow` (icons: `triangleUp`, `triangleDown`)
+- `EtNumberContext` / `useEtNumberContext` – single context for resolved config
+- `useDefaults` – resolves defaults for `format`, `locale`, `showAbsoluteValue`, `showSign`, etc.
+- `useColor` – resolves display color from context and theme
+- Spacing: `X1` in Arrow container (`core/styles/spacing`)
+
+### External Dependencies
+
+- `@etoro/common/utils` – `formatCurrency`, `formatPercent`, `formatNumberWithDecimals`, `formatCompactNumber` (and `FormatCurrencyOptions`)
+- `react-native` – `View`, `StyleSheet`, `StyleProp`, `TextStyle`, `ViewStyle`
+
+### Design System Integration
+
+- Colors from theme (`useEtoroTheme().colors`)
+- Typography: `label-primary-semibold` by default for the value text; overridable via `variant` prop on `EtNumber.Value`
+- Spacing: `X1` for gap between arrow and value
+- Icon size: 12 for the arrow
+
+## Patterns & Pitfalls
+
+### null, undefined, NaN, and non-finite values
+
+`EtNumber.Arrow` returns `null` when `value` is `null`, `undefined`, or non-finite (`NaN`, `Infinity`). `EtNumber.Value` renders the `fallback` text in those cases, or `null` if no `fallback` was provided. The root `View` still renders in all cases, so you may get an empty row when no fallback is set. Use `fallback="--"` (or similar) when you want a visible placeholder.
+
+### useGrouping
+
+`useGrouping` controls thousand-separator grouping and applies to `currency`, `percentage`, and `number` formats. It maps directly to the `Intl.NumberFormat` `useGrouping` option. Default is `true`. `compact` format does not use locale grouping (it uses K/M suffixes instead).
+
+### Single context
+
+EtNumber uses one context (`EtNumberContext`) with the full resolved value. Updates are infrequent (value and props come from parent), so a split-context pattern is not used. Defaults are applied in `useDefaults` and the result (plus `isColored`/`color`) is provided to the context.
+
+### Color resolution order
+
+1. Root `color` prop → used for both arrow and value.
+2. Else `isColored` → sign-based (`statusPositive` / `statusNegative`).
+3. Else neutral (`textPrimaryNeutral`).
+
+### Text decoration pipeline
+
+`EtNumber.Value` applies text transformations in this order:
+
+0. `showAbsoluteValue` — if true, `Math.abs(valueRaw)` is computed **before** any formatting. The resulting absolute value is what the formatter receives as input. Color and arrow direction are still derived from the original `valueRaw`, so a negative value can render as positive text (e.g. `$2.95`) while remaining red with a down arrow.
+1. Format the value produced by step 0 (`formatCurrency` / `formatPercent` / `formatNumberWithDecimals`)
+2. `showSign` — if true, prepend an explicit sign based on the **original** `valueRaw`
+3. `hasParentheses` — if true, wrap the resulting string in `(...)`
+
+The full sequence is therefore: **apply `showAbsoluteValue` (if true) → format the resulting value → apply `showSign` → apply `hasParentheses`**.
+
+Each step is independent; they can be used individually or in combination.
+
+### showSign
+
+When `showSign` is true, `EtNumber.Value` prepends `+` for non-negative values (including zero). Negative values keep the formatter's `-` prefix, or receive a `-` prefix when `showAbsoluteValue` removed it from the formatted value. Default is `false`.
+
+### hasParentheses
+
+When `hasParentheses` is true, the final decorated string is wrapped in `(...)` (e.g. `(20.43%)`, `(+0.86%)`, `($1,234.56)`). Applied after `showSign`. Does not affect color or arrow direction. Default is `false`.
+
+### showAbsoluteValue
+
+When `showAbsoluteValue` is true, `EtNumber.Value` displays `Math.abs(value)` while text and arrow color still follow the **original** `value` sign. So a negative value can show as positive text (e.g. `$2.95`) but in red with a down arrow. Default is `false`.
+
+### showSign with showAbsoluteValue
+
+`showSign` and `showAbsoluteValue` can be used together for signed magnitude displays such as P&L. `showAbsoluteValue` formats `Math.abs(value)`, then `showSign` applies the sign from the original value:
+
+- `value={2.95}` → `+$2.95`
+- `value={-2.95}` → `-$2.95`
+
+Color and arrow direction still follow the original value sign.
+
+### Format options pass-through
+
+`symbol`, `minDecimals`, `maxDecimals`, `locale`, and `useGrouping` are passed as-is into the `@etoro/common/utils` formatters. `compact` format ignores `minDecimals`, `maxDecimals`, `locale`, and `useGrouping` — it applies K/M suffixes for values ≥ 1000, typically displaying up to one significant decimal (e.g. 1500 → 1.5K) but omitting the decimal for whole values (e.g. 5000 → 5K); values below 1000 are left unchanged. See `@etoro/common/utils` for full formatter behavior.
+
+### Zero treated as positive
+
+Zero is treated as non-negative: arrow is up, and with `isColored` the color is green.
+
+## File Map
+
+```
+number/
+├── api/
+│   ├── index.ts
+│   └── types.ts
+├── context/
+│   ├── et-number-context.tsx
+│   └── index.ts
+├── hooks/
+│   ├── index.ts
+│   ├── use-color.ts
+│   └── use-defaults.ts
+├── subcomponents/
+│   ├── index.ts
+│   ├── et-number-arrow.tsx
+│   └── et-number-value.tsx
+├── et-number.tsx
+├── index.ts
+└── AGENTS.mdc
+```
+
+## Design System Integration
+
+`useColor` resolves the displayed value color through V2 tokens. V1 → V2 mapping:
+
+| Slot | V1 token | V2 token |
+| --- | --- | --- |
+| `isColored` positive (and zero) | `statusPositive` | `verdictPositive600` |
+| `isColored` negative | `statusNegative` | `verdictNegative600` |
+| Neutral (default, no `color` / no `isColored`) | `textPrimaryNeutral` | `carbon900` |
+
+A consumer-supplied `color` prop continues to win over both branches.

@@ -1,0 +1,67 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`EtSplitLayout ratio GIVEN a 2:1 ratio at a desktop viewport, WHEN rendered, THEN pane flex weights match the snapshot 1`] = `
+<View
+  style={
+    [
+      {
+        "flex": 1,
+        "flexDirection": "row",
+      },
+      undefined,
+    ]
+  }
+>
+  <View
+    style={
+      {
+        "flex": 1,
+      }
+    }
+    testID="et-split-layout-aside-pane"
+  >
+    <View
+      style={
+        [
+          {
+            "flex": 1,
+          },
+          undefined,
+        ]
+      }
+    >
+      <Text>
+        rail
+      </Text>
+    </View>
+  </View>
+  <View
+    style={
+      [
+        {
+          "flex": 1,
+        },
+        {
+          "flex": 2,
+        },
+      ]
+    }
+    testID="et-split-layout-main-pane"
+  >
+    <View
+      style={
+        [
+          {
+            "flex": 1,
+          },
+          undefined,
+        ]
+      }
+    >
+      <Text>
+        content
+      </Text>
+    </View>
+  </View>
+</View>
+`;

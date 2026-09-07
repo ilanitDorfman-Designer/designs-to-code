@@ -1,0 +1,306 @@
+---
+description: Agent guide for EtProgressV2 - flexible progress indicator with line bar and circular variants, positive/neutral colors, optional label, and custom center content for circle variant
+alwaysApply: false
+---
+
+# EtProgressV2 - Agent Guide
+
+> **AI Assistant Documentation**: This guide helps AI coding assistants understand and work with the EtProgressV2 component.
+
+## Overview
+
+The `EtProgressV2` component is a flexible progress indicator for the eToro React Native application. It supports three visual variants: a horizontal line bar, a circular progress indicator, and a sectioned line bar.
+
+## Key Architecture
+
+- **Variant-Based Rendering**: `variant="line"` (default), `variant="circle"`, or `variant="line-sectioned"`
+- **String Union Variants**: Variants are typed as `'line' | 'circle' | 'line-sectioned'` (plain strings, not an enum)
+- **Theme Integration**: Uses `useEtoroTheme` for colors
+- **SVG-Based Circle**: Uses `react-native-svg` for the circle variant
+- **Composition-Based Sectioned**: `ProgressLineSectioned` reuses `ProgressLine` internally for each section
+- **Memoized**: Both main component and subcomponents use `React.memo`
+
+## Project Structure
+
+```text
+libs/etoro-ui/src/components/status/progress-v2/
+├── et-progress-v2.tsx                # Main component (variant router)
+├── index.ts                          # Public exports
+├── api/
+│   ├── index.ts                      # Type exports
+│   └── types.ts                      # TypeScript interfaces & type unions
+├── subcomponents/
+│   ├── index.ts                      # Component exports
+│   ├── progress-line.tsx             # Line variant implementation
+│   ├── progress-circle.tsx           # Circle variant implementation
+│   └── progress-line-sectioned.tsx   # Line-sectioned variant implementation
+├── __tests__/
+│   └── et-progress-v2.test.tsx   # Component tests
+└── AGENTS.mdc                     # This file
+```
+
+## Usage Patterns
+
+### Basic Line Progress Bar
+
+```tsx
+<EtProgressV2 progress={0.6} />
+```
+
+### Line with Label
+
+```tsx
+<EtProgressV2 progress={0.6} showLabel />
+```
+
+Displays "60% complete" below the bar.
+
+### Line with Custom Label
+
+```tsx
+<EtProgressV2 progress={0.6} showLabel labelText="Step 3 of 5" />
+```
+
+### Line Medium Size
+
+```tsx
+<EtProgressV2 progress={0.6} size="medium" />
+```
+
+### Sectioned Line Progress
+
+Splits the bar into discrete segments with gaps between them:
+
+```tsx
+<EtProgressV2 variant="line-sectioned" progress={0.5} sections={4} />
+```
+
+### Sectioned Line with Custom Gap
+
+```tsx
+<EtProgressV2 variant="line-sectioned" progress={0.6} sections={3} gap={4} />
+```
+
+### Circle Progress
+
+Shows percentage inside by default:
+
+```tsx
+<EtProgressV2 variant="circle" progress={0.6} />
+```
+
+### Circle with Custom Content
+
+Override default percentage with custom content:
+
+```tsx
+<EtProgressV2 variant="circle" progress={0.6} size="large">
+  <EtText variant="body-tiny-regular">$186</EtText>
+</EtProgressV2>
+```
+
+### Neutral Color Scheme
+
+```tsx
+<EtProgressV2 progress={0.6} color="neutral" />
+```
+
+### Custom (Categorical) Colors
+
+When the fill color is data-driven and not one of the built-in `positive`/`neutral`
+schemes (e.g. per-row portfolio allocation bars), pass `customColor`. It accepts a
+**design-system color token key** (`keyof eToroTheme['colors']`, e.g. `'accentA700'`),
+resolved from the theme at render — never an arbitrary literal — so bars stay on-brand
+and correct across light/dark. Supported by all variants (`line`, `line-sectioned`, `circle`).
+
+```tsx
+// Per-row allocation bar (categorical fill) — pass a token key, not a value
+<EtProgressV2 progress={0.536} size="medium" customColor="accentA700" />
+<EtProgressV2 progress={0.003} size="medium" customColor="textTertiaryNeutral" /> // "Other"
+```
+
+Categorical palette convention (matches portfolio-insights `ALLOCATION_PALETTE`):
+use `accentA700`, `accentB700`, `accentC700` … in order for the data slices, and
+`textTertiaryNeutral` for the aggregated "Other" slice.
+
+Figma DS token → theme key mapping (categorical bars):
+
+| Figma DS token        | theme key             |
+| --------------------- | --------------------- |
+| Category/Accent A/700 | `accentA700`          |
+| Category/Accent B/700 | `accentB700`          |
+| Category/Accent C/700 | `accentC700`          |
+| Carbon/Neutral/500    | `textTertiaryNeutral` |
+
+Notes:
+
+- `customColor` overrides `color`; if both are passed, `customColor` wins.
+- Only theme token keys are allowed (type-checked), keeping fills within the design system.
+- To show the background track, use `showBackground`.
+- **DS alignment note**: **Figma is the source of truth** for the accent ramp. At time of
+  writing the eToro-UI code tokens are temporarily out of sync (e.g. Figma `Category/Accent A/700`
+  is blue `#59aeff` while the code `accentA700` still renders pink) — a dev is actively
+  aligning the code tokens to Figma. Always map **by token name** (`accentA700`, `accentB700`,
+  …), never by a hardcoded hex: once the ramp is fixed, these bars pick up the correct Figma
+  colors automatically with no change to `EtProgressV2` or its consumers.
+
+## Component API
+
+### EtProgressV2
+
+| Prop           | Type                                   | Default    | Description                |
+| -------------- | -------------------------------------- | ---------- | -------------------------- |
+| progress       | number                                 | (required) | Progress value from 0 to 1                                   |
+| variant        | 'line' \| 'circle' \| 'line-sectioned' | 'line'     | Visual variant                                              |
+| color          | 'positive' \| 'neutral'                | 'positive' | Built-in color scheme                                      |
+| customColor      | keyof theme colors (DS token)          | -          | Custom fill color; overrides `color`. Design-system token key only |
+| showBackground | boolean                                | false      | Show gray background track                                  |
+| style          | StyleProp\<ViewStyle\>                 | -          | Custom container styles                                    |
+| testID         | string                                 | -          | Test identifier                                            |
+
+### Line Variant Props
+
+| Prop      | Type                           | Default | Description                               |
+| --------- | ------------------------------ | ------- | ----------------------------------------- |
+| size      | 'small' \| 'medium' \| 'large' | 'small' | Height: small=4px, medium=8px, large=12px |
+| showLabel | boolean                        | false   | Show percentage label below bar           |
+| labelText | string                         | -       | Custom label (overrides "XX% complete")   |
+
+### Line-Sectioned Variant Props
+
+| Prop     | Type                           | Default    | Description                               |
+| -------- | ------------------------------ | ---------- | ----------------------------------------- |
+| sections | number                         | (required) | Number of segments to split the bar into  |
+| gap      | number                         | HALF (2px) | Gap in pixels between adjacent sections   |
+| size     | 'small' \| 'medium' \| 'large' | 'small'    | Height: small=4px, medium=8px, large=12px |
+
+### Circle Variant Props
+
+| Prop     | Type                           | Default    | Description                               |
+| -------- | ------------------------------ | ---------- | ----------------------------------------- |
+| size     | 'small' \| 'medium' \| 'large' | 'medium'   | Size: small=32px, medium=40px, large=48px |
+| children | ReactNode                      | percentage | Custom content (defaults to "XX%")        |
+
+## How Line-Sectioned Works
+
+The `line-sectioned` variant renders a row of equally-sized `ProgressLine` sub-bars separated by gaps. It is implemented in `progress-line-sectioned.tsx` and reuses the `ProgressLine` subcomponent internally.
+
+### Fill Distribution Algorithm
+
+Each section's individual fill is calculated from the overall `progress` value (0 to 1):
+
+```
+sectionProgress = clamp(progress * sections - i, 0, 1)
+```
+
+Where `i` is the zero-based section index. This means:
+
+- Sections fill **left to right** in sequence.
+- A section is fully filled once the overall progress passes its threshold (`(i + 1) / sections`).
+- A section is partially filled when the overall progress falls within that section's range (`i / sections` to `(i + 1) / sections`).
+- Sections to the right of the current progress remain empty.
+
+**Example with `sections={4}` and `progress={0.5}`:**
+
+| Section | Index | Calculation            | Fill |
+| ------- | ----- | ---------------------- | ---- |
+| 1st     | 0     | clamp(0.5 \* 4 - 0, …) | 1.0  |
+| 2nd     | 1     | clamp(0.5 \* 4 - 1, …) | 1.0  |
+| 3rd     | 2     | clamp(0.5 \* 4 - 2, …) | 0.0  |
+| 4th     | 3     | clamp(0.5 \* 4 - 3, …) | 0.0  |
+
+At 50% progress with 4 sections, the first 2 sections are fully filled and the remaining 2 are empty.
+
+### Layout
+
+- Sections are arranged in a horizontal `flexDirection: 'row'` container.
+- Each section has `flex: 1` so they share width equally.
+- Gaps are applied via `marginLeft` on all sections after the first.
+- The gap defaults to `HALF` (2px) from spacing constants and can be overridden via the `gap` prop.
+
+### Props Not Supported
+
+The `line-sectioned` variant does **not** support `showLabel`, `labelText`, or `children` (typed as `never` in the discriminated union).
+
+## Default Styling
+
+### Line Variant
+
+- **Small height**: 4px (X1)
+- **Medium height**: 8px (X2)
+- **Large height**: 12px (X3)
+- **Track color**: `colors.dividerQuinary`
+- **Fill color (positive)**: `colors.bgPositivePrimary`
+- **Fill color (neutral)**: `colors.textPrimaryNeutral`
+- **Border radius**: height / 2 (pill shape)
+- **Label margin top**: 8px (X2)
+
+### Line-Sectioned Variant
+
+Inherits all line styling per section. Additional:
+
+- **Gap between sections**: 2px (HALF) by default
+- **Layout**: `flexDirection: 'row'`, each section `flex: 1`
+
+### Circle Variant
+
+- **Small size**: 32px (stroke: 3px)
+- **Medium size**: 40px (stroke: 4px)
+- **Large size**: 48px (stroke: 5px)
+- **Track color**: `colors.dividerQuinary`
+- **Fill color (positive)**: `colors.bgPositivePrimary`
+- **Fill color (neutral)**: `colors.textPrimaryNeutral`
+- **Stroke line cap**: round
+
+## Best Practices for AI Assistants
+
+1. **Progress value**: Always ensure progress is between 0 and 1 (component clamps automatically)
+2. **Variant selection**: Use `"line"` for horizontal layouts, `"circle"` for compact indicators, `"line-sectioned"` for step-based progress (e.g. onboarding, multi-step forms)
+3. **Use string literals**: Always pass variant as a string (`variant="circle"`), never use an enum
+4. **Sections prop is required**: When using `variant="line-sectioned"`, the `sections` prop must be provided
+5. **Add testIDs**: Include testID for testing and accessibility
+6. **Use showLabel sparingly**: Only when percentage context is important (line variant only)
+7. **Circle children**: Keep center content minimal (short text or small icons)
+8. **Respect theme**: Don't override colors unless explicitly required
+
+## Troubleshooting
+
+**Q: Progress bar not filling**
+A: Ensure progress value is between 0 and 1, not 0 to 100
+
+**Q: Sectioned bar has unexpected fill pattern**
+A: The fill distributes left-to-right. Check the formula: `clamp(progress * sections - i, 0, 1)`. With 4 sections at 0.5 progress, exactly 2 sections fill.
+
+**Q: Circle content not centered**
+A: Content is auto-centered; ensure children don't have conflicting styles
+
+**Q: Line bar not full width**
+A: Component fills parent width; check parent container constraints
+
+**Q: Label not showing**
+A: Ensure `showLabel={true}` is set (only for line variant, not supported on line-sectioned or circle)
+
+**Q: Circle variant not rendering**
+A: Ensure `react-native-svg` is installed and linked
+
+**Q: TypeScript error importing EtProgressV2Variant**
+A: `EtProgressV2Variant` is a type alias, not an enum. Use `import type { EtProgressV2Variant }` or pass string literals directly (`variant="line-sectioned"`).
+
+## Dependencies
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors
+- `EtText` - text rendering in label
+- Spacing constants from `core/styles/spacing` (`HALF` for default section gap)
+
+### External Dependencies
+
+- `react-native` - `View`, `StyleSheet`
+- `react-native-svg` - `Svg`, `Circle` (for circle variant)
+
+## Related Components
+
+- `EtText` - Used for percentage label (line variant) and default percentage display (circle variant)
+- `Svg`, `Circle` from `react-native-svg` - Used for rendering the circular progress arc
+- `ProgressLine` - Reused internally by `ProgressLineSectioned` (each section is a `ProgressLine`)

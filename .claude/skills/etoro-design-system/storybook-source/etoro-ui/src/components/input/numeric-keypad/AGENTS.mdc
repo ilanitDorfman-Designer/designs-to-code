@@ -1,0 +1,112 @@
+---
+description: Premium, value-managed numeric keypad for high-touch input flows (trade execution, KYC, options).
+---
+
+# EtNumericKeypad Component
+
+## Purpose
+
+`EtNumericKeypad` is the **single public numeric keypad** for the app — a premium, fully-animated
+4×3 keypad (`1 2 3` / `4 5 6` / `7 8 9` / `. 0 C`) with **built-in value management**. It replaces
+the old `CustomKeyboard` wrapper and is the modern successor to the deprecated
+[`EtKeyboard`](../keyboard/AGENTS.mdc).
+
+It supports both **controlled** (`value` + `onValueChange`) and **uncontrolled** (`defaultValue`)
+usage, and owns `min`/`max` clamping, decimal precision (`allowDecimal` / `maxDecimalPlaces`),
+disabled-key logic, and rejection reporting (`onInputRejected`).
+
+## Structure
+
+Follows the `EtButton` role-model layout (see `../../button/AGENTS.mdc`):
+
+- `et-numeric-keypad.tsx` — composition-only smart root: chains `useNumericKeypadState` (value +
+  validation) → `useNumericKeypadConfig` (disabled-key derivation) → renders `NumericKeypadView`.
+- `api/{index,types}.ts` — `EtNumericKeypadProps` + `EtNumericKeypadRejectionReason`.
+- `hooks/` — **logic only, no animations**: `use-numeric-keypad-state.ts` (value/validation state
+  machine) + `use-numeric-keypad-config.ts` (disabled-key derivation).
+- `animations/` — **all motion**: `constants.ts` (springs/timings), `use-key-press-animation.ts`,
+  `use-clear-key-press-animation.ts`, `use-key-entrance-animation.ts`, `use-keypad-drag-dismiss.ts`,
+  `use-edge-draw-animation.ts`.
+- `subcomponents/` — presentational bricks: `numeric-keypad-view.tsx` (**internal** grid, not
+  barrel-exported; value-agnostic) + `keypad-key.tsx`, `keypad-clear-key.tsx`, `keypad-top-band.tsx`.
+- `utils/build-top-edge-path.ts` — pure SVG path geometry (no React, no animations).
+- `constants.ts` (root) — non-animation layout/geometry (`KEY_ROWS`, key/row sizing, top-band + edge
+  geometry, `getFlareOffset` / `getFlareRing` for the entrance flare).
+- `styles.ts` (root) — static `StyleSheet` for the grid container/rows.
+- `tests/` — `et-numeric-keypad.test.tsx` + `numeric-keypad-view.test.tsx`.
+
+### Intentional deviations from the role model
+
+- **No `context/`.** The role model uses a context to fan config/state out to compound
+  subcomponents. Here the keys are **value-agnostic** — the view never reads the current value; the
+  only value-derived output (`disabledKeys`) is computed once in the root and passed as a primitive.
+  `NumericKeypadView` and the keys are already `memo`-ized with a stable-callback ref pattern, so a
+  value context would add re-render surface without removing prop-drilling of real benefit.
+- **No single root animation orchestrator.** The keypad has no single animated root element; each
+  animation is leaf-local (per-key press, per-band edge-draw, container drag-dismiss), so the
+  `animations/` folder exposes those hooks directly rather than a synthetic `use-*-animations.ts`.
+
+## API
+
+```tsx
+const [amount, setAmount] = useState('');
+
+<EtNumericKeypad
+  value={amount}
+  onValueChange={setAmount}
+  min={0}
+  max={999999}
+  allowDecimal
+  maxDecimalPlaces={2}
+  enableLongPressClear
+/>;
+```
+
+- `value` / `defaultValue` — controlled vs. uncontrolled (mutually exclusive).
+- `onValueChange` — fires after every accepted key press or clear (including `min` clamps).
+- `onInputRejected` — fires when a press is rejected without changing the value (see
+  `EtNumericKeypadRejectionReason`: `leading-zero`, `decimal-exists`, `decimal-disabled`,
+  `max-decimals`, `max`, `delete-at-zero`). When provided, the `C` key stays interactive at the zero
+  floor so `delete-at-zero` can be reported (e.g. to trigger a shake).
+- `min` / `max` — numeric bounds. `min` clamps on delete; `max` rejects presses that would exceed it.
+- `allowDecimal` (default `true`) / `maxDecimalPlaces` — decimal rules.
+- `disableKeysAtLimit` (default `true`) — when `false`, keys stay interactive at their limits (a second
+  decimal, or the `maxDecimalPlaces` cap) so the press is reported via `onInputRejected` instead of the
+  key greying out. The structural `allowDecimal={false}` dot-disable is always enforced regardless.
+- `disabled` — freeze all keys (e.g. while an execution request is in flight).
+- `enableLongPressClear` — long-press `C` wipes the whole value (bypasses `min`).
+- `fillHeight` (default `false`) — stretch rows to fill a bounded/flexible parent.
+- `topBand` / `onTopBandSwipeDown` — render the Figma "Keyboard Top" grabber band with optional
+  swipe-down-to-dismiss.
+- `animateEntrance` (default `true`) — gate the entrance cascade; disable in tests / static contexts.
+- `accessibilityLabel`, `deleteLabel` — pass localized labels from the consuming flow.
+
+## Animation behavior
+
+- **Gentle springs**: press feedback uses a soft, near-critically-damped spring (`PRESS_SPRING`); the
+  entrance flare uses a light spring with a touch of overshoot (`FLARE_SPRING` in `animations/constants.ts`).
+- **Press feedback** (`KeypadKey`): a circle springs from a resting scale (`0.3 → 1`) and fades in on
+  press-in, reversing on press-out. Only `transform` + `opacity` are animated (GPU-friendly).
+- **Clear key** (`KeypadClearKey`): opacity cross-fade between an outlined and a filled (inverted)
+  badge, theme-correct in light and dark.
+- **Entrance**: each key uses a **radial flare** that blooms outward from the center `5` — a custom
+  Reanimated `entering` worklet (`use-key-entrance-animation.ts`) starts the key pulled toward `5`
+  (scaled down + transparent) and springs it out to its slot. Keys enter in distinct concentric layers
+  (`getFlareRing`: `5` first, then the surrounding 8, then the bottom row) with the outward direction
+  seeded by `getFlareOffset`. Because the execution `BottomFold` conditionally mounts the keypad, the
+  flare replays on every show.
+
+## Layout / height
+
+- **Fixed (default, `fillHeight={false}`)**: intrinsic height `KEYPAD_INTRINSIC_HEIGHT`. Keep the
+  execution layout's `EXECUTION_KEYBOARD_HEIGHT` in sync. Safe in any parent.
+- **Fill (`fillHeight={true}`)**: rows flex to fill the parent; pair with a stretched layout area.
+
+## Dependencies
+
+### External
+
+- `expo-haptics` — haptic feedback
+- `react-native-reanimated` — press + entrance animations
+- `react-native-gesture-handler` — key taps + top-band drag-to-dismiss
+- `react-native-svg` — the `C` badge shape

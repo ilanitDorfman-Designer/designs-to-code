@@ -1,0 +1,13 @@
+---
+description: React Native UI kit - dumb component library
+alwaysApply: false
+---
+
+# etoro-ui
+
+eToro UI Component Library for React Native. 
+It includes 40+ components ranging from a simple EtButton to more complex EtListItem or EtSelect to select a country.
+Some are controlled, some uncontrolled. **Each component has a dedicated AGENTS.md file to explain its respective usage in more detail when needed.**
+
+The "using-ui-components.mdc" rule file goes into details on how the UI kit should be used when building screens.
+

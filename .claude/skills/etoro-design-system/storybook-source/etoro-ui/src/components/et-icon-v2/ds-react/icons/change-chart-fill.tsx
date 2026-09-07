@@ -1,0 +1,15 @@
+import { Path, Svg } from 'react-native-svg';
+
+import type { DsReactLocalIconProps } from '../ds-react-local-icon-props';
+
+/** DS — React `change-chart-fill` (generated from Figma SVG export). */
+export function DsReactIconChangeChartFill({ size, color }: DsReactLocalIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M2.78906 16.2979C2.41891 16.2981 2.11914 16.5985 2.11914 16.9688C2.1194 17.3387 2.41907 17.6394 2.78906 17.6396H21.21C21.5802 17.6396 21.8806 17.3389 21.8809 16.9688C21.8809 16.5984 21.5803 16.2979 21.21 16.2979H2.78906ZM16.4717 6.36035C15.6158 6.36046 14.922 7.05427 14.9219 7.91016V14.4873H20.0645V7.91016C20.0643 7.05427 19.3705 6.36046 18.5146 6.36035H16.4717ZM10.6748 8.7959C9.81888 8.796 9.12504 9.48976 9.125 10.3457V14.4873H14.2676V10.3457C14.2675 9.48976 13.5737 8.796 12.7178 8.7959H10.6748ZM4.85449 10.3516C3.99869 10.3517 3.30492 11.0456 3.30469 11.9014V14.4873H8.4375V11.9014C8.43726 11.0456 7.7435 10.3517 6.8877 10.3516H4.85449Z"
+        fill={color}
+      />
+    </Svg>
+  );
+}

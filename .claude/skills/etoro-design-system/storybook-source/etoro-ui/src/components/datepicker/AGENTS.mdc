@@ -1,0 +1,485 @@
+---
+description: Agent guide for Datepicker - compound component for date selection with inputField and compactField variants, native picker integration, floating label, locale support, and configurable date formatting
+alwaysApply: false
+---
+
+# Datepicker Component
+
+## Purpose & Scope
+
+`Datepicker` is a compound component for date selection in the eToro design system. It provides a flexible, accessible date input with:
+
+- **Two display variants**: `inputField` (form-style with floating label) and `compactField` (dropdown-style button)
+- **Compound component pattern**: `Datepicker.Label`, `Datepicker.Field`, `Datepicker.CalendarIcon`, `Datepicker.CompactFieldDisplay` subcomponents
+- **Native picker integration**: Uses `@react-native-community/datetimepicker` for platform-native date selection
+- **Controlled and uncontrolled modes**: Supports both `value` (controlled) and `defaultValue` (uncontrolled)
+- **Built-in states**: focus, error, disabled, readonly
+- **inputField chrome**: boxed InputV2-like surface (fixed height, radius, fill, full border) — not underline
+- **Floating label animation**: Animated label that floats when focused or filled (inputField variant)
+- **Context-based state sharing**: No prop drilling, all state shared via React Context
+- **Configurable formatting**: Custom date formats using date-fns
+- **Locale support**: Internationalization via date-fns locales
+- **Value type conversion**: Return Date object, ISO string, or formatted string
+
+**Does NOT handle:**
+
+- Form validation logic (handle in parent)
+- Form submission logic (handle in parent)
+- Navigation logic (use with router/navigation handlers)
+- Custom calendar UI (uses native platform pickers)
+
+## Entry Points & Contracts
+
+### `Datepicker` (main component - context provider)
+
+```tsx
+<Datepicker
+  variant?: DatepickerVariant            // 'inputField' | 'compactField' (default: 'inputField')
+  style?: StyleProp<ViewStyle>           // Container style override
+  defaultValue?: Date | string | null   // Initial value for uncontrolled mode
+  value?: Date | string | null           // Value for controlled mode
+  onChange?: (date: Date | string | null) => void
+  mode?: DatepickerMode                  // 'date' (only 'date' is currently supported)
+  format?: string                        // date-fns format string (default: 'dd MMM yyyy')
+  locale?: Locale                        // date-fns locale
+  valueType?: DatepickerValueType        // 'date' | 'iso' | 'formatted' (default: 'date')
+  minDate?: Date                         // Minimum selectable date
+  maxDate?: Date                         // Maximum selectable date
+  error?: string | null                  // Error state (affects label/border styling, auto-renders helper text)
+  disabled?: boolean                     // Disabled state (default: false)
+  readonly?: boolean                     // Read-only state (default: false)
+>
+  {children}
+</Datepicker>
+```
+
+**Children constraints (inputField variant):**
+
+- Must contain `Datepicker.Label` and `Datepicker.Field` at minimum
+- Optional: `Datepicker.CalendarIcon` (automatically rendered if not provided)
+- Helper text is automatically rendered when `error` exists - do not include it in JSX
+- Order matters for visual layout
+
+**Children constraints (compactField variant):**
+
+- Optional: `Datepicker.CompactFieldDisplay` for customization (automatically rendered if not provided)
+- Does NOT use `Datepicker.Label`, `Datepicker.Field`, or `Datepicker.CalendarIcon`
+- Helper text is automatically rendered when `error` exists
+
+### `Datepicker.Label`
+
+```tsx
+<Datepicker.Label
+  required?: boolean            // Shows asterisk if required
+>
+  {string}                      // Label text (e.g., "Date" or "Date (Read only)")
+</Datepicker.Label>
+```
+
+### `Datepicker.Field`
+
+```tsx
+<Datepicker.Field
+  placeholder?: string
+  ref?: Ref<TextInput>
+  testID?: string
+  accessibilityLabel?: string
+  accessibilityHint?: string
+/>
+```
+
+**Note:** The field is always readonly - it displays the formatted date and opens the picker on press. All date-related props (`value`, `defaultValue`, `format`, `mode`, etc.) are set on the `Datepicker` root component, not on `Datepicker.Field`.
+
+### `Datepicker.CalendarIcon`
+
+```tsx
+<Datepicker.CalendarIcon
+  iconName?: string             // Default: 'calendar'
+  size?: number                  // Default: 20
+  color?: string                 // Optional color override
+  testID?: string
+  accessibilityLabel?: string   // Default: 'Open date picker'
+/>
+```
+
+**Note:** The calendar icon is automatically rendered if not provided. It opens the native date picker when pressed. Only used with `inputField` variant.
+
+### `Datepicker.CompactFieldDisplay`
+
+```tsx
+<Datepicker.CompactFieldDisplay
+  showIcon?: boolean            // Show calendar icon (default: true)
+  iconName?: string             // Icon name (default: 'calendar')
+  testID?: string               // Default: 'datepicker-compact-field-display'
+  accessibilityLabel?: string   // Default: 'Date picker, current value {value}'
+/>
+```
+
+**Note:** Only used with `compactField` variant. The `CompactFieldDisplay` is automatically rendered if not provided. When no date is selected, displays the format string as a hint.
+
+### Types
+
+| Type                  | Values                               |
+| --------------------- | ------------------------------------ |
+| `DatepickerVariant`   | `'inputField'` \| `'compactField'`   |
+| `DatepickerMode`      | `'date'`                             |
+| `DatepickerValueType` | `'date'` \| `'iso'` \| `'formatted'` |
+
+## Usage Patterns
+
+### Variants Overview
+
+The datepicker supports two display variants:
+
+| Variant        | Description                          | Use Cases                                        |
+| -------------- | ------------------------------------ | ------------------------------------------------ |
+| `inputField`   | Form-style input with floating label | Forms, detailed data entry, validation-heavy UIs |
+| `compactField` | Dropdown-style button                | Filters, compact layouts, inline date selection  |
+
+### InputField Variant (default)
+
+#### Basic datepicker (uncontrolled)
+
+```tsx
+<Datepicker defaultValue={null}>
+  <Datepicker.Label>Date</Datepicker.Label>
+  <Datepicker.Field placeholder="Select date" />
+</Datepicker>
+```
+
+#### Controlled datepicker
+
+```tsx
+const [date, setDate] = useState<Date | null>(null);
+
+<Datepicker value={date} onChange={setDate}>
+  <Datepicker.Label>Date</Datepicker.Label>
+  <Datepicker.Field placeholder="Select date" />
+</Datepicker>;
+```
+
+#### With error state
+
+```tsx
+<Datepicker defaultValue={null} error="Please select a valid date">
+  <Datepicker.Label>Date</Datepicker.Label>
+  <Datepicker.Field />
+</Datepicker>
+```
+
+**Note:** Helper text is automatically rendered when `error` exists - no need to include it in JSX.
+
+#### With date constraints
+
+```tsx
+const today = new Date();
+const maxDate = new Date(today.getFullYear() + 1, today.getMonth(), today.getDate());
+
+<Datepicker defaultValue={null} minDate={today} maxDate={maxDate}>
+  <Datepicker.Label>Date</Datepicker.Label>
+  <Datepicker.Field placeholder="Select date" />
+</Datepicker>;
+```
+
+#### Custom format
+
+```tsx
+<Datepicker defaultValue={null} format="MMM dd, yyyy">
+  <Datepicker.Label>Date</Datepicker.Label>
+  <Datepicker.Field />
+</Datepicker>
+```
+
+#### With locale
+
+```tsx
+import { enUS, es, fr } from 'date-fns/locale';
+
+<Datepicker defaultValue={null} locale={es} format="dd 'de' MMMM yyyy">
+  <Datepicker.Label>Fecha</Datepicker.Label>
+  <Datepicker.Field />
+</Datepicker>;
+```
+
+#### Value type conversion
+
+```tsx
+// Return ISO string
+<Datepicker
+  defaultValue={null}
+  valueType="iso"
+  onChange={(isoString) => {
+    console.log(isoString); // "2026-01-27T00:00:00.000Z"
+  }}
+>
+  <Datepicker.Label>Date</Datepicker.Label>
+  <Datepicker.Field />
+</Datepicker>
+
+// Return formatted string
+<Datepicker
+  defaultValue={null}
+  valueType="formatted"
+  format="yyyy-MM-dd"
+  onChange={(formatted) => {
+    console.log(formatted); // "2026-01-27"
+  }}
+>
+  <Datepicker.Label>Date</Datepicker.Label>
+  <Datepicker.Field />
+</Datepicker>
+```
+
+#### Disabled and readonly states
+
+```tsx
+// Disabled
+<Datepicker disabled defaultValue={new Date()}>
+  <Datepicker.Label>Date</Datepicker.Label>
+  <Datepicker.Field />
+</Datepicker>
+
+// Readonly
+<Datepicker readonly defaultValue={new Date()}>
+  <Datepicker.Label>Date (Read only)</Datepicker.Label>
+  <Datepicker.Field />
+</Datepicker>
+```
+
+### CompactField Variant
+
+#### Basic compact datepicker
+
+```tsx
+<Datepicker variant="compactField" defaultValue={null} />
+```
+
+When no date is selected, the format string (e.g., "dd MMM yyyy") is shown as a hint.
+
+#### Controlled compact datepicker
+
+```tsx
+const [date, setDate] = useState<Date | null>(null);
+
+<Datepicker variant="compactField" value={date} onChange={setDate} />;
+```
+
+#### With customization (composition)
+
+```tsx
+// Without icon
+<Datepicker variant="compactField" value={date} onChange={setDate}>
+  <Datepicker.CompactFieldDisplay showIcon={false} />
+</Datepicker>
+
+// Custom icon
+<Datepicker variant="compactField" value={date} onChange={setDate}>
+  <Datepicker.CompactFieldDisplay iconName="notification" />
+</Datepicker>
+```
+
+#### Compact with error state
+
+```tsx
+<Datepicker variant="compactField" defaultValue={null} error="Please select a date" />
+```
+
+#### Compact disabled and readonly
+
+```tsx
+// Disabled
+<Datepicker variant="compactField" disabled defaultValue={new Date()} />
+
+// Readonly
+<Datepicker variant="compactField" readonly defaultValue={new Date()} />
+```
+
+## Context Architecture
+
+The datepicker uses a **split context pattern** for optimal re-render performance. State is divided into 3 contexts based on update frequency:
+
+| Context                   | Contains                                                                          | Updates when...                         | Hook                         |
+| ------------------------- | --------------------------------------------------------------------------------- | --------------------------------------- | ---------------------------- |
+| `DatepickerConfigContext` | `mode`, `format`, `locale`, `minDate`, `maxDate`, `disabled`, `readonly`, `error` | Props change (rare)                     | `useDatepickerConfig()`      |
+| `DatepickerStateContext`  | `isFocused`, `isPickerOpen`, `hasValue`, handlers, animations                     | Focus, picker open/close, empty↔filled | `useDatepickerInteraction()` |
+| `DatepickerValueContext`  | `selectedDate`, `formattedValue`, `setDate`                                       | Every date selection (hot path)         | `useDatepickerValue()`       |
+
+**Which hook each component uses:**
+
+| Component               | Hooks Used                                                              | Re-renders on date selection? |
+| ----------------------- | ----------------------------------------------------------------------- | ----------------------------- |
+| `CalendarIcon`          | `useDatepickerConfig`                                                   | No                            |
+| `FloatingLabel`         | `useDatepickerInteraction`                                              | No (only on empty↔filled)    |
+| `InputFieldDisplay`     | `useDatepickerConfig`, `useDatepickerInteraction`, `useDatepickerValue` | Yes (needs formatted value)   |
+| `InputFieldContainer`   | `useDatepickerConfig`, `useDatepickerInteraction`                       | No                            |
+| `CompactFieldContainer` | `useDatepickerInteraction`                                              | No                            |
+| `CompactFieldDisplay`   | `useDatepickerConfig`, `useDatepickerInteraction`, `useDatepickerValue` | Yes (needs formatted value)   |
+| `HelperText`            | `useDatepickerConfig`                                                   | No                            |
+
+**File structure:**
+
+```text
+datepicker/
+├── et-datepicker.tsx                     # Main compound component (attaches static subcomponents)
+├── et-datepicker.test.tsx                # Component tests
+├── index.ts                              # Public exports
+├── AGENTS.mdc                             # This document
+├── api/
+│   └── types.ts                          # All public types (DatepickerProps, DatepickerVariant, etc.)
+├── context/
+│   ├── config-context.tsx                # DatepickerConfigContext + useDatepickerConfig
+│   ├── state-context.tsx                 # DatepickerStateContext + useDatepickerInteraction
+│   ├── value-context.tsx                 # DatepickerValueContext + useDatepickerValue
+│   ├── datepicker-provider.tsx           # Composed provider (nests all 3 contexts)
+│   └── index.ts                          # Re-exports hooks and provider
+├── hooks/
+│   ├── use-datepicker-state.ts           # Core state logic (value, picker open/close, focus)
+│   ├── use-datepicker-animations.ts      # Reanimated (label compact, field-row inset, full-box border idle/focus/error)
+│   ├── use-component-children.ts         # Compound component child resolution
+│   └── index.ts                          # Re-exports hooks
+├── subcomponents/
+│   ├── index.ts                          # Re-exports all subcomponents
+│   ├── calendar-icon/
+│   │   ├── calendar-icon.tsx             # CalendarIcon subcomponent
+│   │   └── index.ts
+│   ├── compact-field-container/
+│   │   ├── compact-field-container.tsx   # CompactField variant wrapper
+│   │   └── index.ts
+│   ├── compact-field-display/
+│   │   ├── compact-field-display.tsx     # CompactFieldDisplay subcomponent
+│   │   └── index.ts
+│   ├── helper-text/
+│   │   ├── helper-text.tsx              # Error helper text (auto-rendered)
+│   │   └── index.ts
+│   ├── input-field-container/
+│   │   ├── input-field-container.tsx     # InputField variant wrapper
+│   │   └── index.ts
+│   ├── input-field-display/
+│   │   ├── input-field-display.tsx       # Formatted date display + placeholder
+│   │   └── index.ts
+│   ├── input-field-label/
+│   │   ├── input-field-label.tsx         # Floating label with animation
+│   │   └── index.ts
+│   └── native-picker-modal/             # ← Native Picker Integration lives here
+│       ├── native-picker-modal.tsx       # Cross-platform entry point (Platform.select)
+│       ├── datepicker-modal-ios.tsx      # iOS: modal bottom sheet with Cancel/Done
+│       ├── datepicker-android.tsx        # Android: native dialog (auto-dismiss)
+│       └── index.ts
+```
+
+**Date formatting utilities:** `formatDate`, `convertDateToValueType`, and `parseDateValue` live in `libs/etoro-ui/src/utils/date-formatters/` (shared with the app via `etoro-ui` exports). See that folder’s `README.md` for tests and verification.
+
+**Native picker file mapping:** The `native-picker-modal/` directory contains all platform-specific picker logic. `native-picker-modal.tsx` uses `Platform.select` to choose between `datepicker-modal-ios.tsx` (modal bottom sheet) and `datepicker-android.tsx` (native dialog). The picker is triggered via `isPickerOpen` from `state-context.tsx`, and date selections flow back through `setDate` from `value-context.tsx`.
+
+## Native Picker Integration
+
+The component integrates with `@react-native-community/datetimepicker` for platform-native date selection:
+
+### iOS
+
+- Picker is shown in a modal bottom sheet
+- Modal includes Cancel and Done buttons
+- Uses spinner display mode
+
+### Android
+
+- Picker is shown as a native dialog
+- Automatically closes on selection or cancel
+
+### Platform Differences
+
+- **iOS**: Modal-based picker with explicit Cancel/Done actions
+- **Android**: Native dialog that auto-dismisses on selection
+- Both platforms respect `minDate` and `maxDate` constraints
+- Both platforms support locale via `locale` prop
+
+## Formatting & Localization
+
+The component uses `date-fns` for date formatting and localization:
+
+- **Default format**: `'dd MMM yyyy'` (e.g., "27 Jan 2026")
+- **Custom formats**: Any valid date-fns format string
+- **Locales**: Support via `date-fns/locale` imports
+- **Examples**:
+  - `format="MM/dd/yyyy"` → "01/27/2026"
+  - `format="dd MMMM yyyy"` → "27 January 2026"
+  - `format="yyyy-MM-dd"` → "2026-01-27"
+
+## Value Types
+
+The component supports three value types via the `valueType` prop:
+
+1. **`'date'`** (default): Returns `Date` object
+2. **`'iso'`**: Returns ISO 8601 string (e.g., `"2026-01-27T00:00:00.000Z"`)
+3. **`'formatted'`**: Returns formatted string using the `format` prop
+
+The `onChange` callback receives the value in the configured type.
+
+## Read-only state
+
+When `readonly={true}`, the datepicker:
+
+- Is non-interactive (picker cannot be opened)
+- Suppresses the focus border lift (idle `carbon300` box border still visible)
+- Hides the trailing calendar icon
+- Label should include "(Read only)" text (you should include this in the label text yourself)
+
+## Focus state management
+
+Focus state is managed internally and triggers (inputField variant only):
+
+- Label animation (floats up / compact typography)
+- Border color animation (idle `carbon300` → focus `carbon600` → error `actionBrandVarText`)
+- Placeholder visibility (shown when focused and empty)
+
+**Idle border is always visible** — `isFocused` is only `true` while the native picker modal is open, so focus is a color-lift on top of the permanent idle border, not the source of box visibility.
+
+**Note:** The `compactField` variant does not have focus states - it uses a simpler press interaction.
+
+## Error handling
+
+Error state is managed via the `error` prop:
+
+- Error message is automatically rendered below the input (helper text color = `actionBrandVarText`)
+- Error also drives a red full-box border (`actionBrandVarText`) — same shade as helper text
+- Validation logic should be handled in the parent component
+
+## Disabled state
+
+When `disabled={true}` (inputField):
+
+- Uses InputV2’s disabled treatment: static `carbon300` border, `pointerEvents="none"`, **no** opacity wash
+- Label / value stay legible (`carbon500`)
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `INPUT_LAYOUT_METRICS` (and related layout constants) imported from `input/input-v2` public barrel — shared box model with EtInput v2
+- `useEtoroTheme` — theme colors
+- `EtText` / `EtoroIcon` — helper text and calendar icon
+- Split context: config / state (incl. Reanimated styles) / value
+- `react-native-reanimated` — label float, field-row inset, full-box border color
+
+## Performance Considerations
+
+- Uses split context pattern to minimize re-renders
+- Only components that need date values re-render on date selection
+- Label and border animations use `react-native-reanimated` for smooth 60fps animations
+- Date formatting is memoized in the provider
+
+## Accessibility
+
+### InputField Variant
+
+- All interactive elements have proper `accessibilityRole` and `accessibilityLabel`
+- Calendar icon has default accessibility label: "Open date picker"
+- Date field has `accessibilityRole="button"` since it opens the picker
+- Disabled state is properly communicated to screen readers
+
+### CompactField Variant
+
+- `CompactFieldDisplay` has `accessibilityRole="button"`
+- Default accessibility label: "Date picker, current value {value}" or "Date picker, current value not set"
+- Disabled state is communicated via `accessibilityState={{ disabled: true }}`
+- Custom accessibility label can be provided via the `accessibilityLabel` prop

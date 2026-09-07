@@ -1,0 +1,459 @@
+# EtLineChart Component - Agent Guide
+
+## Overview
+
+`EtLineChart` is a high-performance interactive line chart component built with React Native Skia, Reanimated, and Gesture Handler. It renders financial time-series data with smooth animations, cursor tracking, and haptic feedback. The component uses a Context-based architecture with modular hooks for clean separation of concerns.
+
+## Key Features
+
+- **High Performance**: Skia-based canvas rendering with UI thread animations
+- **Interactive Cursor**: Long-press and drag to explore data points
+- **Smooth Animations**: Path drawing and gradient animations with Reanimated
+- **Haptic Feedback**: Tactile response when crossing data points
+- **Gesture Handling**: Long-press activation (250ms) with scroll conflict resolution
+- **Context Architecture**: Balanced approach with stable SharedValue references
+- **Edge Case Handling**: Robust against empty data, large datasets, single points
+- **Modular Hooks**: Separated concerns for calculations, gestures, and animations
+
+## Usage
+
+```tsx
+import { EtLineChart } from 'etoro-ui';
+import { useSharedValue } from 'react-native-reanimated';
+
+// Basic usage
+function PortfolioChart() {
+  const selectedValue = useSharedValue(0);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [cursorData, setCursorData] = useState(null);
+
+  return (
+    <EtLineChart
+      data={chartData}
+      selectedValue={selectedValue}
+      onFocusModeChange={setIsFocusMode}
+      onCursorDataChange={setCursorData}
+    />
+  );
+}
+
+// With animated value display
+function ChartWithDisplay() {
+  const selectedValue = useSharedValue(0);
+  const [cursorData, setCursorData] = useState(null);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+
+  return (
+    <>
+      <EtAnimatedCount
+        value={cursorData?.amount ?? latestValue}
+        animate={!isFocusMode}  // Disable animation in focus mode
+      />
+      <EtLineChart
+        data={chartData}
+        selectedValue={selectedValue}
+        onFocusModeChange={setIsFocusMode}
+        onCursorDataChange={setCursorData}
+      />
+    </>
+  );
+}
+
+// Read-only chart (no interaction)
+<EtLineChart
+  data={chartData}
+  selectedValue={selectedValue}
+  isInteractive={false}
+/>
+
+// Custom dimensions
+<EtLineChart
+  data={chartData}
+  selectedValue={selectedValue}
+  width={350}
+  height={250}
+  margin={20}
+  onFocusModeChange={handleFocus}
+  onCursorDataChange={handleCursor}
+/>
+
+// With markers (e.g., deposit points)
+<EtLineChart
+  data={chartData}
+  selectedValue={selectedValue}
+  markers={[
+    { timestamp: '2024-01-15T10:30:00Z' },
+    { timestamp: '2024-01-20T14:00:00Z' },
+  ]}
+/>
+```
+
+## Props Reference
+
+### EtLineChartProps
+
+| Prop                 | Type                                 | Default     | Required | Description                                            |
+| -------------------- | ------------------------------------ | ----------- | -------- | ------------------------------------------------------ |
+| `data`               | `ChartDataApiEquity[]`               | -           | ✅       | Array of data points with `timestamp`, `equity`, `pnL` |
+| `selectedValue`      | `SharedValue<number>`                | -           | ✅       | Reanimated shared value for the selected equity        |
+| `markers`            | `ChartMarker[]`                      | `undefined` | ❌       | Optional markers to display on the chart line          |
+| `onFocusModeChange`  | `(isFocused: boolean) => void`       | `undefined` | ❌       | Callback when user enters/exits focus mode             |
+| `onCursorDataChange` | `(data: CursorData \| null) => void` | `undefined` | ❌       | Callback when cursor data updates                      |
+| `width`              | `number`                             | `300`       | ❌       | Chart width in pixels                                  |
+| `height`             | `number`                             | `200`       | ❌       | Chart height in pixels                                 |
+| `margin`             | `number`                             | `10`        | ❌       | Chart margin (vertical only - top/bottom padding)      |
+| `isInteractive`      | `boolean`                            | `true`      | ❌       | Whether cursor interaction is enabled                  |
+| `testID`             | `string`                             | -           | ❌       | Test identifier                                        |
+
+### Data Types
+
+```typescript
+interface ChartDataApiEquity {
+  timestamp: string; // ISO 8601 timestamp (e.g., "2024-01-15T10:30:00Z")
+  equity: number; // Portfolio value at this point
+  pnL?: number; // Profit/Loss value (optional)
+}
+
+interface ChartMarker {
+  timestamp: string; // ISO 8601 timestamp for the marker position
+}
+
+interface CursorData {
+  amount: number; // Current equity value under cursor
+  pnL: number; // Current P&L value under cursor
+  timestamp: string; // Current timestamp under cursor
+}
+```
+
+## Behavior
+
+### Gesture Interaction
+
+1. **Long Press**: User must press and hold for 250ms to enter focus mode
+2. **Focus Mode Entry**: Cursor appears, `onFocusModeChange(true)` called
+3. **Dragging**: User can drag finger to explore different data points
+4. **Data Updates**: `onCursorDataChange` called with current point data
+5. **Haptic Feedback**: Light haptic when crossing data point boundaries
+6. **Focus Mode Exit**: User lifts finger, `onFocusModeChange(false)` called, cursor fades out
+7. **Animation Timing**: `onCursorDataChange(null)` delayed by one frame for smooth animations
+
+### Scroll Conflict Resolution
+
+- If user touches chart but moves finger within 250ms, long-press fails
+- Native scroll gesture wins, allowing vertical scrolling
+- Chart only captures gesture after successful long-press activation
+
+### Animation States
+
+- **Initial**: Chart animates in with path drawing effect
+- **Focus Mode**: Cursor tracks finger, values update in real-time
+- **Exit Focus**: Cursor fades, value animates back to latest
+
+### Markers
+
+- **Visual Display**: Small dots (6x6px) displayed on the chart line at specific timestamps
+- **Timestamp Matching**: Markers are positioned by finding the nearest chart data point
+  - Handles precise timestamps (e.g., `2024-01-15T14:30:00Z`) by matching to daily equity snapshots (`2024-01-15T00:00:00Z`)
+- **Hit Buffer**: 3px invisible hit area around each marker for comfortable hover detection
+  - Cursor automatically snaps to nearby markers when within hit buffer distance
+  - Makes small markers much easier to interact with
+- **Color**: Uses theme color `carbon400` for consistent styling
+- **Use Cases**: Deposit/withdrawal points, significant events, annotations
+
+## Architecture Notes
+
+### Context Pattern (Balanced Approach)
+
+The component uses a **balanced Context pattern** to avoid prop drilling while maintaining performance:
+
+- **Stable References in Context**: SharedValues, memoized handlers (never change)
+- **Reactive Props to Hooks**: Geometry, data (passed directly)
+- **Result**: Clean API without re-render issues
+
+```tsx
+// Context provides stable references
+const { sharedValues, handlers } = useLineChartContext();
+
+// Reactive data passed directly to hooks
+useChartGesture({ geometry, data, ...sharedValues, ...handlers });
+```
+
+### Modular Hooks
+
+| Hook                      | Responsibility                          |
+| ------------------------- | --------------------------------------- |
+| `useChartCalculations`    | Computes scales, paths, stepX from data |
+| `useChartGesture`         | Configures pan gesture with long-press  |
+| `useAnimateGraph`         | Orchestrates path drawing animations    |
+| `useEvaluateBeforeRender` | Resets animation state on data change   |
+
+### Pure Utilities
+
+`chart-calculations.ts` contains pure functions for:
+
+- `computeChartGeometry`: Calculates scales, paths, parsed paths
+- `findDataIndexAtPosition`: Maps X position to data index
+- Edge case handling: empty data, single points, flat data
+
+### Performance Optimizations
+
+1. **SharedValue**: Critical values use Reanimated's SharedValue for UI thread
+2. **useMemo**: Chart geometry computed once, only recalculates on data change
+3. **useCallback**: All handlers memoized with stable dependencies
+4. **React.memo**: Components memoized to prevent cascading re-renders
+5. **Worklet Functions**: Gesture handlers run on UI thread (no JS bridge)
+6. **Efficient Calculations**: Single-pass reduce instead of multiple iterations
+
+## Do's and Don'ts
+
+### Do:
+
+- ✅ Use `onFocusModeChange` to disable animations on external components during focus
+- ✅ Wrap `onCursorDataChange` value in `EtAnimatedCount` with `animate={!isFocusMode}`
+- ✅ Provide consistent data array references (memoize if computed)
+- ✅ Use `isInteractive` for read-only charts
+- ✅ Handle `null` in `onCursorDataChange` (indicates focus mode exit)
+- ✅ Test with edge cases: empty data, single point, large datasets (1000+ points)
+
+### Don't:
+
+- ❌ Don't expect immediate callbacks (long-press has 250ms delay)
+- ❌ Don't animate external values while `isFocusMode` is `true` (causes snap-back)
+- ❌ Don't mutate `data` array in place (provide new reference)
+- ❌ Don't use extremely large datasets without pagination (10k+ points)
+- ❌ Don't nest `EtLineChart` inside gesture handlers (conflicts)
+- ❌ Don't forget to check `cursorData` for `null` before accessing properties
+
+## Common Patterns
+
+### With State Lifting
+
+```tsx
+function ParentComponent() {
+  const selectedValue = useSharedValue(0);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [cursorData, setCursorData] = useState<CursorData | null>(null);
+
+  return (
+    <View>
+      <Text>
+        {isFocusMode ? 'Exploring' : 'Latest'}:{cursorData?.amount ?? latestValue}
+      </Text>
+      <EtLineChart data={data} selectedValue={selectedValue} onFocusModeChange={setIsFocusMode} onCursorDataChange={setCursorData} />
+    </View>
+  );
+}
+```
+
+### With Custom Hook
+
+```tsx
+function useChartState(data: ChartDataApiEquity[]) {
+  const selectedValue = useSharedValue(0);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [cursorData, setCursorData] = useState<CursorData | null>(null);
+
+  const displayValue = cursorData?.amount ?? data[data.length - 1]?.equity ?? 0;
+
+  return {
+    selectedValue,
+    isFocusMode,
+    cursorData,
+    displayValue,
+    onFocusModeChange: setIsFocusMode,
+    onCursorDataChange: setCursorData,
+  };
+}
+
+// Usage
+function ChartScreen() {
+  const chartState = useChartState(portfolioData);
+
+  return (
+    <>
+      <EtAnimatedCount value={chartState.displayValue} animate={!chartState.isFocusMode} />
+      <EtLineChart
+        data={portfolioData}
+        selectedValue={chartState.selectedValue}
+        onFocusModeChange={chartState.onFocusModeChange}
+        onCursorDataChange={chartState.onCursorDataChange}
+      />
+    </>
+  );
+}
+```
+
+### With Loading State
+
+```tsx
+function ChartWithLoading() {
+  const { data, isLoading } = usePortfolioData();
+  const selectedValue = useSharedValue(0);
+
+  if (isLoading || data.length === 0) {
+    return <ChartSkeleton />;
+  }
+
+  return <EtLineChart data={data} selectedValue={selectedValue} onFocusModeChange={handleFocus} onCursorDataChange={handleCursor} />;
+}
+```
+
+## Edge Cases Handled
+
+| Case                               | Behavior                                                  |
+| ---------------------------------- | --------------------------------------------------------- |
+| Empty data `[]`                    | Returns safe sentinel geometry, no crash                  |
+| Single data point                  | Chart renders as flat line with padding                   |
+| Two identical values               | Y-axis padded by ±1 to prevent flat scale                 |
+| Very large datasets (1000+ points) | Uses `reduce` instead of spread to prevent stack overflow |
+| Flat data (all same values)        | Y-axis domain adjusted to show visual variation           |
+| Rapid data changes                 | Chart recalculates geometry efficiently via memoization   |
+| Path generation failure            | Returns empty geometry, component remains stable          |
+| Divide-by-zero in indexing         | Early returns prevent NaN propagation                     |
+
+## Testing
+
+### Component Tests
+
+```tsx
+import { render } from '@testing-library/react-native';
+import { EtLineChart } from './et-line-chart';
+
+test('renders with data', () => {
+  const selectedValue = { value: 0 } as any;
+  const { toJSON } = render(<EtLineChart data={mockData} selectedValue={selectedValue} />);
+  expect(toJSON()).not.toBeNull();
+});
+
+test('calls onFocusModeChange callback', () => {
+  const onFocusModeChange = jest.fn();
+  // Render with callback and simulate gesture
+  // Assert callback was called with correct arguments
+});
+```
+
+### Hook Tests
+
+```tsx
+import { renderHook } from '@testing-library/react-native';
+import { useChartCalculations } from './use-chart-calculations';
+
+test('computes geometry for valid data', () => {
+  const { result } = renderHook(() => useChartCalculations(mockData, 300, 200, 10));
+  expect(result.current.geometry.stepX).toBeGreaterThan(0);
+});
+```
+
+## Dependencies
+
+### Core
+
+- `react-native-reanimated` - Animations and SharedValues
+- `@shopify/react-native-skia` - Canvas rendering
+- `react-native-gesture-handler` - Touch gestures
+- `react-native-redash` - Path calculations (`getYForX`, `parse`)
+- `expo-haptics` - Haptic feedback
+- `react-native-worklets` - UI thread scheduling
+
+### Utilities
+
+- `d3-scale` - Linear and point scales
+- `d3-shape` - Curve generation
+
+## Performance Considerations
+
+### Memory
+
+- Chart geometry memoized, only recalculates on data/dimension change
+- SharedValues don't trigger React re-renders
+- Context value stable across renders
+
+### CPU
+
+- Gesture handlers run on UI thread via worklets
+- Path calculations done once in JavaScript, then cached
+- D3 scales and curves computed efficiently
+
+### Best Practices
+
+- Keep `data` memoized if computed from props
+- Avoid re-creating callback functions on every render
+- Use `React.memo` on parent components if passing many props
+- Paginate or downsample data for 10k+ points
+
+## Troubleshooting
+
+### Chart not responding to touch
+
+- Ensure `isInteractive` is enabled (default: `true`)
+- Verify long-press duration (250ms required)
+- Ensure no parent gesture handlers blocking
+
+### Animation not working on exit
+
+- Verify `isFocusMode` updates before `cursorData`
+- Check `EtAnimatedCount` has `animate={!isFocusMode}`
+- Ensure `requestAnimationFrame` delay for `onCursorDataChange(null)`
+
+### Values not updating
+
+- Verify `onCursorDataChange` callback is provided
+- Check `data` is not empty
+- Ensure `selectedValue` is a valid SharedValue
+
+### Performance issues
+
+- Reduce dataset size (downsample to ~100-500 points)
+- Check for excessive parent re-renders
+- Verify chart dimensions are reasonable (< 1000px)
+
+## Migration from Redux Version
+
+### Before (Redux)
+
+```tsx
+const cursorData = useSelector(selectCursorData);
+const isFocusMode = useSelector(selectFocusMode);
+
+<EtLineChart data={data} selectedValue={selectedValue} />;
+```
+
+### After (Callbacks)
+
+```tsx
+const [cursorData, setCursorData] = useState(null);
+const [isFocusMode, setIsFocusMode] = useState(false);
+
+<EtLineChart data={data} selectedValue={selectedValue} onFocusModeChange={setIsFocusMode} onCursorDataChange={setCursorData} />;
+```
+
+## Design System Integration
+
+The chart consumes V2 color tokens from `useEtoroTheme()`. Each visual slot maps to a token as follows:
+
+| Slot | V2 token |
+| --- | --- |
+| Line color (positive / negative) | `verdictPositive600` / `verdictNegative600` |
+| Cursor stroke (default) | `verdictPositive600` |
+| Fade-mask gradient (start / end) | `verdictPositive600Opacity50` (low-alpha) / `verdictPositive600` (solid) — both serve as alpha values for the Skia `Mask`, not visible hues |
+| Area gradient under line (positive / negative) | `verdictPositive600` / `verdictNegative600` (faded via Path `opacity` prop, default 0.3) |
+| Marker dots (default) | `carbon400` |
+| Baseline dashed line | `carbonPrimaryDivider` |
+| Cursor overlay rect | `carbon050` |
+| Y-axis label chip background | `carbonSecondaryDivider` |
+| Y-axis label text | `carbon900` |
+
+Override props (`lineColor`, `cursorColor`, `markerColor`, `maskGradientColors`, `gradientColors`) bypass the defaults above, so consumers can still pin a specific color when needed.
+
+### Behavior deltas vs. pre-V2
+
+- **Y-axis label text** flips from light grey (`textTertiaryNeutral`) to near-black (`carbon900`) per Figma — most visible change.
+- **Y-axis chip background** changes from translucent white (`bgTransparentPrimaryBright`, `#FFFFFF25`) to translucent grey (`carbonSecondaryDivider`, `#B2B2B226`). Figma's variable label `var(--primary-divider)` resolves to `#B2B2B226`, which corresponds to our `carbonSecondaryDivider` (the naming in Figma is misleading — picked by hex equivalence).
+- **Light-mode area gradient under the line** shifts from bright pale `#6DFF8A` / `#FF6B6E` to saturated `verdictPositive600` / `verdictNegative600`. The hardcoded `useColorScheme` branch was removed because V2 tokens are theme-aware.
+- **Marker dots in dark mode** lighten from `#4D4D4D` (`textDisabledPrimaryNeutral` dark) to `#999999` (`carbon400` dark). Light mode is unchanged (`#CCCCCC`).
+
+## Related Components
+
+- `EtAnimatedCount` - Displays animated numeric values
+- `EtCard` - Container for chart and related content
+- `EtText` - Typography for labels and values

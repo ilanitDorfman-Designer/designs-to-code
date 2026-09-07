@@ -1,0 +1,376 @@
+---
+description: Agent guide for Timepicker - compound component for time selection with inputField and compactField variants, native picker integration, floating label animation, and 12h/24h format support
+alwaysApply: false
+---
+
+# Timepicker Component
+
+## Purpose & Scope
+
+`Timepicker` is a compound component for time selection in the eToro design system. It provides a flexible, accessible time input with:
+
+- **Two display variants**: `inputField` (form-style with floating label) and `compactField` (pill-style button)
+- **Compound component pattern**: `Timepicker.Label`, `Timepicker.Field`, `Timepicker.ClockIcon`, `Timepicker.CompactFieldDisplay` subcomponents
+- **Native picker integration**: Uses `@react-native-community/datetimepicker` for platform-native time selection
+- **Controlled and uncontrolled modes**: Supports both `value` (controlled) and `defaultValue` (uncontrolled)
+- **Built-in states**: focus, error, disabled, readonly
+- **Floating label animation**: Animated label that floats when focused or filled (inputField variant)
+- **Context-based state sharing**: No prop drilling, all state shared via React Context
+- **12h/24h format support**: Display in 12-hour (AM/PM) or 24-hour format
+- **Configurable minute intervals**: 1, 2, 3, 4, 5, 6, 10, 12, 15, 20, or 30 minute intervals
+
+**Does NOT handle:**
+
+- Form validation logic (handle in parent)
+- Form submission logic (handle in parent)
+- Navigation logic (use with router/navigation handlers)
+- Custom time picker UI (uses native platform pickers)
+
+## Entry Points & Contracts
+
+### `Timepicker` (main component - context provider)
+
+```tsx
+<Timepicker
+  variant?: TimepickerVariant            // 'inputField' | 'compactField' (default: 'inputField')
+  style?: StyleProp<ViewStyle>           // Container style override
+  defaultValue?: TimeValue | null        // Initial value for uncontrolled mode
+  value?: TimeValue | null               // Value for controlled mode
+  onChange?: (time: TimeValue | null) => void
+  format?: TimeFormat                    // '12h' | '24h' (default: '24h')
+  minuteInterval?: number                // 1-30 (default: 1)
+  error?: string | null                  // Error state (affects label/border styling, auto-renders helper text)
+  disabled?: boolean                     // Disabled state (default: false)
+  readonly?: boolean                     // Read-only state (default: false)
+>
+  {children}
+</Timepicker>
+```
+
+**Children constraints (inputField variant):**
+
+- Must contain `Timepicker.Label` and `Timepicker.Field` at minimum
+- Optional: `Timepicker.ClockIcon` (automatically rendered if not provided)
+- Helper text is automatically rendered when `error` exists - do not include it in JSX
+- Order matters for visual layout
+
+**Children constraints (compactField variant):**
+
+- Optional: `Timepicker.CompactFieldDisplay` for customization (automatically rendered if not provided)
+- Does NOT use `Timepicker.Label`, `Timepicker.Field`, or `Timepicker.ClockIcon`
+- Helper text is automatically rendered when `error` exists
+
+### `Timepicker.Label`
+
+```tsx
+<Timepicker.Label
+  required?: boolean            // Shows asterisk if required
+>
+  {string}                      // Label text (e.g., "Time" or "Time (Read only)")
+</Timepicker.Label>
+```
+
+### `Timepicker.Field`
+
+```tsx
+<Timepicker.Field
+  placeholder?: string
+  ref?: Ref<TextInput>
+  testID?: string
+  accessibilityLabel?: string
+  accessibilityHint?: string
+/>
+```
+
+**Note:** The field is always readonly - it displays the formatted time and opens the picker on press. All time-related props (`value`, `defaultValue`, `format`, etc.) are set on the `Timepicker` root component, not on `Timepicker.Field`.
+
+### `Timepicker.ClockIcon`
+
+```tsx
+<Timepicker.ClockIcon
+  iconName?: string             // Default: 'calendar'
+  size?: number                  // Default: 20
+  color?: string                 // Optional color override
+  testID?: string
+  accessibilityLabel?: string   // Default: 'Open time picker'
+/>
+```
+
+**Note:** The clock icon is automatically rendered if not provided. It opens the native time picker when pressed. Only used with `inputField` variant.
+
+### `Timepicker.CompactFieldDisplay`
+
+```tsx
+<Timepicker.CompactFieldDisplay
+  showIcon?: boolean            // Show icon (default: true)
+  iconName?: string             // Icon name (default: 'calendar')
+  testID?: string               // Default: 'timepicker-compact-field-display'
+  accessibilityLabel?: string   // Default: 'Time picker, current value {value}'
+/>
+```
+
+**Note:** Only used with `compactField` variant. The `CompactFieldDisplay` is automatically rendered if not provided. When no time is selected, displays the format hint string.
+
+### Types
+
+| Type                | Values                               |
+| ------------------- | ------------------------------------ |
+| `TimepickerVariant` | `'inputField'` \| `'compactField'`   |
+| `TimeFormat`        | `'12h'` \| `'24h'`                   |
+| `TimeValue`         | `{ hours: number; minutes: number }` |
+
+## Usage Patterns
+
+### Variants Overview
+
+The timepicker supports two display variants:
+
+| Variant        | Description                          | Use Cases                                        |
+| -------------- | ------------------------------------ | ------------------------------------------------ |
+| `inputField`   | Form-style input with floating label | Forms, detailed data entry, validation-heavy UIs |
+| `compactField` | Pill-style button                    | Filters, compact layouts, inline time selection  |
+
+### InputField Variant (default)
+
+#### Basic timepicker (uncontrolled)
+
+```tsx
+<Timepicker defaultValue={null}>
+  <Timepicker.Label>Time</Timepicker.Label>
+  <Timepicker.Field placeholder="Select time" />
+</Timepicker>
+```
+
+#### Controlled timepicker
+
+```tsx
+const [time, setTime] = useState<TimeValue | null>(null);
+
+<Timepicker value={time} onChange={setTime}>
+  <Timepicker.Label>Time</Timepicker.Label>
+  <Timepicker.Field placeholder="Select time" />
+</Timepicker>;
+```
+
+#### With error state
+
+```tsx
+<Timepicker defaultValue={null} error="Please select a valid time">
+  <Timepicker.Label>Time</Timepicker.Label>
+  <Timepicker.Field />
+</Timepicker>
+```
+
+#### With 12-hour format
+
+```tsx
+<Timepicker defaultValue={null} format="12h">
+  <Timepicker.Label>Time</Timepicker.Label>
+  <Timepicker.Field />
+</Timepicker>
+```
+
+#### Disabled and readonly states
+
+```tsx
+// Disabled
+<Timepicker disabled defaultValue={{ hours: 9, minutes: 30 }}>
+  <Timepicker.Label>Time</Timepicker.Label>
+  <Timepicker.Field />
+</Timepicker>
+
+// Readonly
+<Timepicker readonly defaultValue={{ hours: 9, minutes: 30 }}>
+  <Timepicker.Label>Time (Read only)</Timepicker.Label>
+  <Timepicker.Field />
+</Timepicker>
+```
+
+### CompactField Variant
+
+#### Basic compact timepicker
+
+```tsx
+<Timepicker variant="compactField" defaultValue={null} />
+```
+
+When no time is selected, the format hint (e.g., "HH:mm") is shown as a hint.
+
+#### Controlled compact timepicker
+
+```tsx
+const [time, setTime] = useState<TimeValue | null>(null);
+
+<Timepicker variant="compactField" value={time} onChange={setTime} />;
+```
+
+#### With customization (composition)
+
+```tsx
+// Without icon
+<Timepicker variant="compactField" value={time} onChange={setTime}>
+  <Timepicker.CompactFieldDisplay showIcon={false} />
+</Timepicker>
+
+// Custom icon
+<Timepicker variant="compactField" value={time} onChange={setTime}>
+  <Timepicker.CompactFieldDisplay iconName="notification" />
+</Timepicker>
+```
+
+## Context Architecture
+
+The timepicker uses a **split context pattern** for optimal re-render performance. State is divided into 3 contexts based on update frequency:
+
+| Context                   | Contains                                                      | Updates when...                         | Hook                         |
+| ------------------------- | ------------------------------------------------------------- | --------------------------------------- | ---------------------------- |
+| `TimepickerConfigContext` | `format`, `minuteInterval`, `disabled`, `readonly`, `error`   | Props change (rare)                     | `useTimepickerConfig()`      |
+| `TimepickerStateContext`  | `isFocused`, `isPickerOpen`, `hasValue`, handlers, animations | Focus, picker open/close, empty↔filled | `useTimepickerInteraction()` |
+| `TimepickerValueContext`  | `selectedTime`, `formattedValue`, `setTime`                   | Every time selection (hot path)         | `useTimepickerValue()`       |
+
+**Which hook each component uses:**
+
+| Component               | Hooks Used                                                              | Re-renders on time selection? |
+| ----------------------- | ----------------------------------------------------------------------- | ----------------------------- |
+| `ClockIcon`             | `useTimepickerConfig`                                                   | No                            |
+| `InputFieldLabel`       | `useTimepickerInteraction`                                              | No (only on empty↔filled)    |
+| `InputFieldDisplay`     | `useTimepickerConfig`, `useTimepickerInteraction`, `useTimepickerValue` | Yes (needs formatted value)   |
+| `InputFieldContainer`   | `useTimepickerConfig`, `useTimepickerInteraction`                       | No                            |
+| `CompactFieldContainer` | `useTimepickerInteraction`                                              | No                            |
+| `CompactFieldDisplay`   | `useTimepickerConfig`, `useTimepickerInteraction`, `useTimepickerValue` | Yes (needs formatted value)   |
+| `HelperText`            | `useTimepickerConfig`                                                   | No                            |
+
+**File structure:**
+
+```text
+timepicker/
+├── et-timepicker.tsx                     # Main compound component (attaches static subcomponents)
+├── et-timepicker.test.tsx                # Component tests
+├── index.ts                              # Public exports
+├── AGENTS.mdc                             # This document
+├── api/
+│   └── types.ts                          # All public types (TimepickerProps, TimepickerVariant, etc.)
+├── context/
+│   ├── config-context.tsx                # TimepickerConfigContext + useTimepickerConfig
+│   ├── state-context.tsx                 # TimepickerStateContext + useTimepickerInteraction
+│   ├── value-context.tsx                 # TimepickerValueContext + useTimepickerValue
+│   ├── timepicker-provider.tsx           # Composed provider (nests all 3 contexts)
+│   └── index.ts                          # Re-exports hooks and provider
+├── hooks/
+│   ├── use-timepicker-state.ts           # Core state logic (value, picker open/close, focus)
+│   ├── use-timepicker-animations.ts      # Reanimated animations (label float, border color)
+│   ├── use-component-children.ts         # Compound component child resolution
+│   └── index.ts                          # Re-exports hooks
+├── subcomponents/
+│   ├── index.ts                          # Re-exports all subcomponents
+│   ├── clock-icon/
+│   │   ├── clock-icon.tsx                # ClockIcon subcomponent
+│   │   └── index.ts
+│   ├── compact-field-container/
+│   │   ├── compact-field-container.tsx   # CompactField variant wrapper
+│   │   └── index.ts
+│   ├── compact-field-display/
+│   │   ├── compact-field-display.tsx     # CompactFieldDisplay subcomponent
+│   │   └── index.ts
+│   ├── helper-text/
+│   │   ├── helper-text.tsx              # Error helper text (auto-rendered)
+│   │   └── index.ts
+│   ├── input-field-container/
+│   │   ├── input-field-container.tsx     # InputField variant wrapper
+│   │   └── index.ts
+│   ├── input-field-display/
+│   │   ├── input-field-display.tsx       # Formatted time display + placeholder
+│   │   └── index.ts
+│   ├── input-field-label/
+│   │   ├── input-field-label.tsx         # Floating label with animation
+│   │   └── index.ts
+│   └── native-picker-modal/             # ← Native Picker Integration lives here
+│       ├── native-picker-modal.tsx       # Cross-platform entry point (Platform.select)
+│       ├── timepicker-modal-ios.tsx      # iOS: modal with Cancel/Done
+│       ├── timepicker-android.tsx        # Android: native dialog (auto-dismiss)
+│       └── index.ts
+└── utils/
+    ├── time-formatters.ts               # Time formatting utilities
+    └── index.ts                          # Re-exports utils
+```
+
+**Native picker file mapping:** The `native-picker-modal/` directory contains all platform-specific picker logic. `native-picker-modal.tsx` uses `Platform.OS` to choose between `timepicker-modal-ios.tsx` (modal with spinner) and `timepicker-android.tsx` (native dialog). The picker is triggered via `isPickerOpen` from `state-context.tsx`, and time selections flow back through `setTime` from `value-context.tsx`.
+
+## Native Picker Integration
+
+The component integrates with `@react-native-community/datetimepicker` for platform-native time selection:
+
+### iOS
+
+- Picker is shown in a modal with spinner display
+- Modal includes Cancel and Done buttons
+- Uses `is24Hour` prop for format
+
+### Android
+
+- Picker is shown as a native dialog
+- Automatically closes on selection or cancel
+
+### Platform Differences
+
+- **iOS**: Modal-based picker with explicit Cancel/Done actions
+- **Android**: Native dialog that auto-dismisses on selection
+- Both platforms support `minuteInterval` constraints
+- Both platforms support 12h/24h format via `is24Hour` prop
+
+## Time Value Format
+
+The component uses `TimeValue { hours: number; minutes: number }` for the value type:
+
+- **hours**: 0-23 (24-hour format internally)
+- **minutes**: 0-59
+- Display format is controlled by the `format` prop ('12h' or '24h')
+
+## Read-only state
+
+When `readonly={true}`, the timepicker:
+
+- Is non-interactive (picker cannot be opened)
+- Shows transparent border
+- Label should include "(Read only)" text (you should include this in the label text yourself)
+
+## Focus state management
+
+Focus state is managed internally and triggers (inputField variant only):
+
+- Label animation (floats up)
+- Border color animation (changes to active color)
+- Placeholder visibility (shown when focused and empty)
+
+**Note:** The `compactField` variant does not have focus states - it uses a simpler press interaction.
+
+## Error handling
+
+Error state is managed via the `error` prop:
+
+- Error message is automatically rendered below the input
+- Error styling affects label and border colors
+- Validation logic should be handled in the parent component
+
+## Performance Considerations
+
+- Uses split context pattern to minimize re-renders
+- Only components that need time values re-render on time selection
+- Label and border animations use `react-native-reanimated` for smooth 60fps animations
+- Time formatting is memoized in the provider
+
+## Accessibility
+
+### InputField Variant
+
+- All interactive elements have proper `accessibilityRole` and `accessibilityLabel`
+- Clock icon has default accessibility label: "Open time picker"
+- Time field has `accessibilityRole="button"` since it opens the picker
+- Disabled state is properly communicated to screen readers
+
+### CompactField Variant
+
+- `CompactFieldDisplay` has `accessibilityRole="button"`
+- Default accessibility label: "Time picker, current value {value}" or "Time picker, current value not set"
+- Disabled state is communicated via `accessibilityState={{ disabled: true }}`
+- Custom accessibility label can be provided via the `accessibilityLabel` prop

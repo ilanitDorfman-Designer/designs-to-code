@@ -1,0 +1,80 @@
+---
+description: Agent guide for EtFlatList / EtSectionList - crash-safe replacements for React Native's FlatList and SectionList.
+alwaysApply: false
+---
+
+# EtFlatList / EtSectionList - Agent Guide
+
+## Purpose & Scope
+
+Thin, transparent wrappers over React Native's `FlatList` and `SectionList` whose only job is to
+default `removeClippedSubviews` to `false`. They exist to prevent an Android-only native crash, not
+to add features.
+
+Only `FlatList` actually defaults the flag on for Android, so `EtFlatList` is the real fix.
+`SectionList` merely declares the prop (`VirtualizedList` passes it through untouched), so
+`EtSectionList` is preventative — it makes the safe value explicit and keeps one list API across the
+app so no future call site can quietly opt into the crash.
+
+**Location:** `/libs/etoro-ui/src/components/list/flat-list/`
+
+**Use these instead of importing `FlatList` / `SectionList` from `react-native` directly.**
+
+```tsx
+import { EtFlatList, EtSectionList } from 'etoro-ui';
+
+<EtFlatList data={items} renderItem={renderItem} keyExtractor={(i) => i.id} />;
+```
+
+The props, generics, and refs are exactly React Native's, so migration is a rename.
+
+## Why this exists
+
+React Native defaults `removeClippedSubviews` to `true` on Android (`FlatList.js`,
+`removeClippedSubviewsOrDefault`). That flag is forwarded to the ScrollView's content container,
+which is a `ReactViewGroup` whose clipped child slots are nullable
+(`getChildAtWithSubviewClippingEnabled` returns `View?`). If a child is removed between the
+child-count check and the child lookup, the resulting `null` reaches `ViewGroup.dispatchDraw` and
+throws:
+
+```
+java.lang.NullPointerException: Attempt to read from field 'int android.view.View.mViewFlags'
+on a null object reference in method 'void android.view.ViewGroup.dispatchDraw(...)'
+```
+
+Tracked as **ETORO-MOBILE-7J**. Three things make it unavoidable at the call site:
+
+1. RN 0.81's `ReactViewGroup.dispatchDraw` has **no null guard** — later RN versions added a
+   try/catch, ours predates it.
+2. We consume a **prebuilt React Native AAR**, so the Kotlin fix cannot be patched in locally.
+3. `newArchEnabled` and `edgeToEdgeEnabled` are both on, which is the Fabric configuration upstream
+   reports cite as widening the race.
+
+Disabling the clipping is the workaround React Native itself uses elsewhere: `ScrollView.js` force-
+disables it on Android whenever sticky headers are present, calling it "hard to fix properly".
+
+## Performance note
+
+`FlatList` and `SectionList` already window their cells — off-screen rows are not mounted.
+`removeClippedSubviews` is an *additional* native optimisation that detaches already-mounted
+off-screen views from the view hierarchy to save draw work; it does not bound memory. Turning it off
+costs some draw time on very long lists and buys crash-freedom.
+
+## Conventions
+
+- **Overridable, deliberately.** The default is applied before the prop spread, so a call site can
+  pass `removeClippedSubviews` to opt back in. Doing so re-opens the crash — only do it with a
+  measurement justifying it, and leave a comment.
+- **Not wrapped in `React.memo`.** A bare `FlatList` re-renders whenever its parent does. Memoizing
+  here would silently change that for every call site, so these stay transparent pass-throughs.
+- **No compound subcomponents.** Unlike most `etoro-ui` components these are intentionally not
+  compound — they are behavioural shims, and any API surface beyond RN's would defeat the "rename to
+  migrate" property.
+
+## Related
+
+- `EtList` (`../list/`) — the richer FlashList-based list primitive with header/empty/error/skeleton
+  slots. Prefer it for new feature lists; `EtFlatList` is for plain RN list usage.
+- `et-table-body.tsx` (`../../tables/table/components/`) — same crash, different trigger: it used to
+  pass `removeClippedSubviews` to a FlashList, which ignores the prop and spreads it onto the native
+  ScrollView.

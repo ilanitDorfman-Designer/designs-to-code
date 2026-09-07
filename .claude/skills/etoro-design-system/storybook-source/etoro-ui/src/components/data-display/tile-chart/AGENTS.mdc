@@ -1,0 +1,208 @@
+---
+description: Agent guide for EtTileChart - data visualization component rendering proportionally sized gradient-filled tiles in vertical, horizontal, or treemap layouts
+alwaysApply: false
+---
+
+# EtTileChart Component - Agent Guide
+
+## Overview
+
+`EtTileChart` is a data visualization component that renders categorical data as proportionally sized, gradient-filled tiles.
+It supports vertical bars, horizontal bars, and a treemap-like mixed layout.
+Each tile displays a label and a percentage value, and tiles are sized proportionally to their value.
+
+**Location:** `/libs/etoro-ui/src/components/data-display/tile-chart/`
+
+## Key Features
+
+- **Three Layout Directions**: `vertical` (side-by-side columns), `horizontal` (stacked rows), `mixed` (treemap grid)
+- **Gradient Tiles**: Each tile renders a `LinearGradient` background from a two-color tuple
+- **Proportional Sizing**: Tile dimensions are calculated proportionally to each item's value with a minimum bar size
+- **Customizable Styles**: Override container/canvas height, gap, and per-element styles via `classes` and `styles` props
+- **Press Interaction**: Optional `onItemPress` callback with the pressed item and gesture event
+- **Symbol Support**: Configurable unit symbol (default `%`) displayed alongside values
+- **Responsive**: Measures available width via `onLayout` and recalculates tile positions
+
+## Usage
+
+### Basic vertical chart (default)
+
+```tsx
+import { EtTileChart, TileChartData } from 'etoro-ui';
+
+const data: TileChartData[] = [
+  { label: 'Crypto', value: 50, color: ['#8B5CF6', '#7C3AED'] },
+  { label: 'Stocks', value: 30, color: ['#3B82F6', '#2563EB'] },
+  { label: 'ETF', value: 20, color: ['#10B981', '#059669'] },
+];
+
+<EtTileChart data={data} />;
+```
+
+### Horizontal layout
+
+```tsx
+<EtTileChart data={data} direction="horizontal" styles={{ height: 340 }} />
+```
+
+### Mixed / treemap layout
+
+```tsx
+<EtTileChart data={data} direction="mixed" styles={{ height: 340 }} />
+```
+
+### With press handler
+
+```tsx
+<EtTileChart
+  data={data}
+  onItemPress={(item, event) => {
+    console.log(`Pressed ${item.label}`, item.rect);
+  }}
+/>
+```
+
+### Custom styling via classes
+
+```tsx
+<EtTileChart
+  data={data}
+  classes={{
+    container: { backgroundColor: '#f0f0f0' },
+    barsContainer: { borderWidth: 1 },
+    label: { fontSize: 14 },
+    percentage: { fontWeight: 'bold' },
+  }}
+/>
+```
+
+## Props Reference
+
+### EtTileChartProps
+
+| Prop          | Type                                                                | Default                   | Description                                                     |
+| ------------- | ------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------- |
+| `data`        | `TileChartData[]`                                                   | **required**              | Array of items to visualize                                     |
+| `classes`     | `TileChartClasses`                                                  | -                         | Style overrides for container, barsContainer, label, percentage |
+| `styles`      | `TileChartStyles`                                                   | `{ height: 200, gap: 4 }` | Chart dimensions (height and gap between tiles)                 |
+| `symbol`      | `string`                                                            | `'%'`                     | Unit symbol displayed after each value                          |
+| `direction`   | `'vertical' \| 'horizontal' \| 'mixed'`                             | `'vertical'`              | Layout direction for tile arrangement                           |
+| `onItemPress` | `(item: TileChartLayoutItem, event: GestureResponderEvent) => void` | -                         | Callback when a tile is pressed                                 |
+
+### TileChartData
+
+| Field   | Type               | Description                                                      |
+| ------- | ------------------ | ---------------------------------------------------------------- |
+| `id`    | `string?`          | Optional unique identifier (falls back to `label` for React key) |
+| `label` | `string`           | Display label (e.g., "Crypto")                                   |
+| `value` | `number`           | Numeric value determining tile proportion                        |
+| `color` | `[string, string]` | Gradient color tuple `[start, end]` for `LinearGradient`         |
+
+### TileChartClasses
+
+| Key             | Type                   | Target                           |
+| --------------- | ---------------------- | -------------------------------- |
+| `container`     | `StyleProp<ViewStyle>` | Outer wrapper View               |
+| `barsContainer` | `StyleProp<ViewStyle>` | Canvas View (contains all tiles) |
+| `label`         | `StyleProp<TextStyle>` | Label text inside each tile      |
+| `percentage`    | `StyleProp<TextStyle>` | Percentage text inside each tile |
+
+### TileChartStyles
+
+| Key      | Type     | Default | Description                  |
+| -------- | -------- | ------- | ---------------------------- |
+| `height` | `number` | `200`   | Total chart height in pixels |
+| `gap`    | `number` | `4`     | Gap between tiles in pixels  |
+
+## File Structure
+
+```
+tile-chart/
+├── tile-chart.tsx              # Root component (EtTileChart)
+├── tile-chart.test.tsx         # Unit tests
+├── tile-chart.interface.ts     # TypeScript interfaces and types
+├── tile-chart.constant.ts      # Default values (direction, symbol, styles)
+├── tile-chart.styles.ts        # Hoisted StyleSheet for container/canvas
+├── tile-chart.utils.ts         # Layout algorithms (linear bars, treemap)
+├── AGENTS.mdc                   # This file
+└── components/
+    └── tile-chart-item/
+        ├── tile-chart-item.tsx        # Individual tile (Pressable + LinearGradient)
+        └── tile-chart-item.styles.ts  # Memoized StyleSheet (theme-dependent)
+```
+
+## Architecture Notes
+
+1. **Layout Measurement**: The canvas View uses `onLayout` to measure available width. Items are not rendered until width > 0.
+2. **Layout Calculation**: `layoutChart()` in `tile-chart.utils.ts` dispatches to either `layoutLinearBars` (vertical/horizontal) or `layoutTreemapFixedColumns` (mixed). Both return `TileChartLayoutItem[]` with absolute `rect` positions.
+3. **Memoized Layout**: The `items` array is wrapped in `useMemo` keyed on `[data, width, height, gap, direction]`.
+4. **Absolute Positioning**: Each `TileChartItem` is `position: absolute` and placed via its `rect` (`left`, `top`, `width`, `height`).
+5. **Styles**:
+   - `tile-chart.styles.ts` — hoisted `StyleSheet.create` (no theme dependency); uses spacing tokens (`X5`) for container padding.
+   - `tile-chart-item.styles.ts` — `useMemo`-wrapped `StyleSheet.create` (depends on theme `colors`); uses spacing tokens (`X1`, `X3`, `X5`).
+
+## Layout Algorithms
+
+### Vertical / Horizontal (`layoutLinearBars`)
+
+- Tiles are laid out along one axis proportional to their `value`.
+- Minimum bar size of 8px prevents tiny tiles from becoming invisible.
+- Gap is subtracted from usable space before proportional distribution.
+
+### Mixed (`layoutTreemapFixedColumns`)
+
+- Auto-selects 2 columns for ≤5 items, 3 columns for more.
+- Items are sorted descending by value, then distributed greedily into the column with the smallest sum.
+- Within each column, tiles are sized proportionally to their value.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` — provides theme colors for tile text styling
+- `EtText` — text rendering inside tiles (`body-base-semibold` variant)
+- Spacing tokens (`X1`, `X3`, `X5`) from `core/styles/spacing`
+
+### External Dependencies
+
+- `react-native` — `View`, `Pressable`, `StyleSheet`, `LayoutChangeEvent`
+- `expo-linear-gradient` — gradient backgrounds for tiles
+
+### Public Exports (from `etoro-ui`)
+
+- `EtTileChart` — the component
+- `TileChartData` — type export for consumer data arrays
+
+## Anti-patterns
+
+### Don't pass unsorted data expecting a specific visual order in mixed mode
+
+Mixed mode sorts items descending by value internally. If you need input-order, use `vertical` or `horizontal` direction.
+
+### Don't set `height` to 0 or very small values
+
+The layout algorithms return empty arrays when `height <= 0`, and very small heights will make tiles invisible.
+
+### Don't use `left`/`right` in custom class styles
+
+Prefer `start`/`end` for future RTL compatibility.
+
+### Don't forget the color tuple
+
+Each data item requires a `color` tuple of exactly two strings `[start, end]` for the gradient. Passing a single color or an empty array will cause a runtime error in `LinearGradient`.
+
+## Do's and Don'ts
+
+### Do:
+
+- Provide unique `id` fields in data items when labels might duplicate
+- Use theme asset-class colors from `eToroLightColors` / `eToroDarkColors` for gradients
+- Use spacing tokens (not hardcoded pixels) when extending styles
+- Use `onItemPress` for navigation/interaction rather than wrapping in a `Pressable`
+- Keep `value` positive — negative or non-finite values are clamped to 0
+
+### Don't:
+
+- Don't mutate the `data` array in place — create a new array to trigger re-render
+- Don't override `position` in `barsContainer` classes (it must remain `relative`)
+- Don't nest `EtTileChart` inside another `EtTileChart`

@@ -1,0 +1,483 @@
+---
+description: Agent guide for QuestionsForm - multi-step wizard form component with input, select, and upload question types, validation, and value change callbacks
+alwaysApply: false
+---
+
+# QuestionsForm
+
+Multi-step wizard form component that renders questions one at a time. Supports input, select, and upload question types with configurable validation and value change callbacks.
+
+## Overview
+
+The QuestionsForm provides a wizard-style UI for collecting user input through a sequence of questions. It integrates with `react-hook-form` for form state and validation, and uses `EtScreen` for consistent layout (title, description, content, footer).
+
+## Component Tree
+
+```
+QuestionsForm
+├── EtScreen
+│   ├── EtScreen.ScrollView
+│   │   └── EtScreen.Content
+│   │       ├── EtScreen.Content.Title (resolved question text)
+│   │       ├── EtScreen.Content.Subtitle (resolved subText)
+│   │       └── EtScreen.Content.Body
+│   │           ├── QuestionHeader (optional: title, img)
+│   │           └── View (question body)
+│   │               └── [InputQuestion | SelectQuestion | Upload placeholder]
+│   └── EtScreen.Footer
+│       ├── EtScreen.Footer.Primary (submit)
+│       └── footerExtra
+```
+
+### Subcomponents
+
+| Component                | Purpose                                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- |
+| **QuestionHeader**       | Renders optional title, description text, and image. Returns null if no props provided.              |
+| **QuestionMessageBox**   | Renders info/warning/error message box with type-based colors, optional border and icon.             |
+| **SelectQuestion**       | Renders options using `EtSelectionTileGroup` for single-select and toggle-input multi-select flows, with fallback to `SelectQuestionOption` where needed. |
+| **SelectQuestionOption** | Legacy/fallback option renderer for non-tile flows. Supports check, checkBox, checkRound, and chips styles. |
+| **AnimatedContainer**    | Wraps children in `Animated.View` with FadeIn/FadeOut transitions (400ms).                           |
+
+---
+
+## SelectQuestion
+
+Renders single-select or multi-select question with style-aware rendering:
+
+- Single-select `check`/`checkBox`/`checkRound` use `EtSelectionTileGroup`
+- Multi-select `checkRound` uses toggle-input rendering (`ToggleSwitchSelectGroup`)
+- Other styles fall back to `SelectQuestionOption`
+
+Text resolution is provided via `QuestionsFormTextProvider` context.
+
+### Props
+
+| Prop            | Type                                            | Required | Description                                        |
+| --------------- | ----------------------------------------------- | -------- | -------------------------------------------------- |
+| `question`      | `OptionsQuestion`                               | Yes      | The options question to render                     |
+| `control`       | `Control<QuestionsFormValues>`                  | Yes      | React Hook Form control instance                   |
+| `allQuestions`  | `Question[]`                                    | No       | Full set of questions (for conditional visibility) |
+| `getFieldName`  | `(q: Question) => string`                       | Yes      | RHF-safe field name for the question (see **React Hook Form field names** below) |
+| `getFieldRules` | `(q: Question) => RegisterOptions \| undefined` | Yes      | Returns react-hook-form rules for the question     |
+
+### Variants
+
+- **Single-select tile group**: One option at a time via `EtSelectionTileGroup`.
+- **Multi-select toggle-input**: `checkRound` options rendered as toggle rows, supports inline input for one inner input question.
+- **Legacy fallback**: Original `SelectQuestionOption` rendering path for styles not covered by tile group/toggle-input.
+
+### Usage
+
+```tsx
+<SelectQuestion question={optionsQuestion} control={control} getFieldName={getFieldName} getFieldRules={getFieldRules} />
+```
+
+---
+
+## SelectQuestionOption
+
+Individual option card for select questions. Supports four visual styles: `check` (chevron on right), `checkBox` (square on left), `checkRound` (round on left), `chips` (pill/chip-style tag). Text resolution is provided via `QuestionsFormTextProvider` context.
+
+### Props
+
+| Prop         | Type                               | Required | Description                                                 |
+| ------------ | ---------------------------------- | -------- | ----------------------------------------------------------- |
+| `option`     | `QuestionOption`                   | Yes      | The option data                                             |
+| `isSelected` | `boolean`                          | Yes      | Whether the option is currently selected                    |
+| `style`      | `QuestionOptionStyle`              | Yes      | Visual style: `check`, `checkBox`, `checkRound`, or `chips` |
+| `onPress`    | `(option: QuestionOption) => void` | Yes      | Called when the option is pressed                           |
+
+### Variants
+
+| Style        | Description                                         |
+| ------------ | --------------------------------------------------- |
+| `check`      | Chevron icon on right when selected (single-select) |
+| `checkBox`   | Square checkbox on left (single-select)             |
+| `checkRound` | Round checkbox on left (multi-select)               |
+| `chips`      | Pill/chip-style toggleable tag (multi-select)       |
+
+### States
+
+- **Default**: Unselected, tappable
+- **Selected**: Shows selection indicator per style
+- **Disabled**: Dimmed, non-interactive (`option.disabled`)
+
+### Usage
+
+```tsx
+<SelectQuestionOption option={opt} isSelected={isSelected(opt)} style="checkBox" onPress={handleOptionPress} />
+```
+
+---
+
+## QuestionsForm Props
+
+| Prop                | Type                                      | Required | Description                                         |
+| ------------------- | ----------------------------------------- | -------- | --------------------------------------------------- |
+| `config`            | `QuestionsFormConfig`                     | Yes      | Form configuration (questions, textAsKeys, getText) |
+| `onValuesChange`    | `(diff: QuestionsFormValuesDiff) => void` | No       | `current` / `diff` use canonical question ids (decoded); see **React Hook Form field names** |
+| `onSubmit`          | `(values: QuestionsFormValues, meta?: QuestionsFormSubmitMeta) => void` | No | Same canonical keys as `getValues()` (decoded). `meta.isAutoSubmit` is `true` for tap-to-advance auto-submit, `false` for button / imperative `ref.submit()` |
+| `validatorRegistry` | `QuestionValidatorRegistry`               | No       | Optional registry of custom validators              |
+| `submitLabel`       | `string`                                  | No       | Label for the submit button (default: "Continue")   |
+| `footerExtra`       | `ReactNode`                               | No       | Extra content to render in the footer               |
+
+---
+
+## QuestionsForm.Submit
+
+Compound submit footer used by production callers (preferred over the legacy top-level `onSubmit` / `submitLabel`). Render as a child of `QuestionsForm`:
+
+```tsx
+<QuestionsForm config={config}>
+  <QuestionsForm.Submit onSubmit={handleSubmit} isAutoSubmit={isAutoSubmit} label="Next" />
+</QuestionsForm>
+```
+
+### Props
+
+| Prop           | Type                                                                                                                    | Required | Description                                                                                                                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onSubmit`     | `(values: QuestionsFormValues, meta?: QuestionsFormSubmitMeta) => void`                                                  | Yes      | Called when the form is submitted with valid values (canonical decoded keys). `meta.isAutoSubmit` is `true` for tap-to-advance auto-submit, `false` for button press / imperative `ref.submit()` |
+| `isAutoSubmit` | `(question: Question, values: QuestionsFormValues, isValid: boolean, isDirty: boolean) => boolean`                      | No       | When returns true, hides the submit button and auto-submits when valid. After the first auto-submit, further value changes switch to manual mode. Prefer the shared `isAutoSubmit` util.                  |
+| `label`        | `string`                                                                                                                | No       | Label for the submit button                                                                                                                                                                                 |
+| `loading`      | `boolean`                                                                                                               | No       | Externally-controlled loading state. When provided, overrides the internal press-driven loader. When omitted, the button shows a loader from press until the question changes.                            |
+| `children`     | `ReactNode`                                                                                                             | No       | Extra content rendered below the submit button                                                                                                                                                              |
+
+---
+
+## QuestionsFormRef (Imperative Handle)
+
+When using `QuestionsForm` with a ref, the following methods and properties are exposed:
+
+| Member      | Type                        | Description                                                      |
+| ----------- | --------------------------- | ---------------------------------------------------------------- |
+| `isValid`   | `boolean`                   | Whether the form is currently valid                              |
+| `getValues` | `() => QuestionsFormValues` | Returns current values keyed by **canonical** question id (or `text` when `textAsKeys`); same shape as `onSubmit` / context `getValues` |
+| `submit`    | `() => void`                | Triggers validation and, if valid, calls legacy `onSubmit` with the same decoded value map as `getValues()` |
+
+---
+
+## useQuestionsForm Hook
+
+Manages form state, validation, and question flow for the QuestionsForm. Integrates with react-hook-form and supports configurable validators and value change callbacks.
+
+### Options
+
+| Option              | Type                                      | Required | Description                                         |
+| ------------------- | ----------------------------------------- | -------- | --------------------------------------------------- |
+| `config`            | `QuestionsFormConfig`                     | Yes      | Form configuration (questions, textAsKeys, getText) |
+| `validatorRegistry` | `QuestionValidatorRegistry`               | No       | Optional registry of custom validators              |
+| `onValuesChange`    | `(diff: QuestionsFormValuesDiff) => void` | No       | Called when form values change                      |
+
+### Return Value
+
+| Property                | Type                                            | Description                                                                          |
+| ----------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `form`                  | `UseFormReturn<QuestionsFormValues>`            | react-hook-form instance for field registration and submission                       |
+| `question`              | `Question \| undefined`                         | Current question to display                                                          |
+| `visibleInnerQuestions` | `Question[]`                                    | Inner questions (for nested/conditional flows)                                       |
+| `visibleOuterQuestions` | `Question[]`                                    | Outer questions (for multi-step flows)                                               |
+| `isValid`               | `boolean`                                       | Whether the form passes all validations                                              |
+| `getValues`             | `() => QuestionsFormValues`                     | Decoded map: keys match `question.id` (or `question.text` when `textAsKeys`), including ids that contain `.` |
+| `resolveText`           | `(text: string \| undefined) => string`         | Resolves text keys (also provided to children via QuestionsFormTextProvider context) |
+| `getFieldName`          | `(q: Question) => string`                       | Encoded name passed to RHF `Controller` / `EtFormInput` (see **React Hook Form field names**) |
+| `getFieldRules`         | `(q: Question) => RegisterOptions \| undefined` | Returns react-hook-form RegisterOptions for a question's validations                 |
+
+### React Hook Form field names (canonical values)
+
+React Hook Form treats `.` in a `name` string as a **nested path** (`a.b` → `values.a.b`). Question ids such as `32>106.text` would therefore break `QuestionsFormValues` as a flat `Record` keyed by id.
+
+- **`getFieldName(q)`** returns an **encoded** string safe for RHF (`.` → `__qfmDOT__` via `encodeQuestionsFormRhfFieldName` in `rhf-field-name.util.ts`). Use this only when wiring fields to RHF.
+- **`getValues()`**, **`onValuesChange.current` / `diff`**, **`QuestionsForm.Submit`’s `onSubmit`**, and **`QuestionsFormRef.getValues` / `submit`** all use **decoded** keys: they match `question.id` (or translation key when `textAsKeys`) exactly as in config.
+- **`form` (raw `UseFormReturn`)** still uses RHF’s internal encoded keys; prefer the hook’s `getValues()` for consumers, persistence, and analytics.
+
+`createSubmitHandler` runs `form.handleSubmit` but invokes the callback with **`getValues()`** so payloads always use canonical keys.
+
+---
+
+## QuestionsFormTextProvider
+
+Context-based DI provider for text resolution. Wrap `QuestionsForm` with this provider to supply i18n / translation logic. All child components (`SelectQuestion`, `SelectQuestionOption`, `InputQuestion`, `AutocompleteQuestion`) resolve text via the `useResolveText()` hook — no prop drilling. For rich secondary content (e.g. colored option subtitles) use the `useResolveNode()` hook, which uses the resolver's optional `resolveNode` and falls back to `resolveText`.
+
+### QuestionsFormTextResolver Interface
+
+| Method        | Signature                                  | Description                                                                                                   |
+| ------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| `resolveText` | `(text: string \| undefined) => string`    | Resolves text keys to display text                                                                            |
+| `resolveNode` | `(text: string \| undefined) => ReactNode` | Optional. Resolves a key to rich inline nodes (e.g. colored segments) for option subtitles. Falls back to `resolveText` when omitted. |
+
+### Usage
+
+```tsx
+import { QuestionsFormTextProvider, type QuestionsFormTextResolver } from 'etoro-ui/questions-form';
+
+class MyTextResolver implements QuestionsFormTextResolver {
+  resolveText(text: string | undefined): string {
+    if (!text) return '';
+    return i18n.t(text) ?? text;
+  }
+}
+
+const resolver = new MyTextResolver();
+
+<QuestionsFormTextProvider resolver={resolver}>
+  <QuestionsForm config={config}>
+    <QuestionsForm.Submit onSubmit={handleSubmit} />
+  </QuestionsForm>
+</QuestionsFormTextProvider>;
+```
+
+If no external provider is wrapped, QuestionsForm creates one internally from `config.textAsKeys` / `config.getText` for backward compatibility.
+
+---
+
+## Utils
+
+Utility functions for the questions-form feature handle validation mapping, text resolution, question lookup, and shared auto-submit behavior.
+
+### Overview
+
+| Function                   | File                      | Purpose                                                                  |
+| -------------------------- | ------------------------- | ------------------------------------------------------------------------ |
+| `mapValidationsToRhfRules` | `validation-mapper.util.ts` | Maps config-driven validation rules to React Hook Form `RegisterOptions` |
+| `resolveText`              | `text-resolver.util.ts`     | Resolves text or translation keys to display strings                     |
+| `getInnerQuestions`        | `question-resolver.util.ts` | Finds inner questions by IDs from the questions bank                     |
+| `getOuterQuestions`        | `question-resolver.util.ts` | Finds outer questions by IDs from the questions bank                     |
+| `isQuestionRequired`       | `question-resolver.util.ts` | Checks if a question has a required validation rule                      |
+| `isAutoSubmit`             | `is-auto-submit.util.ts`    | Shared predicate: when to fire `onSubmit` in auto-submit flow           |
+| `isAutoSubmitIdleEmpty`    | `is-auto-submit.util.ts`    | Empty check-style select: hide footer without treating as submit-ready  |
+| `encodeQuestionsFormRhfFieldName` / `decodeQuestionsFormValues` | `rhf-field-name.util.ts` | Encode/decode RHF names vs canonical `QuestionsFormValues` keys (dots in ids) |
+| `filterVisibleMessages` | `message-filter.util.ts` | Drops `QuestionMessage` entries whose `dependOnFn` requires **CCM** (not available on mobile); keeps all other dependency types |
+
+### Message visibility (`filterVisibleMessages`)
+
+KYC questionnaire configs may attach info/warning messages with `dependOnFn` conditions. The legacy web app can evaluate **CCM**-backed dependencies; React Native does not ship CCM, so messages that depend only on CCM are **filtered out** before render. Other `dependOnFn` entries are left unchanged until explicitly supported.
+
+### rhf-field-name (`encodeQuestionsFormRhfFieldName`, `decodeQuestionsFormRhfFieldName`, `decodeQuestionsFormValues`)
+
+Used inside `useQuestionsForm` so inner/outer question ids containing `.` stay **flat** in `QuestionsFormValues`. Consumers normally do not import these; use the hook’s `getValues()` and config `question.id` when saving or restoring answers.
+
+### isAutoSubmit and isAutoSubmitIdleEmpty
+
+Shared helpers for `QuestionsForm.Submit`. The submit component hides the footer when **either** helper indicates auto-submit UX, but it only calls `onSubmit` when `isAutoSubmit` is true with the **real** `isValid` / `isDirty` flags (see implementation in `questions-form.component.tsx`).
+
+#### Signatures
+
+```ts
+function isAutoSubmit(
+  question: Question,
+  values: QuestionsFormValues,
+  isValid: boolean,
+  isDirty: boolean,
+): boolean;
+
+function isAutoSubmitIdleEmpty(question: Question, values: QuestionsFormValues): boolean;
+```
+
+#### Behavior — `isAutoSubmitIdleEmpty`
+
+- Returns `true` for `select` questions with no `question.value`, at least one `check`-style option (question-level or per-option), and **no current selection** (missing, `null`, or empty array).
+- Otherwise returns `false`.
+- Used so the primary button stays hidden on an empty check-style screen without firing `onSubmit` on mount or after the user clears a `checkRound` selection back to empty.
+
+#### Behavior — `isAutoSubmit`
+
+- Returns `false` for non-select questions, persisted questions (`question.value` set), or when there is no `check`-style option.
+- Returns `false` when the selection is **empty** (no auto-submit on initial load or after clearing selections).
+- When there is a selection: returns `false` if the form is not valid or not dirty.
+- With a valid, dirty form: returns `true` if `optionsDefaultStyle` is `'check'` and something is selected, or if any **selected** option has `optionDefaultStyle: 'check'`.
+- Returns `false` for `checkRound`-only selections (no `check` option in the current value).
+
+#### Usage
+
+```tsx
+import { isAutoSubmit } from 'etoro-ui/questions-form';
+
+<QuestionsForm config={config}>
+  <QuestionsForm.Submit onSubmit={handleSubmit} isAutoSubmit={isAutoSubmit} />
+</QuestionsForm>
+```
+
+`QuestionsForm.Submit` imports `isAutoSubmitIdleEmpty` internally; consumers only pass `isAutoSubmit` unless they reimplement submit behavior.
+
+### Submit loading state
+
+`QuestionsForm.Submit` shows a loader on the footer button from the moment it's pressed (on a valid submit) until the question changes — this also blocks re-press while the step advances. Pass an explicit `loading` prop to drive it from a host's submitting flag instead; the explicit prop overrides the internal press-driven state.
+
+```tsx
+<QuestionsForm.Submit onSubmit={handleSubmit} label="Next" loading={facade.isSubmitting} />
+```
+
+Notes:
+This is the shared helper used by the QuestionsForm Storybook stories.
+Prefer importing this util instead of redefining the predicate locally.
+
+### mapValidationsToRhfRules
+
+Maps an array of `QuestionValidation` rules to a React Hook Form `rules` object.
+
+#### Signature
+
+```ts
+function mapValidationsToRhfRules(
+  validations: QuestionValidation[],
+  question: Question,
+  validatorRegistry?: QuestionValidatorRegistry,
+): RegisterOptions;
+```
+
+#### Mapping Rules
+
+| Config validation      | RHF rule                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------- |
+| `{ required: true }`   | `{ required: { value: true, message } }`                                         |
+| `{ minlength: N }`     | `{ minLength: { value: N, message } }`                                           |
+| `{ maxlength: N }`     | `{ maxLength: { value: N, message } }`                                           |
+| `{ pattern: "regex" }` | `{ pattern: { value: new RegExp(regex), message } }`                             |
+| `{ custom: [...] }`    | `{ validate: { [name]: (value) => validatorFn(value, question) \|\| message } }` |
+
+#### Usage
+
+```ts
+import { mapValidationsToRhfRules } from './utils';
+
+const rules = mapValidationsToRhfRules(question.validations ?? [], question, validatorRegistry);
+```
+
+### resolveText
+
+Resolves a text value. If `textAsKeys` is true and `getText` is provided, treats the value as a translation key. Otherwise returns the raw string.
+
+#### Signature
+
+```ts
+function resolveText(text: string | undefined, textAsKeys?: boolean, getText?: (key: string) => string): string;
+```
+
+#### Usage
+
+```ts
+import { resolveText } from './utils';
+
+resolveText('Hello');
+resolveText('questions.form.title', true, (k) => i18n.t(k));
+resolveText(undefined);
+```
+
+### getInnerQuestions / getOuterQuestions
+
+Find inner or outer questions by id from the full question bank. Both preserve the id order in the result and omit missing ids.
+
+#### Signatures
+
+```ts
+function getInnerQuestions(innerQuestionsIds: string[], allQuestions: Question[]): Question[];
+function getOuterQuestions(outerQuestionsIds: string[], allQuestions: Question[]): Question[];
+```
+
+### isQuestionRequired
+
+Checks if a question has a required validation rule.
+
+#### Signature
+
+```ts
+function isQuestionRequired(question: Question): boolean;
+```
+
+#### Usage
+
+```ts
+import { isQuestionRequired } from './utils';
+
+if (isQuestionRequired(question)) {
+  label = `${label} *`;
+}
+```
+
+---
+
+## Usage Examples
+
+### Basic Usage
+
+```tsx
+import { QuestionsForm, type QuestionsFormConfig, type QuestionsFormValues } from 'etoro-ui/questions-form';
+
+const config: QuestionsFormConfig = {
+  questions: [
+    {
+      id: 'q1',
+      type: 'input',
+      text: 'What is your name?',
+      subText: 'Enter your full name',
+    },
+  ],
+};
+
+function MyScreen() {
+  const handleSubmit = (values: QuestionsFormValues) => {
+    console.log('Submitted:', values);
+  };
+
+  return <QuestionsForm config={config} onSubmit={handleSubmit} />;
+}
+```
+
+### With Ref (Imperative Control)
+
+```tsx
+import { useRef } from 'react';
+import { QuestionsForm, type QuestionsFormRef } from 'etoro-ui/questions-form';
+
+function MyScreen() {
+  const formRef = useRef<QuestionsFormRef>(null);
+
+  const handleExternalSubmit = () => {
+    formRef.current?.submit();
+  };
+
+  const handleGetValues = () => {
+    const values = formRef.current?.getValues();
+    console.log('Current values:', values);
+  };
+
+  return (
+    <>
+      <QuestionsForm ref={formRef} config={config} onSubmit={handleSubmit} />
+      <Button onPress={handleExternalSubmit} title="Submit from outside" />
+      <Button onPress={handleGetValues} title="Get values" />
+    </>
+  );
+}
+```
+
+### With Value Change Callback
+
+```tsx
+<QuestionsForm
+  config={config}
+  onValuesChange={(diff) => {
+    console.log('Current values:', diff.current);
+    console.log('Changed fields:', diff.diff);
+    console.log('Valid:', diff.valid);
+  }}
+  onSubmit={handleSubmit}
+/>
+```
+
+### With Custom Submit Label and Footer
+
+```tsx
+<QuestionsForm
+  config={config}
+  submitLabel="Next"
+  footerExtra={
+    <Text variant="body-sm" style={styles.footerHint}>
+      Step 1 of 3
+    </Text>
+  }
+  onSubmit={handleSubmit}
+/>
+```

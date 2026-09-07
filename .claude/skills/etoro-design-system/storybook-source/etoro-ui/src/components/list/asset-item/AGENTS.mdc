@@ -1,0 +1,324 @@
+---
+description: Agent guide for EtAssetItem - tailored, asset-focused list item with a compound API (Logo, Content, Symbol, Name, Label, Price, Change, Trailing, RateChip, Divider, Skeleton) and two layouts (default, trading-view). Use it for instrument rows in watchlists, search results, recently traded lists, table cells, and Buy/Sell quote tables.
+alwaysApply: false
+---
+
+# EtAssetItem
+
+## Purpose
+
+Tailored, asset-focused list item for the eToro design system. Built with a compound component pattern so consumers compose a row from opinionated subcomponents (`Logo`, `Content`, `Symbol`, `Name`, `Label`, `Price`, `Change`, `Trailing`, `RateChip`, `Divider`, `Skeleton`) instead of passing a large, structured props blob.
+
+Unlike the generic `EtListItemV2` (which supports both assets and people via free-form slots), `EtAssetItem` is intentionally narrow: it knows about logos, symbols, names, prices, changes, and labels, and renders them with the design-system styling that asset rows require. Consumers cannot drift from the design system because the API does not expose primitives that would let them.
+
+For people/user rows, build a separate `EtUserItem` component with its own opinionated subcomponents — do not extend `EtAssetItem`.
+
+For swipe-to-reveal actions, wrap `EtAssetItem` with `EtSwipeableRow` (see below).
+
+## Architecture
+
+```text
+et-asset-item.tsx (root) → provides AssetItemContext, two render paths (skeleton / standard) × two layouts (default / trading-view)
+├── EtAssetItem.Logo      → square instrument EtAvatar; size derived from context; optional fallback / market dot
+├── EtAssetItem.Content   → vertical container for Symbol/Name (flex: 1)
+├── EtAssetItem.Symbol    → primary line (semibold, ellipsized)
+├── EtAssetItem.Name      → secondary line (tertiary text, ellipsized)
+├── EtAssetItem.Label     → opinionated middle-slot pill (wraps EtBadge size="small")
+├── EtAssetItem.Price     → right-aligned, pre-formatted price string (default layout only)
+├── EtAssetItem.Change    → pre-formatted change string with sentiment-driven color; right-aligned in default, left-aligned + smaller under Symbol in trading-view
+├── EtAssetItem.Trailing  → arbitrary right-side slot (default layout only; replaces legacy rightElement)
+├── EtAssetItem.RateChip  → display-only sentiment-colored pill, rendered as a horizontal row (trading-view only)
+├── EtAssetItem.Divider   → hairline separator below the row
+└── EtAssetItem.Skeleton  → loading placeholder shaped like a real asset row (variants: 2-lines, symbol-only, rate-chips)
+
+EtSwipeableRow (public, standalone) → wraps EtAssetItem to add swipe-to-reveal actions
+└── EtSwipeableRow.Action → action button subcomponents revealed on left swipe
+```
+
+### Folder Layout
+
+```text
+asset-item/
+├── api/
+│   ├── index.ts
+│   └── types.ts            // EtAssetItemProps, subcomponent props, SlotType, ChangeSentiment, AssetItemSize, AssetItemLayout
+├── context/
+│   ├── asset-item-context.tsx  // AssetItemContext (size, layout, disabled) + useAssetItemContext
+│   └── index.ts
+├── hooks/
+│   ├── use-asset-item-children.ts  // classifies children by __SLOT_TYPE; rateChipChildren collected as an array
+│   └── index.ts
+├── subcomponents/
+│   ├── asset-item-logo.tsx
+│   ├── asset-item-content.tsx
+│   ├── asset-item-symbol.tsx
+│   ├── asset-item-name.tsx
+│   ├── asset-item-label.tsx
+│   ├── asset-item-price.tsx
+│   ├── asset-item-change.tsx       // layout-aware: right-aligned in default, left-aligned in trading-view
+│   ├── asset-item-trailing.tsx
+│   ├── asset-item-rate-chip.tsx    // sentiment-colored pill for trading-view layout
+│   ├── asset-item-divider.tsx
+│   ├── asset-item-skeleton.tsx     // variants: 2-lines, symbol-only, rate-chips
+│   └── index.ts
+├── utils/
+│   ├── get-change-color.ts         // maps ChangeSentiment → theme text color (Change)
+│   ├── get-rate-chip-colors.ts     // maps ChangeSentiment → { bg, fg } (RateChip)
+│   └── index.ts
+├── et-asset-item.tsx        // memoized compound root, Object.assign-attaches subcomponents
+├── et-asset-item.test.tsx
+└── index.ts                  // exports EtAssetItem + public types
+```
+
+### Slot Detection
+
+Slots are identified at runtime via a static `__SLOT_TYPE` property on each subcomponent (not `displayName`). Static properties survive minification, unlike `displayName` which is a debugging aid only.
+
+```tsx
+AssetItemLogo.__SLOT_TYPE = 'logo';
+AssetItemContent.__SLOT_TYPE = 'content';
+AssetItemSymbol.__SLOT_TYPE = 'symbol';
+AssetItemName.__SLOT_TYPE = 'name';
+AssetItemLabel.__SLOT_TYPE = 'label';
+AssetItemPrice.__SLOT_TYPE = 'price';
+AssetItemChange.__SLOT_TYPE = 'change';
+AssetItemTrailing.__SLOT_TYPE = 'trailing';
+AssetItemRateChip.__SLOT_TYPE = 'rate-chip';
+AssetItemDivider.__SLOT_TYPE = 'divider';
+AssetItemSkeleton.__SLOT_TYPE = 'skeleton';
+
+// useAssetItemChildren reads __SLOT_TYPE to classify children
+const getSlotType = (child: ReactNode): SlotType | undefined =>
+  isValidElement(child) ? (child.type as { __SLOT_TYPE?: SlotType }).__SLOT_TYPE : undefined;
+```
+
+The hook returns the first match for each slot, except `RateChip` — multiple chips are collected and rendered together. JSX order does not matter — render order depends on the active `layout` (see "Layout Rules" below).
+
+### Two Render Paths
+
+The root has exactly two render paths based on children:
+
+1. **Skeleton mode** — when `EtAssetItem.Skeleton` is a child, only the skeleton is rendered. Size, style, and testID are inherited from the parent unless explicitly set on the skeleton. If `EtAssetItem.Divider` is also present, it is rendered below the skeleton.
+2. **Standard mode** — a column `View` containing a row of slots, plus an optional divider below. When `EtAssetItem.Divider` is present, the wrapper uses `paddingTop` only so the divider sits at the bottom edge; otherwise `paddingVertical` applies normally.
+
+When `onPress` is provided and `disabled` is `false`, the wrapper is rendered as `Pressable` with `accessibilityRole="button"`. Otherwise it's a plain `View`.
+
+## API
+
+### Props (root)
+
+| Prop                 | Type                              | Default     | Description                                                                                                                                |
+| -------------------- | --------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `children`           | `EtAssetItemChildren`             | -           | Compound subcomponents (Logo, Content, Symbol, Name, Label, Price, Change, Trailing, RateChip, Divider, Skeleton)                          |
+| `size`               | `'large' \| 'small'`              | `'large'`   | Vertical padding + logo size (`large` → 36px logo, X4 padding; `small` → 24px logo, X3 padding)                                            |
+| `layout`             | `'default' \| 'trading-view'`     | `'default'` | Row layout. `trading-view` moves Change under Symbol and renders RateChip siblings on the right; ignores Price and Trailing                |
+| `disabled`           | `boolean`                         | `false`     | Lowers opacity to 0.5 and disables press handling                                                                                          |
+| `onPress`            | `() => void`                      | -           | Press handler. When set (and not disabled), the row becomes a `Pressable` with `accessibilityRole="button"`                                |
+| `style`              | `StyleProp<ViewStyle>`            | -           | Container style override                                                                                                                   |
+| `testID`             | `string`                          | -           | Test ID for testing                                                                                                                        |
+| `accessibilityLabel` | `string`                          | -           | Accessibility label for the row                                                                                                            |
+| `accessibilityHint`  | `string`                          | -           | Accessibility hint for the row                                                                                                             |
+
+### Subcomponents
+
+| Subcomponent           | Purpose                                                                                                              | Required props |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------- | -------------- |
+| `EtAssetItem.Logo`     | Square instrument avatar (wraps `EtAvatar` with `variant="instrument"`, `shape="square"`); accepts optional `fallback`, `imageBackgroundColor`, and `marketStatus` | none           |
+| `EtAssetItem.Content`  | Vertical container for `Symbol`/`Name` (`flex: 1`)                                                                   | `children`     |
+| `EtAssetItem.Symbol`   | Primary line, single-line ellipsized, `label-primary-semibold`                                                       | `children`     |
+| `EtAssetItem.Name`     | Secondary line, single-line ellipsized, `label-tertiary-regular`                                                     | `children`     |
+| `EtAssetItem.Label`    | Opinionated middle-slot pill (wraps `EtBadge size="small"`)                                                          | `children`     |
+| `EtAssetItem.Price`    | Right-aligned pre-formatted price string (`default` layout only — ignored in `trading-view`)                         | `value`        |
+| `EtAssetItem.Change`   | Pre-formatted change string with sentiment-driven color. Layout-aware: right-aligned in `default`, left-aligned + `num-xs` under Symbol in `trading-view` | `value`        |
+| `EtAssetItem.Trailing` | Arbitrary right-side slot (replaces the legacy `rightElement` prop, `default` layout only — ignored in `trading-view`) | `children`     |
+| `EtAssetItem.RateChip` | Display-only sentiment-colored pill rendered in the right-hand slot of `trading-view`. Compose multiple chips for Buy/Sell quotes | `value`        |
+| `EtAssetItem.Divider`  | Hairline separator below the row                                                                                     | none           |
+| `EtAssetItem.Skeleton` | Loading placeholder shaped like a real asset row; inherits parent size                                               | none           |
+
+All subcomponents accept `style` and `testID`. `Logo` additionally accepts `source`, `fallback`, `imageBackgroundColor`, `marketStatus`, `marketStatusTestID`, `onError`, and `accessibilityLabel`. `Label` accepts a `color: BadgeColor` (default `'neutral'`). `Change` accepts `sentiment: 'positive' | 'negative' | 'neutral'` (default `'neutral'`). `RateChip` accepts `sentiment: 'positive' | 'negative' | 'neutral'` (default `'neutral'`) and an optional `label` (e.g. `"Buy"`, `"Sell"`). `Skeleton` accepts `variant: 'symbol-only' | '2-lines' | 'rate-chips'` (default `'2-lines'`) and an optional `size` override.
+
+## Swipe-to-Reveal Actions
+
+`EtAssetItem` intentionally has **no** swipe API. Wrap with `EtSwipeableRow` from `etoro-ui` to add swipe actions. Place the asset row first, then compose `EtSwipeableRow.Action` subcomponents as direct children after it.
+
+```tsx
+import { EtAssetItem, EtSwipeableRow } from 'etoro-ui';
+
+<EtSwipeableRow
+  isDragging={isAnyItemDragging}
+  onSwipeStart={(close) => {
+    if (activeCloseRef.current && activeCloseRef.current !== close) {
+      activeCloseRef.current();
+    }
+    activeCloseRef.current = close;
+  }}
+>
+  <EtAssetItem onPress={openAsset} accessibilityLabel="AAPL">
+    <EtAssetItem.Logo source={asset.logoUri} />
+    <EtAssetItem.Content>
+      <EtAssetItem.Symbol>AAPL</EtAssetItem.Symbol>
+      <EtAssetItem.Name>Apple Inc</EtAssetItem.Name>
+    </EtAssetItem.Content>
+    <EtAssetItem.Price value="$186.79" />
+    <EtAssetItem.Change value="1.95 (-1.03%)" sentiment="negative" />
+    <EtAssetItem.Divider />
+  </EtAssetItem>
+
+  <EtSwipeableRow.Action onPress={handleTrade} style={{ backgroundColor: '#4ECDC4' }} accessibilityLabel="Trade">
+    <TradeIcon />
+  </EtSwipeableRow.Action>
+  <EtSwipeableRow.Action onPress={handleRemove} style={{ backgroundColor: '#FF6B6B' }} width={80} accessibilityLabel="Delete">
+    <TrashIcon />
+  </EtSwipeableRow.Action>
+</EtSwipeableRow>;
+```
+
+See `libs/etoro-ui/src/components/list/swipeable-row/AGENTS.mdc` for the full `EtSwipeableRow` API.
+
+## Usage Examples
+
+```tsx
+// Standard row with price + change
+<EtAssetItem onPress={openAsset}>
+  <EtAssetItem.Logo source={asset.logoUri} fallback="AP" marketStatus="open" />
+  <EtAssetItem.Content>
+    <EtAssetItem.Symbol>AAPL</EtAssetItem.Symbol>
+    <EtAssetItem.Name>Apple Inc</EtAssetItem.Name>
+  </EtAssetItem.Content>
+  <EtAssetItem.Price value="$186.79" />
+  <EtAssetItem.Change value="1.95 (-1.03%)" sentiment="negative" />
+</EtAssetItem>
+
+// Compact row inside a custom layout (no price, custom horizontal padding)
+<EtAssetItem size="small" style={{ paddingHorizontal: 0 }}>
+  <EtAssetItem.Logo source={asset.logoUri} />
+  <EtAssetItem.Content>
+    <EtAssetItem.Symbol>AAPL</EtAssetItem.Symbol>
+    <EtAssetItem.Name>Apple Inc</EtAssetItem.Name>
+  </EtAssetItem.Content>
+</EtAssetItem>
+
+// Trailing CTA (search results)
+<EtAssetItem onPress={openAsset}>
+  <EtAssetItem.Logo source={asset.logoUri} />
+  <EtAssetItem.Content>
+    <EtAssetItem.Symbol>AAPL</EtAssetItem.Symbol>
+    <EtAssetItem.Name>Apple Inc • Stock</EtAssetItem.Name>
+  </EtAssetItem.Content>
+  <EtAssetItem.Trailing>
+    <EtButton variant="primary-subtle" size="small" onPress={trade}>
+      <EtButton.Label>Trade</EtButton.Label>
+    </EtButton>
+  </EtAssetItem.Trailing>
+</EtAssetItem>
+
+// Label pill (middle slot) — wraps EtBadge with size="small"
+<EtAssetItem>
+  <EtAssetItem.Logo source={asset.logoUri} />
+  <EtAssetItem.Content>
+    <EtAssetItem.Symbol>META</EtAssetItem.Symbol>
+    <EtAssetItem.Name>Meta Platform Inc</EtAssetItem.Name>
+  </EtAssetItem.Content>
+  <EtAssetItem.Label color="neutral">Edited</EtAssetItem.Label>
+</EtAssetItem>
+
+// Trading-view layout (Buy/Sell quote chips)
+<EtAssetItem layout="trading-view">
+  <EtAssetItem.Logo source={asset.logoUri} />
+  <EtAssetItem.Content>
+    <EtAssetItem.Symbol>AUS200</EtAssetItem.Symbol>
+  </EtAssetItem.Content>
+  <EtAssetItem.Change value="▲ 4.35% (-1.03%)" sentiment="positive" />
+  <EtAssetItem.RateChip value="11756.62" sentiment="positive" label="Buy" />
+  <EtAssetItem.RateChip value="11756.62" sentiment="neutral" label="Sell" />
+</EtAssetItem>
+
+// Skeleton loading
+<EtAssetItem size="large">
+  <EtAssetItem.Skeleton variant="2-lines" />
+  <EtAssetItem.Divider />
+</EtAssetItem>
+
+// Skeleton loading — trading-view shape
+<EtAssetItem layout="trading-view">
+  <EtAssetItem.Skeleton variant="rate-chips" />
+  <EtAssetItem.Divider />
+</EtAssetItem>
+
+// Disabled (e.g. order rows in a table)
+<EtAssetItem disabled size="small" style={{ paddingHorizontal: 0 }}>
+  <EtAssetItem.Logo source={logo} />
+  <EtAssetItem.Content>
+    <EtAssetItem.Symbol>AAPL</EtAssetItem.Symbol>
+  </EtAssetItem.Content>
+</EtAssetItem>
+```
+
+## Layout Rules
+
+### `layout="default"` (unchanged)
+
+1. **Row order is deterministic**: `Logo → Content → Label → Price/Change → Trailing → Divider`. JSX order does not matter.
+2. **Row gap** is `X3` (12px). Vertical padding is `X4` for `large` and `X3` for `small`. Horizontal padding is `X4`.
+3. **Content** stretches with `flex: 1` so the right-side slots hug the right edge.
+4. **Price + Change** share a right-aligned column and only render when at least one is present.
+5. **Divider**: when present, the wrapper drops bottom padding (`paddingTop` only) so the divider sits flush.
+
+### `layout="trading-view"`
+
+1. **Row order**: `Logo → [Content + Change column] → [RateChip × N row] → Divider`.
+2. The middle column wraps `Content` and `Change` (in that order) with a small `X1` (4px) gap, so the change line sits directly under the symbol/name. `Change` automatically renders left-aligned and `num-xs` (smaller).
+3. The right slot is a horizontal `flexDirection: 'row'` container with `X2` (8px) gap, holding all `RateChip` siblings in JSX order.
+4. `Price` and `Trailing` are silently ignored in this layout (a `__DEV__` warning is logged) — use `RateChip` siblings instead.
+5. `RateChip` is display-only (no `onPress`). Wrap it in a `Pressable` if you need an order flow.
+6. Sentiment colors come from V2 theme tokens: `positive` → `verdictPositive600Opacity15` (bg) + `verdictPositive600` (fg); `negative` → `verdictNegative600Opacity15` + `verdictNegative600`; `neutral` → `${carbon900}0D` overlay + `carbon900`.
+7. The matching skeleton is `variant="rate-chips"` (logo + 2 stacked left bars + 2 chip-shaped placeholders).
+
+## Anti-Patterns
+
+- **Do NOT** use `displayName` for slot detection — use `__SLOT_TYPE` static property. `displayName` is for DevTools only and is stripped by minifiers.
+- **Do NOT** add boolean props that create branching render paths (e.g. `showTradeButton`, `showAddButton`). Compose with `EtAssetItem.Trailing` instead.
+- **Do NOT** add swipe props to `EtAssetItem`. Wrap with `EtSwipeableRow` instead.
+- **Do NOT** add new size variants (e.g. `medium`, `comfortable`). The component supports only `large | small`. If a consumer needs different paddings, override via the `style` prop on the root.
+- **Do NOT** format numbers inside `EtAssetItem.Price` or `EtAssetItem.Change` — consumers pass already-formatted strings (this keeps the UI kit free of locale/currency logic).
+- **Do NOT** use `EtAssetItem.Label` for arbitrary badges. It is a tailored wrapper around `EtBadge size="small"` with a single `EtBadge.Label` child. For richer badges, render `EtBadge` directly inside `EtAssetItem.Trailing`.
+- **Do NOT** render people/user rows with `EtAssetItem`. Build a dedicated `EtUserItem` component with its own subcomponents (Avatar, Username, Followers, Copy, etc.).
+- **Do NOT** nest `EtAssetItem` inside another `EtAssetItem`.
+- **Do NOT** use subcomponents outside of `EtAssetItem` — they read `AssetItemContext` and will throw when used standalone.
+- **Do NOT** use `EtAssetItem.RateChip` outside of `layout="trading-view"`. The chips will be silently dropped (a dev warning fires) and the design only validates them in the trading-view row.
+- **Do NOT** rely on `EtAssetItem.Price` or `EtAssetItem.Trailing` in `layout="trading-view"`. They are intentionally ignored and dev-warned. Use `EtAssetItem.RateChip` siblings for the right column instead.
+- **Do NOT** add `onPress` or other interactive props to `EtAssetItem.RateChip`. It is display-only by design — wrap the chip in a `Pressable` (or expose a tappable parent) if you need an order flow.
+- **Do NOT** add a third layout. Layouts live in `AssetItemLayout` (`'default' | 'trading-view'`) — adding more here means the component is doing too much. Build a sibling component instead.
+
+## Dependencies
+
+- `EtAvatar` — used by `EtAssetItem.Logo` for the instrument avatar
+- `EtBadge` — used by `EtAssetItem.Label` for the pill
+- `EtSkeleton` — used by `EtAssetItem.Skeleton` for shimmer
+- `EtText` — typography for Symbol/Name/Price/Change/RateChip
+- `useEtoroTheme` — for sentiment colors (Change + RateChip) and divider color
+- Spacing constants: `X1`, `X2`, `X3`, `X4` from `core/styles/spacing`
+- No additional third-party dependencies (all entries above are internal components/utilities)
+
+## Design System Integration
+
+Colors map to V2 carbon / verdict tokens via `useEtoroTheme().colors`. Slot → token:
+
+| Slot | V2 token |
+| --- | --- |
+| Price text ([`asset-item-price.tsx`](libs/etoro-ui/src/components/list/asset-item/subcomponents/asset-item-price.tsx)) | `carbon900` |
+| Change text — positive / negative / neutral ([`get-change-color.ts`](libs/etoro-ui/src/components/list/asset-item/utils/get-change-color.ts)) | `verdictPositive600` / `verdictNegative600` / `carbon900` |
+| Rate chip bg — positive / negative / neutral ([`get-rate-chip-colors.ts`](libs/etoro-ui/src/components/list/asset-item/utils/get-rate-chip-colors.ts)) | `verdictPositive600Opacity15` / `verdictNegative600Opacity15` / `${carbon900}0D` |
+| Rate chip fg — positive / negative / neutral | `verdictPositive600` / `verdictNegative600` / `carbon900` |
+| Divider ([`asset-item-divider.tsx`](libs/etoro-ui/src/components/list/asset-item/subcomponents/asset-item-divider.tsx)) | `carbonSecondaryDivider` (matches Figma's `var(--primary-divider)` hex `#B2B2B226`) |
+
+`Symbol` and `Name` text colors are inherited from the `EtText` foundation (variants `label-primary-semibold` and `label-tertiary-regular`) — not configured in this component.
+
+### Behavior deltas (V1 → V2)
+
+The strict-Figma migration to V2 (`38622:337490`, default layout) introduced four user-visible changes beyond the token swap:
+
+1. **Rate chip neutral background** flips from solid surface (`bgNeutralSecondary` — white in light, charcoal in dark) to a translucent `carbon900` 5% overlay (`#1B1E210D`). Light-mode chips become a subtle grey instead of an invisible-on-white surface.
+2. **Rate chip positive/negative backgrounds** move from solid pastel mint/pink (`bgPositiveTertiary` / `bgNegativeTertiary`) to 15%-alpha verdict tints (`verdictPositive600Opacity15` / `verdictNegative600Opacity15`). Slightly more saturated tone; same intent.
+3. **Divider hue** changes from a solid neutral (`dividerSenary` — `#F2F2F2` light / `#333333` dark) to a translucent grey (`carbonSecondaryDivider` — `#B2B2B226`, both modes). Reads as a translucent overlay on busier surfaces.
+4. **Change/Price text** uses V2 carbon/verdict tokens with light-mode hex parity. Dark-mode hexes shift slightly (`#6DFF8A` → `#6EFF8B`, `#FF554D` → `#FF665E`, `#E5E5E5` → `#FFFFFF`), consistent with et-input / et-select / et-line-chart.

@@ -1,0 +1,269 @@
+---
+description: Agent guide for EtoroIcon - theme-aware bundled SVG icon system with size variants, fill support, accessibility features, and comprehensive test coverage
+alwaysApply: false
+---
+
+# EtoroIcon Component - Agent Guide
+
+## Overview
+
+The `EtoroIcon` component is a comprehensive React Native icon system that provides theme-aware, accessible, and customizable icons for the eToro application. It integrates with hooks for theme handling and accessibility features.
+
+## Component Location
+
+- Main component: [`et-icon.tsx`](./et-icon.tsx)
+- Tests: [`et-icon.test.tsx`](./et-icon.test.tsx)
+- Types: [`api/types.ts`](./api/types.ts)
+
+## Key Features
+
+- Theme-aware icon rendering with automatic color selection
+- Accessibility support with configurable labels and roles
+- Fill support for compatible icons
+- Size variants (xs, sm, md, lg, xl, 2xl) and custom numeric sizes
+- Advanced SVG properties support
+- Comprehensive test coverage
+
+## Usage Examples
+
+### Basic Usage
+
+```tsx
+import { EtoroIcon } from 'etoro-ui';
+
+// Minimal setup
+<EtoroIcon
+  icon={{ iconName: 'home' }}
+  accessibility={{ testID: 'home-icon' }}
+/>
+
+// With size and color
+<EtoroIcon
+  icon={{ iconName: 'search' }}
+  appearance={{ size: 'lg', color: '#FF0000' }}
+  accessibility={{ testID: 'search-icon' }}
+/>
+```
+
+### Advanced Usage
+
+```tsx
+// With fill support
+<EtoroIcon
+  icon={{ iconName: 'heart' }}
+  style={{ hasFill: true, fill: '#FF6B6B' }}
+  accessibility={{
+    testID: 'heart-icon',
+    accessibilityLabel: 'Favorite',
+    accessibilityRole: 'button'
+  }}
+/>
+
+// With custom styling and SVG props
+<EtoroIcon
+  icon={{ iconName: 'settings' }}
+  appearance={{ size: 32 }}
+  style={{ style: { padding: 8, backgroundColor: '#F0F0F0' } }}
+  advanced={{ svgProps: { strokeWidth: 2, opacity: 0.8 } }}
+  accessibility={{ testID: 'settings-icon' }}
+/>
+```
+
+## Available Icon Names
+
+- `home`, `search`, `user`, `settings`, `heart`, `plus`, `minus`
+- `apple`, `btc`, `gainers`, `losers`, `torii`, `notification`
+
+## Available Sizes
+
+- Predefined: `'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl'`
+- Custom: Any number (pixels)
+- Default: `'md'`
+
+## Props Interface
+
+```tsx
+interface EtoroIconProps {
+  icon: {
+    iconName: IconName;
+  };
+  appearance?: {
+    size?: IconSize;
+    color?: string;
+  };
+  style?: {
+    hasFill?: boolean;
+    fill?: string;
+    style?: ViewStyle | ViewStyle[];
+  };
+  accessibility?: {
+    testID?: string;
+    accessibilityLabel?: string;
+    accessibilityRole?: AccessibilityRole;
+  };
+  advanced?: {
+    svgProps?: Record<string, any>;
+    cache?: boolean;
+  };
+}
+```
+
+## Testing
+
+### Run Tests
+
+```bash
+# Run all UI kit tests
+npm run test:libs:all
+
+# Run specific icon tests
+npx jest libs/etoro-ui/src/foundations/icon-assets/et-icon.test.tsx
+
+# Run tests with coverage
+npx jest libs/etoro-ui/src/foundations/icon-assets/et-icon.test.tsx --coverage
+```
+
+### Test Coverage Areas
+
+- ✅ Basic rendering with minimum props
+- ✅ All supported icon names
+- ✅ All size variants (predefined and custom)
+- ✅ Color handling and theme integration
+- ✅ Accessibility features and roles
+- ✅ Fill functionality for compatible icons
+- ✅ Container styling and advanced configurations
+- ✅ Hook integrations (useIconTheme, useIconAccessibility)
+- ✅ Error handling and edge cases
+
+### Key Test Scenarios
+
+```tsx
+// Test basic rendering
+<EtoroIcon
+  icon={{ iconName: 'home' }}
+  accessibility={{ testID: 'test-icon' }}
+/>
+
+// Test with all props
+<EtoroIcon
+  icon={{ iconName: 'heart' }}
+  appearance={{ size: 'lg', color: '#FF0000' }}
+  style={{ hasFill: true, fill: '#00FF00', style: { padding: 10 } }}
+  accessibility={{
+    testID: 'heart-icon',
+    accessibilityLabel: 'Favorite',
+    accessibilityRole: 'button'
+  }}
+  advanced={{ svgProps: { strokeWidth: 2 } }}
+/>
+```
+
+## Build & Development
+
+### Build Commands
+
+```bash
+# Type check
+npm run ts:check
+
+# Lint
+npm run lint
+
+# Lint with auto-fix
+npm run lint:fix
+
+# Run Storybook (for visual testing)
+npm run storybook
+```
+
+### Development Workflow
+
+1. Make changes to the component
+2. Run type checking: `npm run ts:check`
+3. Run tests: `npx jest et-icon.test.tsx`
+4. Run linting: `npm run lint`
+5. Test in Storybook if visual changes are made
+
+## Dependencies
+
+- `react` & `react-native` (core)
+- `@testing-library/react-native` (testing)
+- `jest-expo` (test environment)
+
+## Architecture Integration
+
+- Uses `useIconTheme` hook for theme-aware rendering
+- Uses `useIconAccessibility` hook for accessibility features
+- Integrates with utility functions in `./utils/` directory
+- Exports types from `./api/` directory
+
+## Common Patterns
+
+### Error Handling
+
+```tsx
+// Component returns null for invalid icons
+const IconComponent = getIconComponent(iconName);
+if (!IconComponent) {
+  return null;
+}
+```
+
+### Theme Integration
+
+```tsx
+// Automatic theme-aware color selection
+const { iconName: themeAwareIconName, color: themeAwareColor } = useIconTheme({
+  iconName: icon?.iconName,
+  color: appearance.color,
+});
+```
+
+### Accessibility Best Practices
+
+```tsx
+// Comprehensive accessibility support
+const { accessibilityProps } = useIconAccessibility({
+  iconName: icon?.iconName,
+  size: typeof appearance.size === 'number' ? appearance.size : undefined,
+  accessibilityLabel: accessibility.accessibilityLabel,
+  accessibilityRole: accessibility.accessibilityRole,
+});
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Icon not rendering**: Check if icon name is valid and icon component exists
+2. **Theme colors not applied**: Verify `useIconTheme` hook is working correctly
+3. **Accessibility issues**: Ensure proper `testID` and accessibility props are provided
+4. **Fill not working**: Check if icon supports fill using `iconSupportsFill` utility
+
+### Debug Commands
+
+```bash
+# Check TypeScript errors
+npm run ts:check
+
+# Run specific test with verbose output
+npx jest et-icon.test.tsx --verbose
+
+# Check component in isolation
+npx jest et-icon.test.tsx --testNamePattern="renders with minimum required props"
+```
+
+## Design System Integration
+
+`useIconTheme` resolves contextual icon colors via V2 tokens. V1 → V2 mapping for this hook:
+
+| V1 token | V2 token | Used by case |
+| --- | --- | --- |
+| `actionBrandText` (sentiment intent) | `verdictPositive600` | `gainers` |
+| `actionBrandVarText` | `verdictNegative600` | `losers`, `heart`, `like` |
+| `actionBrandText` (brand intent) | `primary600` | `torii` (eToro brand) |
+| `textPrimaryNeutral` | `carbon900` | `default` |
+
+`btc` (`#F7931A`) and `notification` (`#F59E0B`) remain hardcoded brand/warning hexes outside the theme.
+
+The `actionBrandText` split tracks the original fallback hex literals: `#10B981` (generic emerald) maps to verdict-positive, while `#00C896` (eToro brand teal) maps to brand. This matches the same disambiguation applied in `EtIconV2`.

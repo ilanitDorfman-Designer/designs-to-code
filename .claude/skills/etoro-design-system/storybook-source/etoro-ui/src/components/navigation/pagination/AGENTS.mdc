@@ -1,0 +1,321 @@
+---
+description: Agent guide for EtPagination - animated dot-based pagination indicator with usePagination hook for scroll-driven carousels and step navigation
+alwaysApply: false
+---
+
+# EtPagination Component
+
+## Purpose & Scope
+
+`EtPagination` is a dot-based pagination indicator for the eToro design system. It displays a row of animated dots to indicate the current page within a set of pages. Ideal for carousels, onboarding flows, and image galleries.
+
+- **Two sizes**: small (4px) and large (6px) dot heights
+- **Two color variants**: neutral and primary
+- **Flexible input**: Accepts `number` or `SharedValue<number>` for currentPage
+- **Smooth animations**: Animates dot width and color transitions
+- **Unified `usePagination` hook**: Provides navigation functions and scroll-driven pagination in one hook
+
+**Does NOT handle:**
+
+- Touch/tap interactions on dots (non-interactive visual indicator)
+- Truncation for many pages (displays all dots)
+
+## Entry Points & Contracts
+
+### `EtPagination` (main component)
+
+```tsx
+<EtPagination
+  totalPages: number                        // required, total number of pages
+  currentPage: number | SharedValue<number> // required, current page (0-indexed)
+  size?: 'small' | 'large'                  // default: 'large'
+  color?: 'neutral' | 'primary'             // default: 'neutral'
+  style?: StyleProp<ViewStyle>              // container style
+  testID?: string                           // for testing
+  accessibilityLabel?: string               // default: 'Pagination'
+/>
+```
+
+### `EtPagination.Dot` (subcomponent)
+
+Internal subcomponent, not typically used directly:
+
+```tsx
+<EtPagination.Dot
+  index: number                    // required, dot index
+  totalPages: number               // required, for accessibility label
+  currentPage: SharedValue<number> // required, shared value
+  size: PaginationSize             // required
+  selectedColor: string            // required
+  defaultColor: string             // required
+/>
+```
+
+### Types
+
+| Type              | Values                     |
+| ----------------- | -------------------------- |
+| `PaginationSize`  | `'small'` \| `'large'`     |
+| `PaginationColor` | `'neutral'` \| `'primary'` |
+
+### Size Dimensions
+
+| Size    | Height | Default Width | Selected Width |
+| ------- | ------ | ------------- | -------------- |
+| `small` | 4px    | 4px           | 8px            |
+| `large` | 6px    | 6px           | 12px           |
+
+### `usePagination` Hook
+
+Unified hook for pagination state and interactivity. Provides both navigation controls (for step wizards, onboarding) and scroll-driven pagination (for carousels) in a single hook.
+
+```tsx
+const {
+  // Current page
+  currentPage, // number - for display logic (triggers re-renders)
+  currentPageAnimated, // SharedValue<number> - pass to EtPagination for best performance
+
+  // Navigation functions
+  goToNext, // () => void - navigate to next page
+  goToPrevious, // () => void - navigate to previous page
+  goToPage, // (page: number) => void - navigate to specific page
+
+  // Computed state (reactive)
+  isFirstPage, // boolean
+  isLastPage, // boolean
+  canGoNext, // boolean
+  canGoPrevious, // boolean
+
+  // Scroll features
+  scrollHandler, // for Animated.FlatList onScroll
+  getScrollOffsetForPage, // (page: number) => number - for programmatic scrolling
+} = usePagination({
+  totalPages: 5, // required
+  initialPage: 0, // optional, default: 0
+  itemWidth: 300, // optional, enables scroll tracking
+});
+```
+
+**Performance tip:** Pass `currentPageAnimated` directly to `EtPagination` to avoid creating a second SharedValue internally. Use `currentPage` (number) for display logic like showing step titles.
+
+## Usage Patterns
+
+### Basic usage with number (simplest)
+
+```tsx
+const [currentPage, setCurrentPage] = useState(0);
+
+<EtPagination totalPages={5} currentPage={currentPage} />;
+```
+
+### With size and color variants
+
+```tsx
+<EtPagination totalPages={4} currentPage={1} size="large" color="primary" />
+```
+
+### Onboarding flow with usePagination hook (recommended)
+
+```tsx
+import { EtPagination, usePagination } from 'etoro-ui';
+
+// currentPage (number) for display logic, currentPageAnimated for EtPagination
+const { currentPage, currentPageAnimated, goToNext, goToPrevious, canGoNext, canGoPrevious, isLastPage } = usePagination({ totalPages: 4 });
+
+<>
+  <OnboardingStep step={currentPage} />
+  <EtPagination totalPages={4} currentPage={currentPageAnimated} color="primary" />
+  <Button onPress={goToPrevious} disabled={!canGoPrevious}>
+    Previous
+  </Button>
+  <Button onPress={isLastPage ? finishOnboarding : goToNext}>{isLastPage ? 'Get Started' : 'Next'}</Button>
+</>;
+```
+
+### Carousel with scroll-driven pagination (recommended)
+
+```tsx
+import { EtPagination, usePagination } from 'etoro-ui';
+
+// Pass currentPageAnimated directly for optimal performance
+const { currentPageAnimated, scrollHandler } = usePagination({
+  totalPages: 5,
+  itemWidth: CARD_WIDTH + CARD_GAP,
+});
+
+<>
+  <Animated.FlatList
+    horizontal
+    data={items}
+    onScroll={scrollHandler}
+    scrollEventThrottle={16}
+    snapToInterval={CARD_WIDTH + CARD_GAP}
+    decelerationRate="fast"
+    renderItem={renderItem}
+  />
+  <EtPagination totalPages={5} currentPage={currentPageAnimated} color="primary" />
+</>;
+```
+
+### Carousel with programmatic navigation
+
+```tsx
+const flatListRef = useRef<FlatList>(null);
+const { currentPageAnimated, scrollHandler, goToPage, getScrollOffsetForPage } = usePagination({
+  totalPages: 5,
+  itemWidth: 300,
+});
+
+const handleJumpToPage = (page: number) => {
+  goToPage(page);
+  flatListRef.current?.scrollToOffset({
+    offset: getScrollOffsetForPage(page),
+    animated: true,
+  });
+};
+
+// Use currentPageAnimated with EtPagination
+<EtPagination totalPages={5} currentPage={currentPageAnimated} />;
+```
+
+### Legacy: Manual scroll handler (without hook)
+
+```tsx
+const currentPage = useSharedValue(0);
+const cardWidth = 300;
+
+const handleScroll = useAnimatedScrollHandler({
+  onScroll: (event) => {
+    const position = event.contentOffset.x / cardWidth;
+    currentPage.value = Math.round(position);
+  },
+});
+
+<Animated.FlatList
+  horizontal
+  onScroll={handleScroll}
+  scrollEventThrottle={16}
+  snapToInterval={cardWidth}
+/>
+
+<EtPagination
+  totalPages={5}
+  currentPage={currentPage}
+  color="primary"
+/>
+```
+
+## Anti-patterns
+
+### ❌ Adding tap handlers to dots
+
+```tsx
+// BAD - dots are non-interactive
+// Don't expect onPress on dots
+```
+
+**Fix:** Handle navigation in parent component with buttons or swipe gestures.
+
+### ❌ Using for many pages
+
+```tsx
+// BAD - too many dots looks cluttered
+<EtPagination totalPages={50} currentPage={25} />
+```
+
+**Fix:** Use a different pagination pattern (numbers, scrollbar) for 10+ pages.
+
+### ❌ Mixing number and SharedValue unpredictably
+
+```tsx
+// BAD - switching between types on rerender
+<EtPagination totalPages={5} currentPage={useAnimation ? sharedValue : numberValue} />
+```
+
+**Fix:** Choose one input type and stick with it for the component's lifetime.
+
+### ❌ Manually styling dot colors
+
+```tsx
+// BAD - bypasses design system
+<EtPagination style={{ backgroundColor: 'red' }} ... />
+```
+
+**Fix:** Use `color` prop to control dot appearance.
+
+## Dependencies & Internals
+
+### Internal Structure
+
+```text
+pagination/
+├── api/
+│   ├── types.ts              # EtPaginationProps, PaginationDotProps
+│   └── index.ts
+├── hooks/
+│   ├── use-pagination.ts      # Unified consumer hook (navigation, scroll, state)
+│   ├── use-pagination.test.ts # Tests for usePagination hook
+│   ├── use-pagination-config.ts # EtPagination component config (props→SharedValue, colors)
+│   └── index.ts
+├── subcomponents/
+│   ├── pagination-dot.tsx    # Animated individual dot
+│   └── index.ts
+├── utils/
+│   ├── clamp-page.ts         # Bounds checking utility
+│   ├── constants.ts          # Default values and dimensions
+│   ├── get-dot-colors.ts     # Theme color resolution
+│   ├── get-dot-dimensions.ts # Size variant dimensions
+│   └── index.ts
+├── et-pagination.tsx         # Main component
+├── et-pagination.test.tsx    # Component tests
+└── AGENTS.mdc                 # This file
+```
+
+### Key Dependencies
+
+- `react-native-reanimated` - SharedValue, useAnimatedStyle, useAnimatedReaction, useAnimatedScrollHandler
+- `useEtoroTheme` - provides theme colors for variants
+
+### How usePagination works
+
+The `usePagination` hook is internally composed of two private functions:
+
+1. **`useNormalizedPaginationOptions`** (config): Applies defaults for `initialPage` (0), clamps it to valid bounds via `clampPage`, and passes through `totalPages` and `itemWidth`.
+2. **`usePaginationInternalState`** (state): Manages `currentPage` (React state) and `currentPageAnimated` (SharedValue), navigation functions (`goToNext`, `goToPrevious`, `goToPage`), scroll handler, and computed navigation state (`isFirstPage`, `isLastPage`, `canGoNext`, `canGoPrevious`).
+
+Sync between React state and SharedValue:
+
+- `useEffect` syncs React state → SharedValue (for programmatic navigation)
+- `useAnimatedReaction` + `scheduleOnRN` syncs SharedValue → React state (for scroll-driven updates)
+
+### How currentPage normalization works (EtPagination component internal)
+
+The `usePaginationConfig` hook normalizes the `currentPage` prop for the EtPagination component:
+
+1. If `number` is passed: Creates an internal `SharedValue` and syncs via `useEffect`
+2. If `SharedValue` is passed: Uses it directly (no wrapper)
+
+This is handled by a private `usePaginationState` function within `use-pagination-config.ts`, allowing the component to work seamlessly with both simple state and scroll-driven animations.
+
+## Accessibility
+
+- Container has `accessibilityLabel` (default: "Pagination")
+- Each dot has `accessibilityLabel`: "Page X of Y"
+- Each dot has `accessibilityState`: `{ selected: boolean }`
+- Dots are non-interactive (no `accessibilityRole="button"`)
+
+## Exports from `etoro-ui`
+
+| Export                 | Type      | Description                            |
+| ---------------------- | --------- | -------------------------------------- |
+| `EtPagination`         | Component | Main pagination indicator              |
+| `usePagination`        | Hook      | Unified navigation and scroll hook     |
+| `UsePaginationOptions` | Type      | Options for usePagination              |
+| `UsePaginationResult`  | Type      | Return type of usePagination           |
+| `clampPage`            | Utility   | Bounds check: `clampPage(page, total)` |
+
+## Related
+
+- Storybook stories: `.rnstorybook/stories/components/navigation/pagination/`
+- `EtCarousel` - may use this for page indicators
+- `EtOnboarding` - may use this for step indicators

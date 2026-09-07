@@ -1,0 +1,675 @@
+---
+description: Agent guide for EtPost - social post compound component with Header, Body, Image, Video, Link, Trade, SharedPost attachments, and Footer engagement actions
+alwaysApply: false
+---
+
+# EtPost Component
+
+Social post component following etoro-ui standards with compound component pattern.
+
+## Overview
+
+`EtPost` is the unified social post compound component; it follows modern etoro-ui architecture:
+
+- **Compound Component Pattern** - Flexible composition with `EtPost.Header`, `.Body`, `.Image`, `.Video`, `.Link`, `.Trade`, `.Poll`, `.SharedPost` (with `.Header / .Body / .Attachment / .Deleted`), `.Footer`, `.Likes`, `.Comments`, `.Shares`, `.Save`
+- **Compound Footer** - Engagement actions are flat subcomponents (`EtPost.Likes`, `.Comments`, `.Shares`, `.Save`) composed inside `EtPost.Footer`. Engagement data is NOT passed as props to `EtPost` itself.
+- **Flat Attachment API** - Attachment sub-components are direct children of `EtPost` (no wrapper needed)
+- **Context-Based State Sharing** - Minimal context (`haptics` only), subcomponents use `usePostContext()`
+- **Delegated Text Expansion** - Body uses `EtReadMoreText` for expand/collapse (no manual state in context)
+- **Memoized Performance** - `React.memo`, `useMemo`, `useCallback` throughout
+- **Accessibility** - Full support for `testID`, `accessibilityLabel`, `accessibilityHint`
+
+## Usage
+
+### Basic Usage
+
+```tsx
+import { EtPost } from '@etoro-ui';
+
+<EtPost
+  displayName="Akansha Trivedi"
+  avatar="https://example.com/avatar.jpg"
+  location="Germany"
+  text="This is something that annoys me..."
+  timestamp="2h"
+>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{10}</EtPost.Likes>
+    <EtPost.Comments onPress={handleComment}>{121}</EtPost.Comments>
+    <EtPost.Shares>{33}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>;
+```
+
+### With Image Attachment
+
+```tsx
+<EtPost {...props}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.Image source="https://example.com/photo.jpg" onPress={handleImagePress} />
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+### With Video Attachment
+
+```tsx
+<EtPost {...props}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.Video
+    thumbnailSource="https://example.com/thumb.jpg"
+    title="Intel Stock Analysis"
+    host="www.youtube.com"
+    description="Intel is investing big on dominating the AI semiconductor..."
+    onPress={handleVideoPress}
+  />
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+### With Link Preview
+
+```tsx
+<EtPost {...props}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.Link
+    url="https://www.etoro.com/people/marcomazzali"
+    title="@MarcoMazzali's profile"
+    host="www.etoro.com"
+    description="The Wallaby Project is an ethical investment portfolio..."
+    thumbnailSource="https://example.com/thumb.jpg"
+    onPress={handleLinkPress}
+  />
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+### With Trade Attachment
+
+```tsx
+<EtPost {...props}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.Trade
+    symbolName="NVDA"
+    displayName="NVIDIA Corporation"
+    avatarSource="https://etoro-cdn.etorostatic.com/market-avatars/nvda/80x80.png"
+    rate={186.86}
+    priceChange={1.01}
+    priceChangePercent={0.54}
+    direction="Long"
+    onPress={handleTradePress}
+  />
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+### With Poll Attachment
+
+```tsx
+<EtPost {...props}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.Poll
+    answers={pollAnswers}
+    question="What's your investing style?"
+    voteCount={180}
+    onVote={handleVote}
+    onUndo={handleUndo}
+    selectedId={userSelection} // optional: controlled mode
+    avatarUrls={voterAvatars} // optional
+    additionalVotersCount={177} // optional
+  />
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+### With Shared Post (Compound)
+
+Use the compound sub-components (`SharedPost.Header`, `.Body`, `.Attachment`) for full control:
+
+```tsx
+<EtPost {...outerProps}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.SharedPost>
+    <EtPost.SharedPost.Header
+      displayName="Original Author"
+      avatar="https://example.com/avatar.jpg"
+      timestamp="2h"
+      onUserPress={handleOriginalUserPress}
+    />
+    <EtPost.SharedPost.Body text="This is the original post content..." maxLines={3} />
+    <EtPost.SharedPost.Attachment>
+      <EtPost.Image source="https://example.com/photo.jpg" />
+    </EtPost.SharedPost.Attachment>
+  </EtPost.SharedPost>
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+### Shared Post — Text Only (No Attachment)
+
+```tsx
+<EtPost {...outerProps}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.SharedPost>
+    <EtPost.SharedPost.Header displayName="Original Author" avatar="https://example.com/avatar.jpg" timestamp="5h" />
+    <EtPost.SharedPost.Body text="Just sharing my thoughts..." />
+  </EtPost.SharedPost>
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+### Shared Post — With Link Preview
+
+```tsx
+<EtPost {...outerProps}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.SharedPost>
+    <EtPost.SharedPost.Header displayName="Original Author" avatar="https://example.com/avatar.jpg" timestamp="1d" />
+    <EtPost.SharedPost.Body text="Check out this article..." />
+    <EtPost.SharedPost.Attachment>
+      <EtPost.Link
+        url="https://www.etoro.com/news/article"
+        title="Market Update"
+        host="www.etoro.com"
+        description="Latest market analysis..."
+        thumbnailSource="https://example.com/thumb.jpg"
+      />
+    </EtPost.SharedPost.Attachment>
+  </EtPost.SharedPost>
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+### Shared Post — Deleted Original (Placeholder)
+
+When the original of a share post has been deleted, render `EtPost.SharedPost.Deleted` instead of the `<EtPost.SharedPost>` frame. Self-contained leaf — non-interactive, owns its own inset. Despite the shared `SharedPost.*` namespace, it is rendered directly under `<EtPost>` (NOT wrapped in `<EtPost.SharedPost>`); the dot is purely API grouping so the active-share frame and the deleted state are discoverable together.
+
+```tsx
+<EtPost {...outerProps}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.SharedPost.Deleted text="The shared post was deleted" />
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+> **i18n note:** translation is the caller's responsibility — etoro-ui never imports `react-i18next`. Pass the already-localized string to the `text` prop.
+
+### With "Edited" Badge
+
+```tsx
+<EtPost
+  {...props}
+  isEdited // Shows "Edited" badge next to timestamp
+>
+  <EtPost.Header />
+  <EtPost.Body />
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+### Compound Usage (Custom Layout)
+
+```tsx
+<EtPost {...props}>
+  <EtPost.Header />
+  <EtPost.Body />
+  <CustomMediaPreview />
+  <EtPost.Footer>
+    <EtPost.Likes onPress={handleLike} isActive={isLiked}>{likes}</EtPost.Likes>
+    <EtPost.Comments>{comments}</EtPost.Comments>
+    <EtPost.Shares>{shares}</EtPost.Shares>
+    <EtPost.Save onPress={handleSave} isActive={isSaved} />
+  </EtPost.Footer>
+</EtPost>
+```
+
+## Props
+
+### EtPost Props
+
+| Prop                 | Type         | Required | Default | Description               |
+| -------------------- | ------------ | -------- | ------- | ------------------------- |
+| `displayName`        | `string`     | Yes      | -       | User display name         |
+| `avatar`             | `string`     | Yes      | -       | User avatar URL           |
+| `text`               | `string`     | Yes      | -       | Post content              |
+| `timestamp`          | `string`     | Yes      | -       | Time display (e.g., "2h") |
+| `location`           | `string`     | No       | -       | User location             |
+| `verified`           | `boolean`    | No       | `false` | Show verified badge       |
+| `isEdited`           | `boolean`    | No       | `false` | Show "Edited" badge       |
+| `maxLines`           | `number`     | No       | `4`     | Lines before "Show More"  |
+| `onPress`            | `() => void` | No       | -       | Container press           |
+| `onUserPress`        | `() => void` | No       | -       | User tap                  |
+| `onMenuPress`        | `() => void` | No       | -       | Menu tap                  |
+| `haptics`            | `boolean`    | No       | `true`  | Haptic feedback           |
+| `children`           | `ReactNode`  | No       | -       | Custom children           |
+| `style`              | `ViewStyle`  | No       | -       | Container style           |
+| `testID`             | `string`     | No       | -       | Test identifier           |
+| `accessibilityLabel` | `string`     | No       | -       | A11y label                |
+
+> **Note:** Engagement data (likes, comments, shares, isLiked, isSaved) and engagement handlers (onLike, onComment, onShare, onSave) are **not** props of `EtPost`. They are passed directly to the footer subcomponents (`EtPost.Likes`, `.Comments`, `.Shares`, `.Save`).
+
+### EtPost.Footer Props
+
+| Prop       | Type        | Required | Default | Description                                      |
+| ---------- | ----------- | -------- | ------- | ------------------------------------------------ |
+| `children` | `ReactNode` | Yes      | -       | Footer subcomponents (Likes, Comments, Shares, Save) |
+| `testID`   | `string`    | No       | -       | Test identifier                                  |
+
+### EtPost.Likes Props
+
+| Prop           | Type         | Required | Default | Description                                       |
+| -------------- | ------------ | -------- | ------- | ------------------------------------------------- |
+| `children`     | `number`     | Yes      | -       | Like count (rendered as formatted text)            |
+| `onPress`      | `() => void` | No       | -       | Tap on icon (toggle like)                          |
+| `onCountPress` | `() => void` | No       | -       | Tap on count (e.g., open likes drawer). Falls back to `onPress` if not provided. |
+| `isActive`     | `boolean`    | No       | `false` | Whether the user has liked (fills icon + changes color) |
+| `testID`       | `string`     | No       | -       | Test identifier                                   |
+
+### EtPost.Comments Props
+
+| Prop           | Type         | Required | Default | Description                                       |
+| -------------- | ------------ | -------- | ------- | ------------------------------------------------- |
+| `children`     | `number`     | Yes      | -       | Comment count (rendered as formatted text)         |
+| `onPress`      | `() => void` | No       | -       | Tap on icon                                        |
+| `onCountPress` | `() => void` | No       | -       | Tap on count. Falls back to `onPress` if not provided. |
+| `testID`       | `string`     | No       | -       | Test identifier                                   |
+
+### EtPost.Shares Props
+
+| Prop           | Type         | Required | Default | Description                                       |
+| -------------- | ------------ | -------- | ------- | ------------------------------------------------- |
+| `children`     | `number`     | Yes      | -       | Share count (rendered as formatted text)           |
+| `onPress`      | `() => void` | No       | -       | Tap on icon (share action)                         |
+| `onCountPress` | `() => void` | No       | -       | Tap on count (e.g., open shares drawer). Falls back to `onPress` if not provided. |
+| `testID`       | `string`     | No       | -       | Test identifier                                   |
+
+### EtPost.Save Props
+
+| Prop       | Type         | Required | Default | Description                                       |
+| ---------- | ------------ | -------- | ------- | ------------------------------------------------- |
+| `onPress`  | `() => void` | No       | -       | Tap to toggle save                                 |
+| `isActive` | `boolean`    | No       | `false` | Whether the user has saved (fills icon + changes color) |
+| `testID`   | `string`     | No       | -       | Test identifier                                   |
+
+## Subcomponents
+
+### EtPost.Header
+
+User avatar, name, location, timestamp, "Edited" badge, menu icon.
+
+### EtPost.Body
+
+Post text with inline "Show More"/"Show Less" expansion. Delegates all expand/collapse logic to `EtReadMoreText` (no expansion state in context).
+
+### EtPost.Image
+
+Full-width image attachment. Props: `source`, `onPress`, `style`, `testID`, `accessibilityLabel`, `accessibilityHint`.
+
+### EtPost.Video
+
+Video thumbnail with play icon overlay and metadata. Props: `thumbnailSource`, `title`, `host`, `description`, `onPress`, `style`, `testID`, `accessibilityLabel`, `accessibilityHint`.
+
+### EtPost.Link
+
+Link preview card with optional thumbnail. Uses a `card` + `cardInner` structure where the border is on `card` and overflow clipping is on `cardInner`. Props: `url`, `title`, `host`, `description`, `thumbnailSource`, `type` (`'link'` | `'video'`, default `'link'`), `onPress`, `style`, `testID`, `accessibilityLabel`, `accessibilityHint`. When `type="video"` a play icon is overlaid on the thumbnail.
+
+### EtPost.Trade
+
+> **Retired from the post feature (PE-1094).** The social post feature no longer renders the full-width trade card; it now uses `EtPost.Badge` (status pill) + `EtPost.Tag` (compact asset chip) instead. `EtPost.Trade` / `TradeRenderer` are kept exported for external consumers, but new post work should prefer `EtPost.Badge` + `EtPost.Tag`.
+
+Trade card with market avatar, symbol, price & daily change. Props: `symbolName`, `displayName`, `avatarSource`, `avatarSvgSource`, `avatarBackgroundColor`, `avatarTextColor`, `rate`, `priceChange`, `priceChangePercent`, `direction`, `onPress`, `style`, `testID`, `accessibilityLabel`, `accessibilityHint`.
+
+### EtPost.Poll
+
+Interactive poll attachment with pre-vote (votable options) and post-vote (result bars, voter avatars, undo) states. Wraps `PollProvider` internally — consumers just pass props. Supports controlled mode (`selectedId`) and uncontrolled mode (internal state). Props: `answers`, `question`, `voteCount`, `onVote`, `onUndo`, `selectedId`, `avatarUrls`, `additionalVotersCount`, `style`, `testID`, `accessibilityLabel`, `accessibilityHint`.
+
+### EtPost.Footer
+
+Compound container for engagement actions. Uses `React.Children.forEach` to automatically lay out children into a left section (Likes, Comments, Shares) and a right section (Save, identified by `displayName`). All icons use `EtIconV2` with `md` size.
+
+### EtPost.Likes
+
+Like action — thumbs-up icon + formatted count. Supports separate `onPress` (toggle like) and `onCountPress` (e.g., open likes drawer). When `isActive`, icon fills and color changes to primary. Uses `useFooterActionStyle` for theming and `useHapticHandler` for haptic feedback.
+
+### EtPost.Comments
+
+Comment action — comment icon + formatted count. Supports separate `onPress` and `onCountPress`. No `isActive` state.
+
+### EtPost.Shares
+
+Share action — share icon + formatted count. Supports separate `onPress` (share action) and `onCountPress` (e.g., open shares drawer). No `isActive` state.
+
+### EtPost.Save
+
+Save action — bookmark icon only (no count). When `isActive`, icon fills and color changes to primary. Positioned on the right side of the footer automatically by the `Footer` container.
+
+### EtPost.SharedPost.Deleted
+
+Informational placeholder rendered in place of the embedded original-post preview when the shared post has been deleted (e.g. `share.isShareDeleted === true`). Self-contained leaf — non-interactive, owns its own horizontal inset and vertical margins so it aligns with the rest of the post chrome (mirrors the `<EtPost.SharedPost>` frame).
+
+> **Namespace, not nesting:** `EtPost.SharedPost.Deleted` is a **leaf** rendered directly under `<EtPost>` — it is NOT a child of `<EtPost.SharedPost>`. The dot is purely API grouping so both states of a shared post (live frame + deleted tombstone) live under the same `SharedPost.*` namespace and surface together in autocomplete and Storybook navigation.
+
+| Prop                 | Type        | Required | Default | Description                                                                                  |
+| -------------------- | ----------- | -------- | ------- | -------------------------------------------------------------------------------------------- |
+| `text`               | `string`    | Yes      | -       | Localized placeholder message (e.g. `"The shared post was deleted"`). i18n is caller's job.  |
+| `style`              | `ViewStyle` | No       | -       | Override the inner card style                                                                |
+| `testID`             | `string`    | No       | -       | Test identifier on the card root                                                             |
+| `accessibilityLabel` | `string`    | No       | `text`  | A11y label (falls back to the provided `text`)                                               |
+| `accessibilityHint`  | `string`    | No       | -       | A11y hint                                                                                    |
+
+> **Mutual exclusion:** render either `<EtPost.SharedPost>` (the live frame) or `<EtPost.SharedPost.Deleted />` (the tombstone) — never both in the same post.
+
+### EtPost.SharedPost (Compound)
+
+Nested shared post rendered below the outer post's body. Follows its own compound component pattern with three sub-components:
+
+#### EtPost.SharedPost (Frame)
+
+Outer container with horizontal padding. The left border is **not** applied here — it is rendered individually by `Header` and `Body` so that the attachment area renders without it.
+
+| Prop                 | Type        | Required | Default | Description                       |
+| -------------------- | ----------- | -------- | ------- | --------------------------------- |
+| `children`           | `ReactNode` | Yes      | -       | Header, Body, Attachment children |
+| `style`              | `ViewStyle` | No       | -       | Container style override          |
+| `testID`             | `string`    | No       | -       | Test identifier                   |
+| `accessibilityLabel` | `string`    | No       | -       | A11y label                        |
+| `accessibilityHint`  | `string`    | No       | -       | A11y hint                         |
+
+#### EtPost.SharedPost.Header
+
+Compact header row: small square avatar + display name + dot separator + formatted timestamp. Applies a left border independently.
+
+| Prop                 | Type         | Required | Default | Description                                    |
+| -------------------- | ------------ | -------- | ------- | ---------------------------------------------- |
+| `displayName`        | `string`     | Yes      | -       | Original author name                           |
+| `avatar`             | `string`     | Yes      | -       | Original author avatar URL                     |
+| `timestamp`          | `string`     | Yes      | -       | Time display (formatted via `formatTimestamp`) |
+| `onUserPress`        | `() => void` | No       | -       | Tap on avatar / name                           |
+| `style`              | `ViewStyle`  | No       | -       | Container style override                       |
+| `testID`             | `string`     | No       | -       | Test identifier                                |
+| `accessibilityLabel` | `string`     | No       | -       | Accessibility label for screen readers         |
+| `accessibilityHint`  | `string`     | No       | -       | Additional hint for screen readers             |
+
+#### EtPost.SharedPost.Body
+
+Expandable text using `EtReadMoreText`. Applies a left border independently.
+
+| Prop                 | Type        | Required | Default | Description                            |
+| -------------------- | ----------- | -------- | ------- | -------------------------------------- |
+| `text`               | `string`    | Yes      | -       | Original post text                     |
+| `maxLines`           | `number`    | No       | `4`     | Lines before "Show More"               |
+| `style`              | `ViewStyle` | No       | -       | Container style override               |
+| `testID`             | `string`    | No       | -       | Test identifier                        |
+| `accessibilityLabel` | `string`    | No       | -       | Accessibility label for screen readers |
+| `accessibilityHint`  | `string`    | No       | -       | Additional hint for screen readers     |
+
+#### EtPost.SharedPost.Attachment
+
+Padded + rounded wrapper that clips attachment children (images, links, trades). Rendered **without** the left border.
+
+> **Note:** `SharedPost.Attachment` - Attachment components inside a shared post **must** be wrapped in `SharedPost.Attachment` so that the border radius and padding are applied correctly within the shared post frame.
+
+| Prop                 | Type        | Required | Default | Description                            |
+| -------------------- | ----------- | -------- | ------- | -------------------------------------- |
+| `children`           | `ReactNode` | Yes      | -       | Attachment component to wrap           |
+| `style`              | `ViewStyle` | No       | -       | Container style override               |
+| `testID`             | `string`    | No       | -       | Test identifier                        |
+| `accessibilityLabel` | `string`    | No       | -       | Accessibility label for screen readers |
+| `accessibilityHint`  | `string`    | No       | -       | Additional hint for screen readers     |
+
+## Architecture
+
+```text
+post/
+├── api/
+│   ├── index.ts          # Public API exports
+│   └── types.ts          # EtPostProps, FooterLikesProps, FooterCommentsProps, FooterSharesProps, FooterSaveProps, SharedPost* props
+├── context/
+│   ├── index.ts
+│   ├── post-context.tsx  # PostContext, usePostContext (haptics only)
+│   └── post-provider.tsx # Provider component (minimal — no engagement props)
+├── hooks/
+│   ├── index.ts
+│   └── use-post-footer-logic.ts  # useFooterActionStyle() + useHapticHandler() utilities
+├── subcomponents/
+│   ├── index.ts
+│   ├── post-header.tsx
+│   ├── post-body.tsx             # Delegates to EtReadMoreText
+│   ├── post-footer.tsx           # Compound container — React.Children layout (Save→right, rest→left)
+│   ├── footer/                      # Compound footer subcomponents
+│   │   ├── index.ts                 # Barrel exports
+│   │   ├── footer-action.tsx        # Internal shared component (icon + count Pressables)
+│   │   ├── footer-likes.tsx         # EtPost.Likes (thin wrapper → FooterAction)
+│   │   ├── footer-comments.tsx      # EtPost.Comments (thin wrapper → FooterAction)
+│   │   ├── footer-shares.tsx        # EtPost.Shares (thin wrapper → FooterAction)
+│   │   └── footer-save.tsx          # EtPost.Save (standalone bookmark icon)
+│   ├── shared-post/                       # Compound SharedPost + Deleted leaf
+│   │   ├── index.ts                       # Composes Frame + Header + Body + Attachment + Deleted
+│   │   ├── shared-post-frame.tsx          # EtPost.SharedPost (active-share frame)
+│   │   ├── shared-post-header.tsx         # EtPost.SharedPost.Header
+│   │   ├── shared-post-body.tsx           # EtPost.SharedPost.Body
+│   │   ├── shared-post-attachment.tsx     # EtPost.SharedPost.Attachment
+│   │   └── shared-post-deleted.tsx        # EtPost.SharedPost.Deleted (leaf tombstone)
+│   ├── poll/                                  # Poll compound component (moved from et-poll/)
+│   │   ├── api/                              # Poll types (PollAnswer, subcomponent props)
+│   │   ├── context/                          # PollContext, PollProvider, usePollContext
+│   │   ├── hooks/                            # usePollProviderState, usePollStats, usePollVoterData
+│   │   ├── subcomponents/                    # EtPoll.* sub-components
+│   │   ├── et-poll.tsx                       # EtPoll compound component
+│   │   ├── et-poll.test.tsx                  # EtPoll standalone tests
+│   │   └── index.ts                          # Public exports
+│   └── attachments/
+│       ├── index.ts                          # Exports individual renderers
+│       ├── image-renderer.tsx         # EtPost.Image
+│       ├── video-renderer.tsx         # EtPost.Video
+│       ├── link-preview-renderer.tsx  # EtPost.Link (card + cardInner structure)
+│       ├── trade-renderer.tsx         # EtPost.Trade
+│       └── poll-renderer.tsx          # EtPost.Poll (adapter over PollProvider)
+├── utils/
+│   ├── index.ts
+│   ├── format-timestamp.ts
+│   ├── format-engagement-count.ts   # Formats large numbers (e.g., 1.2K)
+│   └── trigger-haptic.ts
+├── et-post.tsx          # Main component (Object.assign: Footer, Likes, Comments, Shares, Save, SharedPost, etc.)
+├── et-post.test.tsx     # Tests
+├── index.ts                # Public exports (includes FooterLikesProps, FooterCommentsProps, etc.)
+└── AGENTS.mdc               # This file
+```
+
+## Design Decisions
+
+### SharedPost Left Border Strategy
+
+The left border is applied **per-subcomponent** (Header and Body each have `borderLeftWidth: 1`) rather than on the Frame. This allows the Attachment area to render full-width without a left border, matching the Figma design.
+
+### Body Delegates to EtReadMoreText
+
+`PostBody` no longer manages expansion state (hidden text measurement, `isExpanded`, `toggleExpanded`, `shouldShowMore`). All expand/collapse logic is delegated to the `EtReadMoreText` component. The context only carries `maxLines` for text configuration.
+
+### Compound Footer Pattern
+
+Engagement actions use a compound component pattern instead of props on `EtPost`. This was chosen because:
+
+1. **Extensibility** — Adding new actions (e.g., `onCountPress` for opening drawers) doesn't require modifying `EtPostProps` or threading through context
+2. **Colocation** — Each action's data (count, handlers, active state) is passed at the point of use, not scattered across 12+ props
+3. **Flat naming** — `EtPost.Likes` (not `EtPost.Footer.Likes`) for a simpler API
+4. **Auto-layout** — `PostFooter` uses `React.Children.forEach` to detect `FooterSave` by `displayName` and render it on the right; all other children go to the left section
+5. **Deduplication** — `FooterAction` is a shared internal component used by Likes/Comments/Shares, handling icon rendering, count formatting (`formatEngagementCount`), haptic feedback, and separate icon/count `Pressable` elements
+
+### Attachment Style Prop Placement
+
+For `LinkPreviewRenderer` and `TradeRenderer`, the `style` prop is applied to the outermost container (not the card), so consumers can control margins/padding without breaking the card's internal layout.
+
+## Do's and Don'ts
+
+### Do's
+
+- Use compound children for custom layouts
+- Pass engagement data to footer subcomponents (`EtPost.Likes`, `.Comments`, `.Shares`, `.Save`), not to `EtPost` itself
+- Use `onCountPress` on Likes/Comments/Shares when the count tap should do something different from the icon tap (e.g., open a drawer)
+- Provide `testID` for testing
+- Use `haptics={false}` to disable feedback
+- Use `maxLines` to customize expansion threshold
+- Place attachment sub-components (`.Image`, `.Video`, `.Link`, `.Trade`, `.Poll`) directly as children of `<EtPost>` (exception: inside a shared post, wrap them in `<EtPost.SharedPost.Attachment>`)
+- Use `EtPost.SharedPost` compound sub-components (`.Header`, `.Body`, `.Attachment`) for shared post layouts
+- Wrap shared post attachments in `<EtPost.SharedPost.Attachment>` so they get proper border radius clipping
+
+### Don'ts
+
+- Don't pass `likes`, `comments`, `shares`, `isLiked`, `isSaved`, `onLike`, `onComment`, `onShare`, `onSave` as props to `EtPost` — these were removed; use footer subcomponents instead
+- Don't use subcomponents outside `<EtPost>` (will throw)
+- Don't pass colors directly - use theme via context
+- Don't add `!important` to style overrides
+- Don't render more than one attachment per post
+- Don't manage text expansion state manually - `EtReadMoreText` handles it
+- Don't apply the left border on the SharedPost Frame - Header and Body handle it individually
+- Don't use `FooterAction` directly — it's an internal component; use `EtPost.Likes`, `.Comments`, `.Shares` instead
+
+## Related Components
+
+- `EtAvatar` - User avatar component (used in SharedPost.Header with `size="small"` + `shape="square"`)
+- `EtReadMoreText` - Text expansion component (used by PostBody and SharedPost.Body)
+- `EtText` - Foundation text component
+- `EtIconV2` - Icon component (used in Footer)
+
+## Design System Integration
+
+Slot → V2 token mapping for the full `EtPost` compound (basic post per Figma `51357:64170`, Poll pre-vote per Figma `45584:129490`, attachments + shared post mapped via hex-equivalence and prior-PR conventions):
+
+### Container, header, footer (basic post)
+
+| Slot | V2 token |
+| --- | --- |
+| Container background ([`et-post.tsx`](libs/etoro-ui/src/components/social/post/et-post.tsx)) | `carbon050` |
+| Container border-bottom ([`et-post.tsx`](libs/etoro-ui/src/components/social/post/et-post.tsx)) | `carbonSecondaryDivider` (matches Figma `var(--primary-divider)` `#B2B2B226`) |
+| Display name ([`post-header.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/post-header.tsx)) | `carbon900` |
+| Location / timestamp / dot / menu icon ([`post-header.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/post-header.tsx)) | `carbon500` |
+| Footer idle text + idle icon ([`use-post-footer-logic.ts`](libs/etoro-ui/src/components/social/post/hooks/use-post-footer-logic.ts)) | `carbon900` |
+| Footer active icon — `isLiked` / `isSaved` ([`use-post-footer-logic.ts`](libs/etoro-ui/src/components/social/post/hooks/use-post-footer-logic.ts)) | `primary600` |
+
+### Poll attachment
+
+| Slot | V2 token |
+| --- | --- |
+| Frame surface ([`poll-frame.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-frame.tsx)) | `cardDefault` (matches Figma `Surface/card/Default` `#1B1E210A`) |
+| Frame shadow color | `carbon900` |
+| Footer divider ([`poll-footer-divider.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-footer-divider.tsx)) | `carbonSecondaryDivider` |
+| Undo button text ([`poll-undo-button.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-undo-button.tsx)) | `verdictPositive600` |
+| Voter avatar stack bg ([`poll-voter-avatars.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-voter-avatars.tsx)) | inline `${carbon900}0D` (et-input neutral overlay convention) |
+| Voter text | `carbon900` |
+| Votable option bg ([`poll-votable-option.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-votable-option.tsx)) | inline `${carbon900}14` (Figma `Carbon/Neutral/900 @ opacity-8`) |
+| Votable option text | `carbon900` |
+| Result selected fill ([`poll-result-option.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/poll/subcomponents/poll-result-option.tsx)) | `verdictPositive600` |
+| Result unselected fill | inline `${carbon900}14` |
+| Result text + percentage + check icon | `carbon900` |
+
+### Link preview & Trade card
+
+| Slot | V2 token |
+| --- | --- |
+| Card surface (Link, Trade) | `cardDefault` (`#1B1E210A`) |
+| Card border (Link, Trade) | dropped (`borderWidth: 0`) — strict-Figma per et-select precedent |
+| Title / symbol / price text | `carbon900` |
+| Description / host / display name text | `carbon500` |
+| Trade gain — positive | `verdictPositive600` |
+| Trade gain — negative | `verdictNegative600` |
+| Trade avatar fallback text | `carbonStatic050` (always white, theme-static) |
+
+### Video attachment
+
+| Slot | V2 token |
+| --- | --- |
+| Metadata gradient overlay ([`video-renderer.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/attachments/video-renderer.tsx)) | `[overlayTop, overlayBottom]` |
+| Play button background | `overlayBottom` |
+| Play arrow border | `carbonStatic050` |
+| Title + metadata text | `carbonStatic050` (consolidated `textBright` + `textDark` to a single always-white token) |
+
+### Shared post
+
+| Slot | V2 token |
+| --- | --- |
+| Left border (Header, Body) ([`shared-post-header.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/shared-post/shared-post-header.tsx) / [`shared-post-body.tsx`](libs/etoro-ui/src/components/social/post/subcomponents/shared-post/shared-post-body.tsx)) | `carbonSecondaryDivider` |
+| Display name | `carbon900` |
+| Timestamp + dot bg | `carbon500` |
+
+> **Foundation-owned slots (still on V1)**: `post-body.tsx` text color (inherits from `EtText` foundation) and the `EtBadge` ("Edited") surface — both migrate when their respective foundation components migrate. Adding V2 keys to the global `colorsMock` is also outstanding housekeeping.
+
+### Behavior deltas (V1 → V2)
+
+The strict-Figma migration to V2 introduced these user-visible changes:
+
+1. **Container border-bottom** (NEW) — every post now renders a `1px` translucent grey divider (`carbonSecondaryDivider`, `#B2B2B226`) along its bottom edge per Figma. Feeds that already render their own row dividers will see two stacked dividers; consumers can suppress via `style`.
+2. **Container background** — `bgNeutralPrimary` → `carbon050`. Light hex parity (`#FFFFFF`); dark hex shifts to `#1B1E21`.
+3. **Header display name + footer counts** — `textPrimaryNeutral` → `carbon900`. Light hex parity (`#1B1E21`); dark hex shifts (`#E5E5E5` → `#FFFFFF`).
+4. **Header location/timestamp + dot + menu icon** — `textSecondaryNeutral` → `carbon500` (`#999999` both modes).
+5. **Active footer icon** — `actionBrandText` → `primary600`. Same brand family; slight hex shift consistent with et-button / et-link.
+6. **Card borders dropped** (Link Preview, Trade) — strict-Figma decision. Cards now rely on the `cardDefault` translucent fill (`#1B1E210A`) for visual containment. Most visible in light mode where the card surface becomes a subtle grey wash instead of a hairline-bordered box.
+7. **Card backgrounds** — `bgNeutralSecondary` solid → `cardDefault` translucent. Reads as a softer-on-page surface.
+8. **Poll frame** — `bgGreyPrimary` solid → `cardDefault` translucent. Subtler.
+9. **Votable poll options + unselected result fills** — `bgGreyTertiary` / `bgNeutralGreyQuaternary` → inline `${carbon900}14` (8% alpha). Slightly different contrast on both modes.
+10. **Selected poll result + Undo button** — `indicesPrimary` / `indicatorPositive` → `verdictPositive600`. Same green family; slight hex shift (`#33C728` → `#0EB12E` light) — verdict-green is the canonical brand-positive in V2.
+11. **Trade gain text** — `statusPositive` / `statusNegative` → `verdictPositive600` / `verdictNegative600`. Same as et-asset-item.
+12. **Video overlay text + play arrow** — `textBright` / `textDark` → `carbonStatic050`. Consolidated to the always-white static token (both V1 hexes already collapsed to near-white).
+13. **Shared post left border** — `dividerTertiary` solid grey → `carbonSecondaryDivider` translucent. Softer accent, matches et-asset-item / et-list-item divider treatment.

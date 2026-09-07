@@ -1,0 +1,277 @@
+---
+description: Agent guide for EtAvatar - compositional avatar with Image/Fallback/Badge/MarketOpen subcomponents, multiple sizes and shapes, instrument variant with gradient overlay, and Group support with overlap
+alwaysApply: false
+---
+
+# EtAvatar Component (V2)
+
+## Purpose & Scope
+
+`EtAvatar` is a compositional avatar component for the eToro design system. It provides a flexible, accessible avatar with:
+
+- **Multiple sizes**: small (24px), medium (36px), large (48px)
+- **Multiple shapes**: square (rounded rectangle), circle (fully circular)
+- **Compound component pattern**: `EtAvatar.Image`, `EtAvatar.Fallback`, `EtAvatar.Badge`, `EtAvatar.MarketOpen` subcomponents
+- **Variant support**: default, instrument (with gradient overlay)
+- **Group support**: `EtAvatar.Group` with overlap and glass container
+
+**Does NOT handle:**
+
+- Navigation logic (use with router/navigation handlers)
+- Press interactions (wrap in Pressable if needed)
+- Loading skeletons (use `EtSkeleton` separately)
+
+## Entry Points & Contracts
+
+### `EtAvatar` (main component)
+
+```tsx
+<EtAvatar
+  size?: AvatarSize          // default: 'medium'
+  shape?: AvatarShape        // default: 'square'
+  variant?: AvatarVariant    // default: 'default'
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  // ...other ViewProps
+>
+  {children}
+</EtAvatar>
+```
+
+### `EtAvatar.Image`
+
+```tsx
+<EtAvatar.Image
+  src: string              // required - image URL
+  alt?: string             // accessibility label
+  onLoad?: () => void
+  onError?: () => void
+  // ...other ImageProps
+/>
+```
+
+### `EtAvatar.Fallback`
+
+```tsx
+<EtAvatar.Fallback
+  delayMs?: number         // delay before showing
+  // ...other ViewProps
+>
+  {children}               // string or ReactNode
+</EtAvatar.Fallback>
+```
+
+### `EtAvatar.Badge`
+
+```tsx
+<EtAvatar.Badge
+  position?: BadgePosition // default: 'bottomRight'
+  // ...other ViewProps
+>
+  {children}
+</EtAvatar.Badge>
+```
+
+### `EtAvatar.MarketOpen`
+
+```tsx
+<EtAvatar.MarketOpen
+  position?: BadgePosition       // default: 'bottomRight'
+  status?: AvatarMarketStatus    // default: 'open'
+  // ...other ViewProps
+/>
+```
+
+Renders a fixed-size dot at the given corner. Shape-aware positioning. No children.
+- `status='open'` (default) — green dot (`statusPositive`)
+- `status='closed'` — red dot (`statusNegative`)
+
+Visibility is consumer-controlled: omit the subcomponent entirely to hide the dot.
+
+### `EtAvatar.Group`
+
+```tsx
+<EtAvatar.Group
+// ...ViewProps
+>
+  {children} // EtAvatar components
+</EtAvatar.Group>
+```
+
+### `EtAvatar.GroupCount`
+
+```tsx
+<EtAvatar.GroupCount>{children} // string like "+3"</EtAvatar.GroupCount>
+```
+
+### Types
+
+| Type            | Values                                                           |
+| --------------- | ---------------------------------------------------------------- |
+| `AvatarSize`    | `'small'` \| `'medium'` \| `'large'`                             |
+| `AvatarShape`   | `'square'` \| `'circle'`                                         |
+| `AvatarVariant` | `'default'` \| `'instrument'`                                    |
+| `BadgePosition`      | `'topLeft'` \| `'topRight'` \| `'bottomLeft'` \| `'bottomRight'` |
+| `AvatarMarketStatus` | `'open'` \| `'closed'`                                           |
+
+## Usage Patterns
+
+### Basic avatar with fallback
+
+```tsx
+<EtAvatar size="medium" shape="circle">
+  <EtAvatar.Image src={user.avatarUrl} alt={user.name} />
+  <EtAvatar.Fallback>JD</EtAvatar.Fallback>
+</EtAvatar>
+```
+
+### Instrument/Asset avatar with overlay
+
+```tsx
+<EtAvatar size="medium" variant="instrument">
+  <EtAvatar.Image src={stock.logo} alt={stock.symbol} />
+</EtAvatar>
+```
+
+### Instrument with market-status dot
+
+```tsx
+// Green dot (market open — default status)
+<EtAvatar size="medium" shape="square" variant="instrument">
+  <EtAvatar.Image src={instrument.logoUrl} />
+  <EtAvatar.MarketOpen position="bottomRight" />
+</EtAvatar>
+
+// Red dot (market closed)
+<EtAvatar size="medium" shape="square" variant="instrument">
+  <EtAvatar.Image src={instrument.logoUrl} />
+  <EtAvatar.MarketOpen position="bottomRight" status="closed" />
+</EtAvatar>
+```
+
+### Avatar with badge
+
+```tsx
+<EtAvatar size="large" shape="square">
+  <EtAvatar.Image src={user.avatarUrl} />
+  <EtAvatar.Fallback>JD</EtAvatar.Fallback>
+  <EtAvatar.Badge position="bottomRight">
+    <OnlineIndicator />
+  </EtAvatar.Badge>
+</EtAvatar>
+```
+
+### Avatar group
+
+```tsx
+<EtAvatar.Group>
+  <EtAvatar size="small" shape="circle">
+    <EtAvatar.Image src={user1.avatar} />
+  </EtAvatar>
+  <EtAvatar size="small" shape="circle">
+    <EtAvatar.Image src={user2.avatar} />
+  </EtAvatar>
+  <EtAvatar size="small" shape="circle">
+    <EtAvatar.Image src={user3.avatar} />
+  </EtAvatar>
+  <EtAvatar.GroupCount>+3</EtAvatar.GroupCount>
+</EtAvatar.Group>
+```
+
+## Anti-patterns
+
+### ❌ Using subcomponents outside EtAvatar
+
+```tsx
+// BAD - will throw runtime error
+<EtAvatar.Image src="url" />
+<EtAvatar.Fallback>JD</EtAvatar.Fallback>
+```
+
+**Fix:** Always wrap in `<EtAvatar>`.
+
+### ❌ Using square shape in groups
+
+```tsx
+// BAD - groups should use circular avatars
+<EtAvatar.Group>
+  <EtAvatar shape="square">...</EtAvatar>
+</EtAvatar.Group>
+```
+
+**Fix:** Use `shape="circle"` for avatars in groups.
+
+### ❌ Forgetting fallback
+
+```tsx
+// BAD - no fallback if image fails
+<EtAvatar>
+  <EtAvatar.Image src={user.avatar} />
+</EtAvatar>
+```
+
+**Fix:** Always provide a fallback for user avatars.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for fallback styling
+- `EtText` - underlying text component for fallback text
+- `AvatarContext` - React context for passing state to subcomponents
+
+### External Dependencies
+
+- `expo-linear-gradient` - gradient overlay for instrument variant
+- `react-native` - `Image`, `View`, `StyleSheet`
+
+### Design System Integration
+
+- Sizes follow Figma specs (24px, 36px, 48px)
+- Border radius uses design tokens (`X1`, `X2`)
+- Group container uses glass effect with 60px radius
+
+## Patterns & Pitfalls
+
+### Fallback visibility
+
+Fallback only shows when:
+
+1. Image hasn't loaded yet (unless `delayMs` is set)
+2. Image failed to load (`imageError` is true)
+
+### Group overlap
+
+Group applies `-8px` margin to create overlap effect. The glass container has padding to compensate.
+
+### Instrument variant
+
+When `variant="instrument"`, a gradient overlay is applied on top of the image to match the design system for asset/instrument logos.
+
+### SVG background color (automatic)
+
+eToro instrument SVG URLs encode brand colors in the filename:
+`…/market-avatars/{id}/{id}_{bgHex}_{fgHex}.svg` (e.g. `1001_F7F7F7_2C2C2C.svg`)
+
+`EtAvatar.Image` automatically detects this pattern, parses the background hex, and applies it as the container `backgroundColor`. No extra props needed — passing an SVG `src` is sufficient. The color is cleared when the component unmounts or the `src` changes to a non-SVG URL.
+
+## Design System Integration
+
+V1 -> V2 mapping for `EtAvatar` slots:
+
+| Subcomponent | Slot | V1 token | V2 token |
+| --- | --- | --- | --- |
+| `Avatar.Fallback` | initials background | `bgNeutralGreyPrimary` | `cardDefault` |
+| `Avatar.Fallback` | initials text color | `textSecondaryNeutral` | `carbon500` |
+| `Avatar.GroupCount` | `+N` background | `bgNeutralGreyPrimary` | `cardDefault` |
+| `Avatar.GroupCount` | `+N` text color | `textSecondaryNeutral` | `carbon500` |
+| `Avatar.Group` | stack container background | `bgGlassPrimaryOverlay` | `cardDefault` |
+| `Avatar.MarketOpen` | dot fill | `statusPositive` | `verdictPositive600` |
+| `Avatar.MarketOpen` | dot border | `bgNeutralPrimary` | `backgroundBase` |
+| `Avatar.Badge` | badge background | `carbonStatic900` | (already V2 — no change) |
+
+`avatarOverlayTop` / `avatarOverlayBottom` (gradient stops on the instrument variant) remain RGBA literals defined inline in `core/styles/colors.ts` and are not theme tokens.
+
+## Behavior deltas vs production
+
+`Avatar.Group` previously used `bgGlassPrimaryOverlay`, whose dark-mode value is a 25% black wash (`neutralOpacity[950.25]`). The new `cardDefault` token resolves to a 4% white overlay in dark mode — visually slightly lighter rather than slightly darker than the surface beneath. This is an intentional, modest delta from production: the avatar group now reads as a low-opacity elevated chip in both themes, consistent with `EtPositionCard` and `EtAvatar.Fallback`. The pre-V2 token had a `// TODO: change to liquid glass` comment indicating it was already flagged as transitional.

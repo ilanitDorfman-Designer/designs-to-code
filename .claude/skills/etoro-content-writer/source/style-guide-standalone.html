@@ -1,0 +1,3692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Voice &amp; Style Guide - etoro Content Hub</title>
+<!-- SELF-CONTAINED SNAPSHOT: single-file, shareable, works offline. -->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* --- inlined styles.css --- */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --border: #e2e6ec;
+  --text: #1c2430;
+  --text-muted: #667085;
+  --accent: #2452e8;
+  --accent-dark: #17337a;
+  --confirmed-bg: #dff3e6;
+  --confirmed-text: #1c7a3e;
+  --needs-bg: #fdecd2;
+  --needs-text: #a35c00;
+  --inconsistent-bg: #f6dede;
+  --inconsistent-text: #a3242c;
+  --added-bg: #e4e8fd;
+  --added-text: #3c47b3;
+  --radius: 12px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.topbar {
+  background: var(--accent-dark);
+  color: #fff;
+  padding: 20px 32px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topbar a { color: #cfe0ff; text-decoration: none; font-size: 14px; }
+.topbar a:hover { text-decoration: underline; }
+
+.topbar h1 { margin: 0; font-size: 20px; font-weight: 700; }
+.topbar .subtitle { margin: 2px 0 0; font-size: 13px; color: #b9caf5; }
+
+.container {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+}
+
+.intro {
+  color: var(--text-muted);
+  font-size: 14px;
+  max-width: 720px;
+  margin-bottom: 28px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.doc-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.doc-card[href]:not([href="#"]):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(16, 24, 40, 0.1);
+}
+
+.doc-card.disabled { cursor: default; opacity: 0.75; }
+
+.doc-card h3 { margin: 0; font-size: 16px; }
+.doc-card p { margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.4; }
+
+.doc-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: auto;
+}
+
+.tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tag-live { background: var(--confirmed-bg); color: var(--confirmed-text); }
+.tag-soon { background: #eceef2; color: var(--text-muted); }
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.toolbar input[type="search"] {
+  flex: 1 1 260px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  background: var(--surface);
+}
+
+.toolbar select {
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.stat-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+
+.stat-pill {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.stat-pill b { color: var(--text); }
+
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 28px 0 12px;
+}
+
+.entry-list { display: flex; flex-direction: column; gap: 10px; }
+
+.entry {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 18px;
+}
+
+.entry-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.term-old, .term-new {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.term-old { color: var(--text-muted); text-decoration: line-through; text-decoration-color: #c7cdd6; }
+.arrow { color: var(--text-muted); }
+
+.badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.badge.confirmed { background: var(--confirmed-bg); color: var(--confirmed-text); }
+.badge.needs-verification { background: var(--needs-bg); color: var(--needs-text); }
+.badge.inconsistent { background: var(--inconsistent-bg); color: var(--inconsistent-text); }
+.badge.added { background: var(--added-bg); color: var(--added-text); }
+
+.entry-detail {
+  margin-top: 8px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.entry-detail .label { font-weight: 700; color: var(--text); }
+
+.entry[contenteditable], .editable {
+  outline: none;
+}
+
+.entry.edit-mode .term-old, .entry.edit-mode .term-new,
+.entry.edit-mode .entry-detail-editable {
+  border: 1px dashed #c7cdd6;
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: #fbfcfe;
+}
+
+.actions-bar {
+  display: flex;
+  gap: 10px;
+  margin: 18px 0 8px;
+  flex-wrap: wrap;
+}
+
+button.btn {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--text);
+}
+
+button.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.btn:hover { filter: brightness(0.97); }
+
+.empty-state { color: var(--text-muted); font-size: 14px; padding: 40px 0; text-align: center; }
+
+.readme-box {
+  background: #fff8e6;
+  border: 1px solid #f0dca0;
+  border-radius: var(--radius);
+  padding: 14px 18px;
+  font-size: 12.5px;
+  color: #6b5300;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+</style>
+<script>(function(){try{var t=localStorage.getItem('cf-theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();</script>
+<style>
+  /* ===== etoro brand theme (matches Know Better guide visual language) ===== */
+  :root {
+    --green: #6dff8a;
+    --ink-on-green: #08110b;
+    --danger: #ff7a8a;
+    --danger-tint: rgba(255,122,138,0.14);
+    --ok: #5fe08a;
+    --ok-tint: rgba(95,224,138,0.14);
+    --radius: 16px;
+    --radius-sm: 11px;
+    --font-brand: 'etoro', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  }
+  :root, :root[data-theme="dark"] {
+    --bg: #10110e;
+    --bg-elev: #14160f;
+    --surface: #1b1e15;
+    --surface-2: #23271c;
+    --border: rgba(236,234,209,0.12);
+    --border-strong: rgba(236,234,209,0.24);
+    --text: #ecead1;
+    --text-muted: rgba(236,234,209,0.58);
+    --text-faint: rgba(236,234,209,0.40);
+    --accent: var(--green);
+    --accent-ink: var(--green);
+    --accent-soft: rgba(109,255,138,0.14);
+    --toolbar-bg: rgba(16,17,14,0.82);
+    color-scheme: dark;
+  }
+  :root[data-theme="light"] {
+    --bg: #f5f3e8;
+    --bg-elev: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f2f0e4;
+    --border: rgba(16,17,14,0.10);
+    --border-strong: rgba(16,17,14,0.18);
+    --text: #10110e;
+    --text-muted: rgba(16,17,14,0.60);
+    --text-faint: rgba(16,17,14,0.42);
+    --accent: #6dff8a;
+    --accent-ink: #0b7a3f;
+    --accent-soft: rgba(11,122,63,0.10);
+    --toolbar-bg: rgba(245,243,232,0.82);
+    color-scheme: light;
+  }
+
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-brand); line-height: 1.5; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  ::selection { background: var(--accent); color: var(--ink-on-green); }
+
+  /* ---- hero ---- */
+  .hero { position: relative; background: radial-gradient(1100px 460px at 82% -60%, rgba(109,255,138,0.12), transparent 62%), var(--bg-elev); border-bottom: 1px solid var(--border); }
+  .hero-inner { max-width: 1140px; margin: 0 auto; padding: 22px 28px 44px; }
+  .hero-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { font-family: var(--font-brand); font-weight: 700; font-size: 21px; letter-spacing: -0.02em; color: var(--text); text-decoration: none; }
+  .brand .b { color: var(--accent-ink); }
+  .hero-actions { display: flex; align-items: center; gap: 8px; }
+  .ghost-link { color: var(--text-muted); text-decoration: none; font-size: 13.5px; font-weight: 500; padding: 8px 12px; border-radius: 999px; }
+  .ghost-link:hover { color: var(--text); background: var(--accent-soft); }
+  .theme-toggle { font-family: inherit; font-size: 13px; font-weight: 600; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 8px 15px; cursor: pointer; }
+  .theme-toggle:hover { border-color: var(--border-strong); }
+
+  .eyebrow { color: var(--accent-ink); font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; margin: 44px 0 14px; }
+  .hero h1 { margin: 0; font-size: clamp(38px, 6.4vw, 70px); line-height: 1.0; font-weight: 800; letter-spacing: -0.035em; }
+  .hero h1 .dot { color: var(--accent-ink); }
+  .hero .lede { margin: 20px 0 0; font-size: clamp(16px, 2.1vw, 21px); line-height: 1.5; color: var(--text-muted); max-width: 60ch; font-weight: 400; }
+
+  .hero-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+  .hstat { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 9px 16px; font-size: 13px; color: var(--text-muted); }
+  .hstat b { color: var(--text); font-size: 15px; font-weight: 700; }
+  .hstat .dotm { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+  /* ---- sticky toolbar ---- */
+  .toolbar-wrap { position: sticky; top: 0; z-index: 20; background: var(--toolbar-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); }
+  .toolbar-inner { max-width: 1140px; margin: 0 auto; padding: 13px 28px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .search-box { flex: 1 1 280px; padding: 11px 18px; font-size: 14px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; font-family: inherit; }
+  .search-box::placeholder { color: var(--text-faint); }
+  .search-box:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .filter-chips { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px; }
+  .filter-chip { font-size: 13px; font-weight: 600; padding: 7px 16px; border-radius: 999px; background: transparent; border: none; cursor: pointer; color: var(--text-muted); font-family: inherit; }
+  .filter-chip:hover { color: var(--text); }
+  .filter-chip.active { background: var(--accent); color: var(--ink-on-green); }
+  :root[data-theme="light"] .filter-chip.active { color: #fff; background: var(--accent-ink); }
+
+  .container { max-width: 1140px; margin: 0 auto; padding: 30px 28px 100px; }
+
+  .layout { display: grid; grid-template-columns: 232px 1fr; gap: 40px; align-items: flex-start; }
+  @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } .toolbar-wrap { position: static; } .sidenav { display: none; } }
+
+  .sidenav { position: sticky; top: 78px; max-height: calc(100vh - 98px); overflow-y: auto; padding: 6px 4px 24px; }
+  .sidenav::-webkit-scrollbar { width: 8px; }
+  .sidenav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 8px; }
+  .sidenav h4 { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint); margin: 14px 10px 6px; }
+  .sidenav h4:first-child { margin-top: 4px; }
+  .sidenav a { position: relative; display: block; padding: 7px 12px 7px 22px; font-size: 13px; color: var(--text-muted); text-decoration: none; border-radius: 8px; line-height: 1.35; }
+  .sidenav a::before { content: ""; position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 5px; height: 5px; border-radius: 50%; background: var(--border-strong); transition: .15s; }
+  .sidenav a:hover { color: var(--text); background: var(--accent-soft); }
+  .sidenav a.active { color: var(--text); font-weight: 600; background: var(--accent-soft); }
+  .sidenav a.active::before { background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .section { margin-bottom: 46px; scroll-margin-top: 86px; }
+  .section-head { font-size: 27px; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 5px; color: var(--text); }
+  .section-desc { font-size: 14px; color: var(--text-muted); margin-bottom: 18px; max-width: 72ch; }
+
+  .rule-card { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--border-strong); border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 10px; transition: border-color .15s ease; }
+  .rule-card:hover { border-color: var(--border-strong); }
+  .rule-card.mandatory, .rule-card.suggested { border-left-color: var(--accent); }
+  .rule-row { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .rule-id { font-size: 11px; font-family: 'SFMono-Regular', Consolas, monospace; color: var(--text-faint); flex-shrink: 0; min-width: 130px; }
+  .rule-text { flex: 1; font-size: 14.5px; line-height: 1.55; color: var(--text); min-width: 240px; }
+  .rule-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; padding: 3px 9px; border-radius: 999px; text-transform: uppercase; flex-shrink: 0; }
+  .rule-badge.mandatory { background: var(--danger-tint); color: var(--danger); }
+  .rule-badge.suggested { background: var(--accent-soft); color: var(--accent-ink); }
+  .rule-note { margin-top: 10px; padding: 10px 14px; background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 8px; font-size: 13px; color: var(--text-muted); line-height: 1.5; }
+  .rule-note b { color: var(--text); }
+
+  .voice-block { background: linear-gradient(180deg, var(--accent-soft), transparent); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 22px; margin-bottom: 16px; }
+  .voice-block h3 { font-size: 15px; font-weight: 700; margin: 0 0 6px; color: var(--accent-ink); }
+  .voice-block p { font-size: 14px; color: var(--text); margin: 0 0 6px; line-height: 1.55; }
+
+  .example-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; font-size: 13.5px; }
+  @media (max-width: 640px) { .example-grid { grid-template-columns: 1fr; } }
+  .example-do, .example-dont { padding: 10px 12px; border-radius: 8px; line-height: 1.45; }
+  .example-do { background: var(--ok-tint); }
+  .example-dont { background: var(--danger-tint); }
+  .example-label { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; }
+  .example-do .example-label { color: var(--ok); }
+  .example-dont .example-label { color: var(--danger); }
+
+  .list-item { font-size: 14px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .list-item:last-child { border-bottom: none; }
+  .list-item .item-title { font-weight: 600; color: var(--text); }
+  .list-item .item-detail { font-size: 13px; color: var(--text-muted); margin-top: 2px; line-height: 1.5; }
+
+  .rule-card.hidden { display: none; }
+  .section.hidden { display: none; }
+
+  .footer-note { margin-top: 48px; padding: 18px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .footer-note b { color: var(--text); }
+  .footer-note code { background: var(--surface-2); color: var(--text); padding: 2px 7px; border-radius: 5px; font-size: 12px; }
+  /* ---- full-guide rendering ---- */
+  .sub-head { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; margin: 30px 0 8px; color: var(--text); scroll-margin-top: 86px; }
+  .sub-head.sub-head-2 { font-size: 14.5px; font-weight: 700; margin: 22px 0 6px; color: var(--text-muted); }
+  .gd-prose { font-size: 14.5px; line-height: 1.6; margin: 0 0 10px; color: var(--text); }
+  .gd-prose.gd-intro { color: var(--text-muted); max-width: 74ch; }
+  .gd-block { margin: 4px 0 16px; }
+  .gd-sub { font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-faint); margin: 8px 0 8px; }
+  .gd-list { margin: 6px 0 12px; padding-left: 20px; }
+  .gd-list li { font-size: 14px; line-height: 1.55; margin-bottom: 5px; }
+  .gd-structure { margin: 6px 0 12px; padding-left: 4px; list-style: none; counter-reset: st; }
+  .gd-structure li { position: relative; font-size: 14px; line-height: 1.55; margin-bottom: 8px; padding-left: 30px; counter-increment: st; }
+  .gd-structure li::before { content: counter(st); position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-ink); font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+  .gd-callout { background: var(--surface-2); border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px 16px; font-size: 14px; line-height: 1.55; margin: 10px 0 16px; color: var(--text); }
+  .gd-table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 14px; }
+  .gd-table th, .gd-table td { text-align: left; vertical-align: top; padding: 9px 13px; border: 1px solid var(--border); line-height: 1.5; }
+  .gd-table thead th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+  .gd-table .th-do { background: var(--ok-tint); color: var(--ok); }
+  .gd-table .th-dont { background: var(--danger-tint); color: var(--danger); }
+  .ex-label { font-weight: 700; font-size: 13.5px; margin-bottom: 8px; color: var(--text); }
+  .ex-gap { margin-top: 8px; }
+  .term-concept { font-weight: 700; font-size: 15px; margin-bottom: 4px; color: var(--text); }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div class="hero-nav">
+        <a href="#" class="brand"><span class="b">&lt;</span>etoro<span class="b">&gt;</span></a>
+        <div class="hero-actions">
+          <a href="#" class="ghost-link">&larr; Content Hub</a>
+          <button type="button" id="themeToggle" class="theme-toggle" aria-label="Toggle light or dark mode">Theme</button>
+        </div>
+      </div>
+      <div class="eyebrow">Content Foundations &middot; Source of truth</div>
+      <h1>Voice &amp; Style Guide<span class="dot">.</span></h1>
+      <p class="lede">The rules the Figma UX Writing Agent plugin runs against — how etoro speaks across every screen, in one place.</p>
+      <div class="hero-stats" id="heroStats"></div>
+    </div>
+  </header>
+
+  <div class="toolbar-wrap">
+    <div class="toolbar-inner">
+      <input type="search" id="searchBox" class="search-box" placeholder="Search rules, terms, categories…">
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="layout">
+      <nav class="sidenav" id="sidenav"></nav>
+      <div id="content"></div>
+    </div>
+
+    <div class="footer-note">
+      <b>Source of truth:</b> this page is rendered from <code>data/style-guide.js</code>.
+      The Figma UX Writing Agent plugin reads the same file at build time via
+      <code>scripts/embed-style-guide-in-ui.js</code>. Edit the data file, re-run the plugin's
+      embed script, and republish the plugin — the new rules go live for pilot PMs.
+    </div>
+  </div>
+
+  <script>
+/* --- inlined data/style-guide.js --- */
+// Voice & Style Guide — single source of truth for etoro UI content.
+// Humans edit `fullGuide` (the full document). The hub renders it directly;
+// the Figma plugin derives a compact, ID-tagged rule list from it at build time
+// via scripts/derive-rules.js + scripts/embed-style-guide-in-ui.js.
+
+const STYLE_GUIDE = 
+{
+  "brand": "etoro",
+  "guideTitle": "etoro Voice and Style Guide",
+  "purpose": "Help text consistently sound like etoro across surfaces. In a financial product, words shape trust, clarify risk, guide decisions, and reduce friction. The guide is living—use it, question it, improve it over time.",
+  "fullGuide": {
+    "title": "etoro Voice and Style Guide",
+    "sections": [
+      {
+        "num": "1",
+        "title": "Purpose and Principles",
+        "subs": [
+          {
+            "num": "1.1",
+            "title": "Why This Guide Exists",
+            "intro": [
+              "This guide exists to help you write text that consistently sounds like etoro, wherever users encounter it.",
+              "In a financial product, words shape trust. They clarify risk, guide decisions, and reduce friction in complex trading flows. Consistent writing across surfaces strengthens our brand, supports global scalability and localization, and makes the product easier to use.",
+              "This guide defines our voice, principles, and standards so that what we ship feels clear, coherent, and intentional.",
+              "It is a living document. As our product evolves, this guide will evolve with it. Use it in your everyday work, question it when needed, and help improve it over time."
+            ]
+          },
+          {
+            "num": "1.2",
+            "title": "Core Writing Principles",
+            "intro": [
+              "These principles apply to every product surface, from onboarding to liquidation flows. If copy conflicts with one of these, rewrite it."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "When reviewing copy, ask:",
+                "items": [
+                  "Is it immediately clear?",
+                  "Can it be shorter?",
+                  "Does it match our terminology?",
+                  "Does it guide the user forward?",
+                  "Does it sound human but professional?"
+                ]
+              },
+              {
+                "t": "callout",
+                "text": "If the answer to any of these is no, revise."
+              }
+            ],
+            "subs": [
+              {
+                "num": "1.2.1",
+                "title": "Clear",
+                "intro": [
+                  "Easy to understand. Least amount of jargon possible.",
+                  "Use simple, direct language. Prefer everyday words over financial or technical terminology unless precision requires it. If a complex term is necessary, explain it."
+                ],
+                "blocks": [
+                  {
+                    "t": "table",
+                    "headers": [
+                      "Do",
+                      "Don't"
+                    ],
+                    "rows": [
+                      [
+                        "Add funds to start trading.",
+                        "Power up your portfolio."
+                      ],
+                      [
+                        "Your verification is under review.",
+                        "We're taking a closer look."
+                      ],
+                      [
+                        "You don't have enough available balance.",
+                        "Insufficient equity threshold."
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "1.2.2",
+                "title": "Concise",
+                "intro": [
+                  "Say only what's needed.",
+                  "Remove filler, repetition, and marketing padding. Deliver the essential information in the fewest words possible without sacrificing clarity."
+                ],
+                "blocks": [
+                  {
+                    "t": "table",
+                    "headers": [
+                      "Do",
+                      "Don't"
+                    ],
+                    "rows": [
+                      [
+                        "Deposit funds to continue.",
+                        "In order to be able to continue, you will need to make a deposit."
+                      ],
+                      [
+                        "We couldn't process your payment.",
+                        "Unfortunately, it appears that we were unable to process your recent payment attempt."
+                      ],
+                      [
+                        "Trade closed.",
+                        "Your trade has now been successfully closed."
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "1.2.3",
+                "title": "Consistent",
+                "intro": [
+                  "Same terms, style, and voice everywhere.",
+                  "Use the same terminology for the same concept across all surfaces. Follow the same tone rules, capitalization, and structural patterns."
+                ],
+                "blocks": [
+                  {
+                    "t": "table",
+                    "headers": [
+                      "Do",
+                      "Don't"
+                    ],
+                    "rows": [
+                      [
+                        "Choose one primary term, such as 'Portfolio,' and use it consistently.",
+                        "Switch between 'Trader' and 'Investor' in the same flow without definition."
+                      ],
+                      [
+                        "Structure all error messages the same way.",
+                        "Mix sentence case and title case randomly."
+                      ],
+                      [
+                        "Apply the same capitalization rules across buttons and menus.",
+                        "Change button styles across similar actions."
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "1.2.4",
+                "title": "Constructive",
+                "intro": [
+                  "Guide. Don't just point out problems.",
+                  "When something goes wrong, tell users what happened and what they can do next. Avoid blame and dead ends."
+                ],
+                "blocks": [
+                  {
+                    "t": "table",
+                    "headers": [
+                      "Do",
+                      "Don't"
+                    ],
+                    "rows": [
+                      [
+                        "We couldn't verify your document. Upload a clearer photo to continue.",
+                        "Verification failed."
+                      ],
+                      [
+                        "Your available balance is too low. Add funds or reduce the trade amount.",
+                        "Error 504."
+                      ],
+                      [
+                        "This action can't be undone.",
+                        "Invalid input."
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "1.2.5",
+                "title": "Conversational",
+                "intro": [
+                  "Human. Friendly. Natural.",
+                  "Write the way a knowledgeable professional would speak. Natural, calm, and respectful. Never robotic, never slangy."
+                ],
+                "blocks": [
+                  {
+                    "t": "table",
+                    "headers": [
+                      "Do",
+                      "Don't"
+                    ],
+                    "rows": [
+                      [
+                        "Let's get you started.",
+                        "User authentication unsuccessful."
+                      ],
+                      [
+                        "Here's what you need to know.",
+                        "Commencing transactional procedure."
+                      ],
+                      [
+                        "You can update this anytime in Settings.",
+                        "Hey there, trader."
+                      ]
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "num": "2",
+        "title": "etoro Brand Voice",
+        "subs": [
+          {
+            "num": "2.1",
+            "title": "Voice Attributes",
+            "intro": [
+              "This document establishes the official brand voice guidelines for etoro. It is designed to turn our business strategy into actionable direction for every writer, ensuring our communication is consistent, trustworthy, and human."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Our foundations — a bridge between 'people' and 'markets'",
+                "items": [
+                  "Internal Vision: Opening the global markets for everyone to trade and invest in a simple and transparent way.",
+                  "External 'Big Idea': 'Be the investor you want to be.' Our non-judgmental north star; we provide the room for users to become whoever they want to be in the financial world.",
+                  "Mission: To open global markets, connect users to leading investors, and give them the tools to grow their knowledge and wealth."
+                ]
+              },
+              {
+                "t": "prose",
+                "text": "Our personality: the 'Friendly Expert'. If etoro were a person, they would be an Expert Friend, or Trusted Guide — tech-savvy and accomplished, but prioritizing crowd wisdom over individual ego."
+              },
+              {
+                "t": "table",
+                "headers": [
+                  "Personality trait",
+                  "What we mean",
+                  "What we don't mean"
+                ],
+                "rows": [
+                  [
+                    "Straightforward",
+                    "Clear, uncomplicated, and easy to understand.",
+                    "Dumbed down, patronizing, or lacking substance."
+                  ],
+                  [
+                    "Friendly",
+                    "Inclusive, supportive, and down-to-earth.",
+                    "Lacking ambition, too soft, or unfocused."
+                  ],
+                  [
+                    "Imaginative",
+                    "Visionary and experimental with new tech like tokenization.",
+                    "Unrealistic, 'flights of fancy,' or dreaming without doing."
+                  ],
+                  [
+                    "Confident",
+                    "Accomplished and authoritative based on facts.",
+                    "Arrogant, over-promising, or self-important."
+                  ]
+                ]
+              },
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Accessibility over elitism",
+                    "desc": "Markets have historically been exclusive and intimidating; our language is the antidote. Swap formal 'finance-speak' for plain English. Put the most important information first (inverted pyramid), especially for mobile."
+                  },
+                  {
+                    "title": "Empowerment through shared intelligence",
+                    "desc": "We don't just provide access; we provide connection. Highlight collective success — 'crowd intelligence' and social trading as a way to learn and grow."
+                  },
+                  {
+                    "title": "Grounded authority",
+                    "desc": "Because we deal with capital at risk, we avoid hype or artificial urgency. Substantiate claims with hard facts (e.g. 'Established in 2007', 'Regulated platform'). Be direct and honest about risks — never hide behind ambiguity."
+                  },
+                  {
+                    "title": "Non-prescriptive guidance",
+                    "desc": "We are a mentor, not a lecturer. Recognize users range from experienced active traders to passive beginners. Enable, don't force — provide tools and tailored recommendations without being dogmatic about strategies."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "2.2",
+            "title": "Tone Variations by Context",
+            "intro": [
+              "Voice is our permanent personality: the 'Friendly Expert'. It is constant across all surfaces. Tone is the context-dependent expression of that personality. While our Voice remains stable, our Tone shifts to match the user's emotional state or the financial stakes of the moment.",
+              "Voice (who we are): knowledgeable, tech-savvy, and grounded. Tone (how we speak): varies from encouraging (onboarding) to neutral and precise (risk / errors)."
+            ],
+            "blocks": [
+              {
+                "t": "table",
+                "headers": [
+                  "Context",
+                  "Tone",
+                  "Example"
+                ],
+                "rows": [
+                  [
+                    "Onboarding",
+                    "Encouraging, simple",
+                    "Let's get you started."
+                  ],
+                  [
+                    "Funding",
+                    "Clear, precise",
+                    "Add funds to begin trading."
+                  ],
+                  [
+                    "Market volatility",
+                    "Calm, factual",
+                    "The market is experiencing high volatility."
+                  ],
+                  [
+                    "Errors",
+                    "Supportive, solution-focused",
+                    "We couldn't process your payment."
+                  ],
+                  [
+                    "Risk disclosures",
+                    "Neutral, transparent",
+                    "CFDs are complex instruments…"
+                  ]
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Use more conversational, encouraging language in:",
+                "items": [
+                  "Onboarding and first-time user experiences",
+                  "Empty states and discovery moments",
+                  "Educational and explanatory content"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Use controlled, neutral language in:",
+                "items": [
+                  "Financial transactions and funding flows",
+                  "Risk-related messaging (losses, margin, liquidation)",
+                  "Errors and system messages affecting money or access"
+                ]
+              },
+              {
+                "t": "callout",
+                "text": "Rule: Clarity and accuracy always take priority over tone. When in doubt, default to neutral and precise language."
+              }
+            ]
+          },
+          {
+            "num": "2.3",
+            "title": "Addressing the User",
+            "intro": [
+              "etoro product copy uses a direct, second-person point of view."
+            ],
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Use second person ('you', 'your')",
+                    "desc": "Address the user directly in all product UI.",
+                    "do": [
+                      "Your portfolio value",
+                      "You can close this trade at any time"
+                    ],
+                    "dont": [
+                      "The user's portfolio value",
+                      "It is possible to close the trade"
+                    ]
+                  },
+                  {
+                    "title": "Do not use first-person ('I', 'my', 'me')",
+                    "desc": "Avoid first-person phrasing in all product UI.",
+                    "do": [
+                      "Add funds",
+                      "Update details"
+                    ],
+                    "dont": [
+                      "Add my funds",
+                      "Update my details"
+                    ]
+                  },
+                  {
+                    "title": "Use names sparingly",
+                    "desc": "Only in greeting or low-risk contexts. Avoid in financial or transactional flows."
+                  },
+                  {
+                    "title": "Do not use usernames",
+                    "desc": "Usernames should not appear in user-facing product copy."
+                  },
+                  {
+                    "title": "Keep perspective consistent",
+                    "desc": "Do not switch between 'you', 'the user', or other perspectives within the same flow."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "num": "3",
+        "title": "Writing for a Trading Platform",
+        "intro": [
+          "etoro operates in a high-risk, high-emotion environment. Users are making real financial decisions, often in volatile conditions.",
+          "Our writing must prioritize clarity, neutrality, and control over excitement or persuasion. This section defines how we write in moments that directly affect users' money."
+        ],
+        "subs": [
+          {
+            "num": "3.1",
+            "title": "Writing for Financial Risk",
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "We write about risk in a way that is:",
+                "items": [
+                  "Neutral, not dramatic",
+                  "Clear, not vague",
+                  "Transparent, not softened",
+                  "Informative, not persuasive"
+                ]
+              }
+            ],
+            "subs": [
+              {
+                "num": "3.1.1",
+                "title": "Non-Negotiable Rules",
+                "blocks": [
+                  {
+                    "t": "guidelines",
+                    "items": [
+                      {
+                        "title": "No guaranteed language",
+                        "desc": "Never imply certainty of returns, outcomes, or safety."
+                      },
+                      {
+                        "title": "No exaggeration",
+                        "desc": "Avoid emotional amplification of gains or losses."
+                      },
+                      {
+                        "title": "No urgency manipulation",
+                        "desc": "Do not pressure users into time-sensitive financial decisions unless there is a factual system constraint."
+                      },
+                      {
+                        "title": "No minimization of risk",
+                        "desc": "Do not downplay potential losses or complexity."
+                      }
+                    ]
+                  },
+                  {
+                    "t": "table",
+                    "headers": [
+                      "Avoid",
+                      "Use instead"
+                    ],
+                    "rows": [
+                      [
+                        "Don't miss this opportunity before the market takes off.",
+                        "This asset has increased in value recently. Past performance does not guarantee future results."
+                      ],
+                      [
+                        "This is a safe way to grow your money.",
+                        "All investments carry risk. You may lose some or all of your invested capital."
+                      ],
+                      [
+                        "Lock in profits now before it's too late.",
+                        "You can close this trade at any time."
+                      ]
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "3.2",
+            "title": "Writing for Complex Data",
+            "intro": [
+              "Trading platforms present dense, high-stakes information. Our job is to make complex data understandable at a glance, without distortion or oversimplification.",
+              "This section defines how we write around metrics, charts, performance data, and advanced financial concepts."
+            ],
+            "subs": [
+              {
+                "num": "3.2.1",
+                "title": "Core principles",
+                "subs": [
+                  {
+                    "num": "3.2.1.1",
+                    "title": "Prioritize scannability",
+                    "intro": [
+                      "Copy must support quick scanning, not deep reading."
+                    ],
+                    "blocks": [
+                      {
+                        "t": "bullets",
+                        "label": null,
+                        "items": [
+                          "Lead with the metric name, not explanation",
+                          "Keep labels short and consistent",
+                          "Avoid stacking multiple concepts in one sentence",
+                          "Use structured formatting instead of long paragraphs",
+                          "Surface the most decision-critical information first"
+                        ]
+                      },
+                      {
+                        "t": "table",
+                        "headers": [
+                          "Avoid",
+                          "Use instead"
+                        ],
+                        "rows": [
+                          [
+                            "This shows how well the investor has performed over the past year relative to risk.",
+                            "1Y Return — Performance over the last 12 months. (Clear label first, explanation second.)"
+                          ]
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "num": "3.2.1.2",
+                    "title": "Explain metrics in plain language",
+                    "intro": [
+                      "Most users are not financial professionals. Even experienced traders benefit from clarity."
+                    ],
+                    "blocks": [
+                      {
+                        "t": "bullets",
+                        "label": null,
+                        "items": [
+                          "Assume partial familiarity, not expertise",
+                          "Avoid academic phrasing",
+                          "Use everyday language without dumbing down",
+                          "Explain what the metric means for the user"
+                        ]
+                      },
+                      {
+                        "t": "table",
+                        "headers": [
+                          "Avoid",
+                          "Use instead"
+                        ],
+                        "rows": [
+                          [
+                            "Annualized volatility indicates the statistical dispersion of returns.",
+                            "Volatility — Shows how much the price has moved up and down over time. Higher volatility means larger price swings."
+                          ]
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "num": "3.2.1.3",
+                    "title": "Avoid internal or technical jargon",
+                    "intro": [
+                      "If a term is internal, regulatory, or industry shorthand, it must be clarified or replaced."
+                    ],
+                    "blocks": [
+                      {
+                        "t": "bullets",
+                        "label": "Avoid:",
+                        "items": [
+                          "Acronyms without explanation (if an acronym must be used, spell it out on first reference)",
+                          "Abbreviations users cannot infer",
+                          "Internal naming conventions"
+                        ]
+                      },
+                      {
+                        "t": "table",
+                        "headers": [
+                          "Avoid",
+                          "Use instead"
+                        ],
+                        "rows": [
+                          [
+                            "Max DD",
+                            "Maximum drawdown — The largest drop from a peak to a low point during a specific period."
+                          ]
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "3.2.2",
+                "title": "Writing for Tables and Data-Dense Screens",
+                "subs": [
+                  {
+                    "num": "3.2.2.1",
+                    "title": "Avoid redundant labels",
+                    "intro": [
+                      "Do not repeat what the UI already communicates visually."
+                    ],
+                    "blocks": [
+                      {
+                        "t": "examples",
+                        "items": [
+                          {
+                            "label": "If a column header says 'P/L'",
+                            "good": "P/L: -$42.10",
+                            "bad": "Your profit and loss for this trade is…"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "num": "3.2.2.2",
+                    "title": "Use short units",
+                    "blocks": [
+                      {
+                        "t": "bullets",
+                        "label": null,
+                        "items": [
+                          "% instead of percent",
+                          "1Y instead of 1 Year",
+                          "USD, EUR, GBP according to regional standards"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "3.3",
+            "title": "Writing During High Emotion Moments",
+            "intro": [
+              "High-emotion moments are when users feel stress, fear, urgency, or frustration. In trading, these moments often involve financial loss, restricted access, or blocked actions.",
+              "In these moments, writing directly affects trust. The role of UX copy is to stabilize the experience through clarity and structure. This is not the place for brand personality. It is the place for precision."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Examples:",
+                "items": [
+                  "Liquidation",
+                  "Margin call",
+                  "Large or rapid loss",
+                  "Payment failure",
+                  "Verification rejection",
+                  "Account restriction"
+                ]
+              }
+            ],
+            "subs": [
+              {
+                "num": "3.3.1",
+                "title": "Core Standards",
+                "subs": [
+                  {
+                    "num": "3.3.1.1",
+                    "title": "Be Calm and Neutral",
+                    "intro": [
+                      "Use factual language. Avoid emotional amplification."
+                    ],
+                    "blocks": [
+                      {
+                        "t": "table",
+                        "headers": [
+                          "Do",
+                          "Don't"
+                        ],
+                        "rows": [
+                          [
+                            "Your position was closed automatically.",
+                            "Urgent action required."
+                          ],
+                          [
+                            "We couldn't process your payment.",
+                            "Your account is in danger."
+                          ]
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "num": "3.3.1.2",
+                    "title": "Remove Blame",
+                    "intro": [
+                      "Do not imply user fault unless legally required."
+                    ],
+                    "blocks": [
+                      {
+                        "t": "table",
+                        "headers": [
+                          "Do",
+                          "Don't"
+                        ],
+                        "rows": [
+                          [
+                            "We couldn't verify your identity.",
+                            "You failed verification."
+                          ],
+                          [
+                            "This document does not meet our requirements.",
+                            "You entered incorrect details."
+                          ]
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "num": "3.3.1.3",
+                    "title": "State What Happened Before Explaining Why",
+                    "intro": [
+                      "Lead with the outcome (avoid technical explanations). Then provide context if necessary."
+                    ],
+                    "blocks": [
+                      {
+                        "t": "structure",
+                        "label": "Correct structure",
+                        "items": [
+                          "What happened",
+                          "Why it happened, if helpful",
+                          "What happens next"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "num": "3.3.1.4",
+                    "title": "Always Clarify What Happens Next",
+                    "intro": [
+                      "Uncertainty increases anxiety. Every high-emotion message must clarify:"
+                    ],
+                    "blocks": [
+                      {
+                        "t": "bullets",
+                        "label": null,
+                        "items": [
+                          "What will happen automatically",
+                          "What the user can do",
+                          "What happens if no action is taken"
+                        ]
+                      },
+                      {
+                        "t": "prose",
+                        "text": "If no action is available, say so clearly."
+                      }
+                    ]
+                  },
+                  {
+                    "num": "3.3.1.5",
+                    "title": "Offer a Clear Action When Possible",
+                    "intro": [
+                      "Actions must be specific and outcome-based."
+                    ],
+                    "blocks": [
+                      {
+                        "t": "table",
+                        "headers": [
+                          "Do",
+                          "Don't"
+                        ],
+                        "rows": [
+                          [
+                            "Add funds",
+                            "Submit"
+                          ],
+                          [
+                            "Review positions",
+                            "Continue"
+                          ],
+                          [
+                            "Upload new document",
+                            "Resolve"
+                          ]
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "3.3.2",
+                "title": "Structural Pattern",
+                "intro": [
+                  "All high-emotion messages should follow this structural model:"
+                ],
+                "blocks": [
+                  {
+                    "t": "structure",
+                    "label": null,
+                    "items": [
+                      "Acknowledge — signal that something significant occurred.",
+                      "State clearly — describe the outcome in plain language.",
+                      "Explain next step — clarify automatic consequences or required actions.",
+                      "Offer control — provide a clear, labeled action if available."
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "3.3.3",
+                "title": "Language Guardrails",
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": "Never use:",
+                    "items": [
+                      "Exclamation marks",
+                      "Marketing tone",
+                      "Reassurance clichés such as 'Don't worry'",
+                      "Minimizing language such as 'It's just temporary'",
+                      "Urgency amplification beyond compliance requirements"
+                    ]
+                  },
+                  {
+                    "t": "bullets",
+                    "label": "Avoid dramatic framing such as:",
+                    "items": [
+                      "The market crashed",
+                      "You've lost a significant amount",
+                      "Act now before it's too late"
+                    ]
+                  },
+                  {
+                    "t": "table",
+                    "headers": [
+                      "Do",
+                      "Don't"
+                    ],
+                    "rows": [
+                      [
+                        "Add funds before 18:00 UTC to prevent automatic position closure.",
+                        "Add funds immediately to avoid losing everything."
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "3.3.4",
+                "title": "Scannability Requirements",
+                "intro": [
+                  "During stress, cognitive load increases. Copy must reduce friction."
+                ],
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": "Guidelines:",
+                    "items": [
+                      "Use short sentences.",
+                      "Separate explanation from action.",
+                      "Avoid dense paragraphs.",
+                      "Do not stack multiple warnings in one message.",
+                      "Use whitespace to distinguish status from action."
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "num": "4",
+        "title": "Writing in UI Components",
+        "intro": [
+          "This section makes the guide practical and operational. It translates principles and voice into concrete writing rules that designers and writers can apply immediately."
+        ],
+        "subs": [
+          {
+            "num": "4.1",
+            "title": "Headlines",
+            "intro": [
+              "A headline is the highest-level piece of text within a screen or section. It anchors the content hierarchy and signals what the user can expect from the content that follows.",
+              "Headlines must prioritize orientation and clarity. They are not promotional copy. They are structural navigation tools."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Its role in information architecture:",
+                "items": [
+                  "Define the purpose of the screen or section",
+                  "Establish visual and cognitive hierarchy",
+                  "Help users scan and orient quickly",
+                  "Reduce ambiguity in complex flows",
+                  "Support accessibility and screen reader navigation"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Definition",
+                "items": [
+                  "One H1 per screen",
+                  "H1 defines the primary purpose of the screen",
+                  "Subheadings organize content within the screen"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Style — punctuation",
+                "items": [
+                  "Headlines should rarely have any punctuation",
+                  "Do not use a period in any headline",
+                  "Avoid exclamation marks",
+                  "Avoid ellipses"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Style — capitalization",
+                "items": [
+                  "H1 must be title case",
+                  "All other headings must be sentence case"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Guidelines",
+                "items": [
+                  "Prioritize clarity over marketing",
+                  "State the purpose of the screen",
+                  "Keep them concise and scannable",
+                  "Do not stack multiple ideas in one headline"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Length guidance",
+                "items": [
+                  "Aim for 3 to 8 words",
+                  "Never longer than two lines",
+                  "Avoid multi-line headlines where possible",
+                  "If a headline requires a full sentence, restructure the screen"
+                ]
+              }
+            ]
+          },
+          {
+            "num": "4.2",
+            "title": "Body Text",
+            "intro": [
+              "Body text supports headlines and UI components by providing necessary context, explanation, or instruction. Headlines signal what the section is about; body text explains what the user needs to know or do; UI components enable action."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Style",
+                "items": [
+                  "Use sentence case",
+                  "Punctuate with a period after each sentence",
+                  "Use active voice"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Avoid filler language such as:",
+                "items": [
+                  "Please note that",
+                  "Kindly be advised",
+                  "It is important to mention",
+                  "In order to",
+                  "Simply",
+                  "Just",
+                  "Basically"
+                ]
+              },
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Keep sentences short",
+                    "desc": "Target 8 to 20 words. Avoid multi-clause sentences; break complex ideas into separate lines."
+                  },
+                  {
+                    "title": "One idea per sentence",
+                    "desc": "Do not stack explanation, risk, and instruction in one sentence.",
+                    "do": "We could not verify your document because the image was unclear. Please upload a new photo to continue.",
+                    "dont": "Your account could not be verified because the document was unclear and you need to upload a new one to continue using all features."
+                  },
+                  {
+                    "title": "Use active voice",
+                    "do": "We'll review your documents",
+                    "dont": "Your documents will be reviewed"
+                  },
+                  {
+                    "title": "Remove filler words",
+                    "do": "Add funds to start trading.",
+                    "dont": "You can add funds in order to begin trading on the platform."
+                  },
+                  {
+                    "title": "Avoid redundancy with the headline",
+                    "desc": "Do not restate the headline in different words. Add new information."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "4.3",
+            "title": "Buttons",
+            "intro": [
+              "Buttons are interactive UI controls that trigger an action or confirm a decision. Their label must tell the user what will happen when they tap or click."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Style",
+                "items": [
+                  "Title case",
+                  "Start with a verb",
+                  "1-3 words preferred, max 5",
+                  "No punctuation",
+                  "No exclamation marks",
+                  "Use the same term users see elsewhere in the UI (from the approved terminology list)"
+                ]
+              },
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Label the outcome, not the UI interaction",
+                    "desc": "Users should understand the result of the action.",
+                    "do": [
+                      "Add funds (over 'Continue')",
+                      "Close trade (over 'Confirm')"
+                    ]
+                  },
+                  {
+                    "title": "Avoid generic CTAs",
+                    "desc": "Avoid generic labels like 'Submit' or 'Continue' when context allows specificity."
+                  },
+                  {
+                    "title": "Match the product's terminology exactly",
+                    "desc": "If the UI says 'funds', do not switch to 'money'. If the UI says 'trade', do not switch to 'position' unless that is the canonical term for that surface."
+                  },
+                  {
+                    "title": "Do not use first-person CTAs",
+                    "desc": "Buttons should describe the action and its outcome, not the user's perspective.",
+                    "do": [
+                      "Add funds",
+                      "Close trade",
+                      "Upload document"
+                    ],
+                    "dont": [
+                      "Add my funds",
+                      "Close my trade",
+                      "Upload my document"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "4.4",
+            "title": "Field labels",
+            "intro": [
+              "Field labels identify what information a user needs to provide in a form or input field. They create clarity, reduce errors, and guide users through high-stakes actions like funding, trading, and verification.",
+              "In a financial context, unclear labels can lead to mistakes, hesitation, or loss of trust. Labels must remove ambiguity completely."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Style",
+                "items": [
+                  "Sentence case",
+                  "1-3 words preferred, max 4",
+                  "No punctuation",
+                  "No exclamation marks",
+                  "Use the same terminology across all flows and surfaces"
+                ]
+              },
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Name the data, don't instruct",
+                    "desc": "Labels describe the field. They do not tell the user what to do.",
+                    "do": "Email address",
+                    "dont": "Enter your email address"
+                  },
+                  {
+                    "title": "Be specific, not generic",
+                    "desc": "Avoid labels that require interpretation.",
+                    "do": [
+                      "Investment amount",
+                      "Country of residence"
+                    ],
+                    "dont": [
+                      "Amount",
+                      "Country"
+                    ]
+                  },
+                  {
+                    "title": "Use familiar, user-facing language",
+                    "desc": "Avoid internal, technical, or regulatory jargon unless required.",
+                    "do": "Card number",
+                    "dont": "PAN"
+                  },
+                  {
+                    "title": "Keep labels short and scannable",
+                    "desc": "Aim for 1 to 3 words when possible.",
+                    "do": "Phone number",
+                    "dont": "Your mobile phone number"
+                  },
+                  {
+                    "title": "Include units and context when needed",
+                    "desc": "Especially important in financial inputs.",
+                    "do": [
+                      "Amount (USD)",
+                      "Stop loss (%)"
+                    ],
+                    "dont": "Value"
+                  },
+                  {
+                    "title": "Don't rely on placeholders as labels",
+                    "desc": "Labels must always remain visible. Labels = structure; placeholders = examples or hints."
+                  },
+                  {
+                    "title": "Add support only when necessary",
+                    "desc": "Use helper text or tooltips for complexity, not the label itself. E.g. Label: 'Tax ID' / Helper: 'Required for verification in your country'."
+                  },
+                  {
+                    "title": "Mark optional fields clearly",
+                    "desc": "Only when needed, e.g. 'Middle name (optional)'. Avoid marking all required fields — assume required by default unless stated otherwise."
+                  },
+                  {
+                    "title": "Keep terminology consistent across flows",
+                    "desc": "The same concept should always use the same label.",
+                    "do": "Portfolio value",
+                    "dont": "Switching between Account value / Balance / Equity"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "4.5",
+            "title": "Placeholder text",
+            "intro": [
+              "Placeholder text appears inside input fields to guide users on what to enter. It is not a substitute for a label. Its role is to clarify format, reduce errors, and support faster completion."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Style",
+                "items": [
+                  "Sentence case",
+                  "1-3 words preferred, max 6",
+                  "No punctuation",
+                  "No exclamation marks",
+                  "Use the same terminology across all flows and surfaces"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Placeholders should never:",
+                "items": [
+                  "Replace a field label",
+                  "Contain critical information users may need after typing",
+                  "Include full sentences unless absolutely necessary"
+                ]
+              },
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Use placeholders to show format, not explain concepts",
+                    "desc": "Focus on input structure like numbers, dates, or examples. Avoid teaching or describing the field's purpose.",
+                    "do": [
+                      "e.g. 10,000",
+                      "DD/MM/YYYY"
+                    ],
+                    "dont": "Enter the amount you would like to invest in USD"
+                  },
+                  {
+                    "title": "Keep them short and scannable",
+                    "desc": "Aim for 1 to 4 words where possible. Avoid punctuation unless needed for format.",
+                    "do": [
+                      "Minimum $10",
+                      "Search assets"
+                    ],
+                    "dont": "Please type the name of the asset you are looking for"
+                  },
+                  {
+                    "title": "Do not rely on placeholders as labels",
+                    "desc": "Always include a visible field label — placeholders disappear once users start typing.",
+                    "do": "Label: 'Amount' / Placeholder: 'e.g. 500'",
+                    "dont": "No label / Placeholder: 'Enter amount'"
+                  },
+                  {
+                    "title": "Avoid redundancy with labels",
+                    "desc": "Do not repeat the same text in both label and placeholder.",
+                    "do": "Label: 'Email' / Placeholder: 'name@example.com'",
+                    "dont": "Label: 'Email' / Placeholder: 'Email'"
+                  },
+                  {
+                    "title": "Avoid instructional language",
+                    "desc": "Placeholders are not the place for guidance or rules — use helper text or tooltips if more explanation is needed.",
+                    "do": "Placeholder: 'Password' / Helper text below: 'Must include 8 characters, a number, and a symbol'",
+                    "dont": "Enter your password. Must include 8 characters, a number, and a symbol"
+                  },
+                  {
+                    "title": "Be careful with localization",
+                    "desc": "Avoid abbreviations that may not translate well. Ensure formats are region-aware when needed."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "4.6",
+            "title": "Errors",
+            "intro": [
+              "Errors are critical moments in the user journey. The way we communicate errors directly impacts user trust, clarity, and decision-making.",
+              "Error messages inform users that something has gone wrong and guide them toward resolution. They should reduce confusion, not add to it."
+            ],
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Start with what happened",
+                    "desc": "State the issue in plain language. Avoid vague or generic phrasing.",
+                    "do": "We couldn't place your order.",
+                    "dont": "Something went wrong."
+                  },
+                  {
+                    "title": "Add context only if it helps",
+                    "desc": "Explain why the error occurred only when it provides useful clarity or prevents repeated failure.",
+                    "do": "Your balance is too low to complete this trade.",
+                    "dont": "Error 502. Invalid execution state."
+                  },
+                  {
+                    "title": "Always guide the next step",
+                    "desc": "Every error should help the user move forward.",
+                    "do": "Add funds to continue.",
+                    "dont": "Please try again."
+                  },
+                  {
+                    "title": "Avoid blame or alarm",
+                    "desc": "Never imply the user made a mistake. Keep the tone neutral and supportive.",
+                    "do": "We couldn't verify your details.",
+                    "dont": "You entered incorrect information."
+                  },
+                  {
+                    "title": "Be specific, not generic",
+                    "desc": "Tailor the message to the exact situation whenever possible.",
+                    "do": "This card is not supported. Try a different payment method.",
+                    "dont": "Payment failed."
+                  },
+                  {
+                    "title": "Keep it concise",
+                    "desc": "Error messages should be easy to scan, especially in high-pressure moments."
+                  },
+                  {
+                    "title": "Match tone to severity",
+                    "desc": "More serious issues should feel calm and controlled, not urgent or dramatic.",
+                    "do": "Trading is temporarily unavailable.",
+                    "dont": "Trading has stopped!"
+                  },
+                  {
+                    "title": "Avoid technical language",
+                    "desc": "Users should never need system knowledge to understand the issue."
+                  }
+                ]
+              },
+              {
+                "t": "structure",
+                "label": "Standard error structure",
+                "items": [
+                  "What happened",
+                  "Why (if helpful)",
+                  "What to do next"
+                ]
+              },
+              {
+                "t": "prose",
+                "text": "Example: 'We couldn't process your payment. Your bank declined the transaction. Try a different card or contact your bank.'"
+              },
+              {
+                "t": "examples",
+                "items": [
+                  {
+                    "label": "Generic error",
+                    "good": "We couldn't load your portfolio. Try refreshing the page.",
+                    "bad": "Something went wrong."
+                  },
+                  {
+                    "label": "Action blocked",
+                    "good": "We couldn't place your trade. The market is currently closed.",
+                    "bad": "Error placing trade."
+                  },
+                  {
+                    "label": "Input issue",
+                    "good": "Enter a valid email address.",
+                    "bad": "Invalid input."
+                  }
+                ]
+              }
+            ],
+            "subs": [
+              {
+                "num": "4.6.1",
+                "title": "Validation errors",
+                "intro": [
+                  "Validation errors indicate that the information entered is missing, incomplete, or formatted incorrectly, and needs to be corrected before proceeding."
+                ],
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": "Style",
+                    "items": [
+                      "Sentence case",
+                      "Neutral and instructional"
+                    ]
+                  },
+                  {
+                    "t": "guidelines",
+                    "items": [
+                      {
+                        "title": "Be specific about what's wrong",
+                        "desc": "Clearly describe the exact issue with the input.",
+                        "do": "Enter a valid email address.",
+                        "dont": "Invalid input."
+                      },
+                      {
+                        "title": "Focus on how to fix it",
+                        "desc": "The message should guide correction, not just point out the problem.",
+                        "do": "Password must include at least 8 characters.",
+                        "dont": "Password is invalid."
+                      },
+                      {
+                        "title": "Keep it short and scannable",
+                        "desc": "Validation errors appear inline, so they must be quick to read and easy to act on."
+                      },
+                      {
+                        "title": "Avoid blame",
+                        "desc": "Do not suggest the user made a mistake. Keep tone neutral.",
+                        "do": "This field is required.",
+                        "dont": "You forgot to fill this out."
+                      },
+                      {
+                        "title": "Use plain language, not rules jargon",
+                        "desc": "Translate system requirements into user-friendly instructions.",
+                        "do": "Use numbers only.",
+                        "dont": "Invalid format."
+                      },
+                      {
+                        "title": "Show errors at the right time",
+                        "desc": "After user interaction, not before. Prefer inline validation over form-level errors."
+                      },
+                      {
+                        "title": "One issue per message",
+                        "desc": "Do not combine multiple rules into one unclear message.",
+                        "do": [
+                          "Use at least 8 characters.",
+                          "Include one number."
+                        ],
+                        "dont": "Password must be valid."
+                      },
+                      {
+                        "title": "Match placement to the field",
+                        "desc": "Validation errors should appear directly below or next to the relevant field, never detached."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "4.6.2",
+                "title": "System errors",
+                "intro": [
+                  "System errors occur when something fails on the platform side. They indicate that an action could not be completed due to a technical issue, temporary outage, or system limitation."
+                ],
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": "Style",
+                    "items": [
+                      "Calm and reassuring",
+                      "Transparent, but not technical",
+                      "Ownership-driven and solution-focused"
+                    ]
+                  },
+                  {
+                    "t": "guidelines",
+                    "items": [
+                      {
+                        "title": "Take responsibility",
+                        "desc": "Make it clear the issue is on the system side, not the user.",
+                        "do": "We couldn't load your data.",
+                        "dont": "Failed to load data."
+                      },
+                      {
+                        "title": "Avoid technical details",
+                        "desc": "Do not expose internal errors, codes, or infrastructure language.",
+                        "do": "We're having trouble connecting right now.",
+                        "dont": "Server timeout. Error 504."
+                      },
+                      {
+                        "title": "Reassure when appropriate",
+                        "desc": "If user funds, positions, or data are safe, say so explicitly.",
+                        "do": "Your funds are safe.",
+                        "dont": "(no reassurance in a high-risk moment)"
+                      },
+                      {
+                        "title": "Offer a clear next step",
+                        "desc": "Even if the issue is temporary, guide the user.",
+                        "do": "Try again in a few minutes.",
+                        "dont": "Please try again."
+                      },
+                      {
+                        "title": "Be honest about uncertainty",
+                        "desc": "If timing or resolution is unclear, avoid false precision.",
+                        "do": "We're working to fix this.",
+                        "dont": "This will be resolved shortly."
+                      },
+                      {
+                        "title": "Match severity to tone",
+                        "desc": "More critical issues require more reassurance and clarity.",
+                        "do": "Minor: 'We couldn't refresh this section.' / Major: 'Trading is temporarily unavailable.'"
+                      },
+                      {
+                        "title": "Avoid over-apologizing",
+                        "desc": "Stay professional and controlled. One acknowledgment is enough.",
+                        "do": "We're having trouble processing this right now.",
+                        "dont": "We're really sorry, something went terribly wrong."
+                      }
+                    ]
+                  },
+                  {
+                    "t": "structure",
+                    "label": "Standard structure",
+                    "items": [
+                      "What happened",
+                      "Reassurance (if needed)",
+                      "What to do next"
+                    ]
+                  },
+                  {
+                    "t": "prose",
+                    "text": "Example: 'We're having trouble loading your portfolio. Your investments are not affected. Try refreshing the page.'"
+                  },
+                  {
+                    "t": "examples",
+                    "items": [
+                      {
+                        "label": "Loading issue",
+                        "good": "We couldn't load this page. Try refreshing.",
+                        "bad": "Error loading page."
+                      },
+                      {
+                        "label": "Outage",
+                        "good": "Trading is temporarily unavailable. We're working to restore it.",
+                        "bad": "Service unavailable."
+                      },
+                      {
+                        "label": "Connection issue",
+                        "good": "We're having trouble connecting. Check your connection or try again.",
+                        "bad": "Network error."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "4.6.3",
+                "title": "Transaction failures",
+                "intro": [
+                  "Transaction failures indicate that a financial action was attempted but not completed successfully."
+                ],
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": "Style",
+                    "items": [
+                      "Best presented in a modal with a title, a body and 1-2 CTAs",
+                      "Clear and precise",
+                      "Calm and reassuring",
+                      "Action-oriented and transparent"
+                    ]
+                  },
+                  {
+                    "t": "guidelines",
+                    "items": [
+                      {
+                        "title": "Clearly state that the transaction failed",
+                        "desc": "Avoid vague language. Be explicit about what did not happen.",
+                        "do": "We couldn't complete your withdrawal.",
+                        "dont": "Something went wrong."
+                      },
+                      {
+                        "title": "Specify the transaction type",
+                        "desc": "Always name the action so users understand the impact.",
+                        "do": "We couldn't place your trade.",
+                        "dont": "Action failed."
+                      },
+                      {
+                        "title": "Provide the reason when known",
+                        "desc": "Transaction failures often require explanation to prevent repeated attempts.",
+                        "do": "Your bank declined the payment.",
+                        "dont": "Payment failed."
+                      },
+                      {
+                        "title": "Reassure about money and status",
+                        "desc": "Users need to know what happened to their funds or order.",
+                        "do": [
+                          "No funds were deducted.",
+                          "Your order was not executed."
+                        ],
+                        "dont": "Leave uncertainty"
+                      },
+                      {
+                        "title": "Guide the next step clearly",
+                        "desc": "Always provide a path forward.",
+                        "do": "Try a different payment method.",
+                        "dont": "Please try again."
+                      },
+                      {
+                        "title": "Avoid ambiguity around timing",
+                        "desc": "If retries or delays are involved, be clear.",
+                        "do": "Try again in a few minutes.",
+                        "dont": "Try again later."
+                      },
+                      {
+                        "title": "Do not use technical or banking jargon",
+                        "desc": "Translate backend reasons into user-understandable language.",
+                        "do": "Your card was declined.",
+                        "dont": "Issuer response code 05."
+                      },
+                      {
+                        "title": "Match tone to financial impact",
+                        "desc": "Higher-value or more sensitive failures require more reassurance and clarity."
+                      }
+                    ]
+                  },
+                  {
+                    "t": "structure",
+                    "label": "Standard structure",
+                    "items": [
+                      "Title: what failed",
+                      "Body: why (if known)",
+                      "Body: status of funds or order",
+                      "Body: what to do next",
+                      "Primary CTA: leads to the next step, or closes the modal if there's no next step",
+                      "Secondary CTA: closes the modal if there's an action to take with the primary CTA"
+                    ]
+                  },
+                  {
+                    "t": "prose",
+                    "text": "Example — Title: 'We couldn't process your deposit'. Body: 'Your bank declined the payment. No funds were charged. Try a different card or contact your bank.' Primary CTA: 'Try Again'. Secondary CTA: 'Close'."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "4.7",
+            "title": "Empty states",
+            "intro": [
+              "Empty states appear when there is no data to show yet. They guide users on what to do next instead of leaving them at a dead end. They should reduce uncertainty and keep users moving forward."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Style",
+                "items": [
+                  "Clear and precise — avoid over-explaining",
+                  "Calm and reassuring — no sense of error or failure",
+                  "Action-oriented and transparent — always point to a next step",
+                  "Forward-looking — focus on potential, not absence",
+                  "Format: title (sentence case), body (sentence case), button CTA (title case)"
+                ]
+              },
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Frame the future, not the absence",
+                    "desc": "Write headlines around what the user can achieve, not what's missing.",
+                    "do": "Start building your portfolio",
+                    "dont": "You don't have a portfolio yet"
+                  },
+                  {
+                    "title": "Always include a clear next step",
+                    "desc": "Every empty state should guide the user forward.",
+                    "do": [
+                      "Explore markets",
+                      "Add funds",
+                      "Find investors to copy"
+                    ]
+                  },
+                  {
+                    "title": "Avoid blame or negative tone",
+                    "desc": "Never imply the user did something wrong.",
+                    "do": "Ready to add funds?",
+                    "dont": "You haven't added funds"
+                  },
+                  {
+                    "title": "Keep it short and scannable",
+                    "desc": "One idea. One action. No unnecessary detail."
+                  },
+                  {
+                    "title": "Match the user's journey stage",
+                    "desc": "New users → inspire and guide. Active users → re-engage. Temporary states → explain and reassure."
+                  },
+                  {
+                    "title": "Avoid hype or unrealistic outcomes",
+                    "desc": "Stay grounded and compliant.",
+                    "do": "Discover popular assets",
+                    "dont": "Start winning now"
+                  },
+                  {
+                    "title": "Use supportive, low-pressure CTAs",
+                    "desc": "Encourage action without forcing it.",
+                    "do": [
+                      "Explore markets",
+                      "Browse assets",
+                      "Find investors"
+                    ]
+                  }
+                ]
+              },
+              {
+                "t": "structure",
+                "label": "Structure",
+                "items": [
+                  "Headline — what the user can do or achieve",
+                  "Body — short clarification or benefit",
+                  "CTA — clear next step"
+                ]
+              },
+              {
+                "t": "examples",
+                "items": [
+                  {
+                    "label": "Watchlist (empty)",
+                    "good": "Headline: 'Track assets you care about' / Body: 'Add assets to follow their performance.' / CTA: 'Browse Assets'"
+                  },
+                  {
+                    "label": "No transactions yet",
+                    "good": "Headline: 'Start your trading journey' / Body: 'Your activity will appear here once you begin.' / CTA: 'Start Trading'"
+                  },
+                  {
+                    "label": "Copy trading (no copied investors)",
+                    "good": "Headline: 'Discover investors to copy' / Body: 'Automatically mirror their trades in your portfolio.' / CTA: 'Find Investors'"
+                  },
+                  {
+                    "label": "No search results (exception case)",
+                    "good": "Headline: 'Try another search' / Body: 'We couldn't find matches for your query.' / CTA: 'Explore Popular Assets'"
+                  }
+                ]
+              },
+              {
+                "t": "callout",
+                "text": "Important exception: when the system needs to explain a result (like empty search results), clarity takes priority over inspiration. In these cases, it's acceptable to state what happened."
+              }
+            ]
+          },
+          {
+            "num": "4.8",
+            "title": "Tooltips and info modals",
+            "intro": [
+              "Tooltips and info modals provide additional context, clarification, or education without interrupting the main user flow. Tooltips are lightweight and contextual — they explain a single element or metric. Info modals are more detailed. These components are especially important in trading, where users encounter unfamiliar terms, metrics, and risk concepts.",
+              "They are not a substitute for clarity in core flows. Critical information must be visible inline."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Style",
+                "items": [
+                  "Clear and factual",
+                  "Neutral and informative",
+                  "Concise, but complete",
+                  "Focused on helping users understand, not persuading them",
+                  "Free of jargon or internal terminology"
+                ]
+              }
+            ],
+            "subs": [
+              {
+                "num": "4.8.1",
+                "title": "Use tooltips when",
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": null,
+                    "items": [
+                      "The information is supportive, not essential",
+                      "The user can complete the task without reading it",
+                      "The concept is advanced or secondary",
+                      "Adding explanation inline would create visual clutter"
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "4.8.2",
+                "title": "Do not use tooltips when",
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": null,
+                    "items": [
+                      "The information impacts money or risk directly",
+                      "Misunderstanding could cause financial harm",
+                      "The concept is critical to completing the task"
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "4.8.3",
+                "title": "Guidelines",
+                "blocks": [
+                  {
+                    "t": "guidelines",
+                    "items": [
+                      {
+                        "title": "One concept per tooltip",
+                        "desc": "Each tooltip should explain a single idea. Avoid combining multiple concepts.",
+                        "do": "Spread is the difference between the buy and sell price of an asset.",
+                        "dont": "Spread is the difference between buy and sell price, and it changes based on market conditions and liquidity."
+                      },
+                      {
+                        "title": "Start with a direct explanation",
+                        "desc": "Avoid introductions or filler. Get straight to the point.",
+                        "do": "Available balance is the amount you can use to open new trades.",
+                        "dont": "This shows your available balance, which means the amount you currently have…"
+                      },
+                      {
+                        "title": "Use plain language for complex concepts",
+                        "desc": "Translate financial terminology into everyday language.",
+                        "do": "Leverage lets you open a larger position using a smaller amount of your own funds.",
+                        "dont": "Leverage is a financial mechanism that amplifies exposure through borrowed capital."
+                      },
+                      {
+                        "title": "Avoid compliance overload in tooltips",
+                        "desc": "Tooltips should not contain full risk disclosures. Use links or modals for deeper detail.",
+                        "do": "CFDs allow you to trade on price movements without owning the asset.",
+                        "dont": "CFDs are complex instruments and come with a high risk of losing money rapidly due to leverage…"
+                      },
+                      {
+                        "title": "Use info modals for depth, not tooltips",
+                        "desc": "If the explanation requires multiple sentences, examples, or structure, use a modal. Tooltip: 'Margin is the amount required to keep your position open.' Modal — Title: 'What is margin?' Body: 'Margin is the amount of funds required to keep your trade open. If your equity falls below the required margin, your position may be closed automatically.'"
+                      },
+                      {
+                        "title": "Structure info modals for clarity",
+                        "desc": "Title; short definition; additional context or example; optional link to learn more."
+                      },
+                      {
+                        "title": "Be neutral and non-persuasive",
+                        "desc": "Do not use tooltips or modals to encourage trading behavior.",
+                        "do": "Higher leverage increases both potential gains and potential losses.",
+                        "dont": "Use leverage to maximize your potential returns."
+                      },
+                      {
+                        "title": "Avoid redundancy with UI",
+                        "desc": "Do not repeat what is already clear from labels or surrounding text. Add only what the user cannot infer."
+                      },
+                      {
+                        "title": "Keep length tight",
+                        "desc": "Tooltips: 1 to 2 sentences. Info modals: short paragraphs, scannable."
+                      },
+                      {
+                        "title": "Ensure accessibility and clarity",
+                        "desc": "Avoid abbreviations unless defined. Write for users with varying levels of financial knowledge. Make content understandable without prior context."
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "4.9",
+            "title": "Notifications",
+            "intro": [
+              "Short, timely messages delivered via push or in-app notifications to inform users about activity, status updates, or required actions."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Style",
+                "items": [
+                  "Lead with the outcome — put the result or event in the first 3-5 words",
+                  "Clear — no ambiguity about what happened",
+                  "Relevant — only notify when it matters",
+                  "Calm and factual — especially during market movement or risk events",
+                  "Actionable when needed — tell users what they can do next",
+                  "Avoid noise, urgency for its own sake, or marketing language"
+                ]
+              },
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Don't prefix notifications with system labels",
+                    "desc": "Users scan notifications quickly. Lead with what happened. Users already know where the message comes from.",
+                    "do": "Your order was executed",
+                    "dont": "etoro update: your order has been successfully executed"
+                  },
+                  {
+                    "title": "Match urgency to importance",
+                    "desc": "High: 'Margin call: add funds to avoid liquidation'. Medium: 'Your deposit is being processed'. Low: 'You received a dividend payment'. Avoid overusing high-urgency language."
+                  },
+                  {
+                    "title": "Be precise with financial events",
+                    "desc": "Vague wording creates anxiety and mistrust.",
+                    "do": "Your stop loss was triggered at $1,245",
+                    "dont": "Your position changed"
+                  },
+                  {
+                    "title": "Include next steps when relevant",
+                    "desc": "If the user needs to act, make it obvious.",
+                    "do": "Verification failed. Upload a new document to continue.",
+                    "dont": "Verification failed"
+                  },
+                  {
+                    "title": "Keep it concise",
+                    "desc": "Notifications should be readable in one glance.",
+                    "do": "Funds added. You can start trading.",
+                    "dont": "Your funds have been successfully added to your account and are now available for trading activities."
+                  },
+                  {
+                    "title": "Avoid promotional tone in product notifications",
+                    "desc": "Notifications are functional, not marketing-driven.",
+                    "do": "Price alert: Tesla reached $250",
+                    "dont": "Tesla is soaring. Don't miss out"
+                  },
+                  {
+                    "title": "Use consistent capitalization",
+                    "desc": "Follow sentence case for all notifications.",
+                    "do": "Your withdrawal request was approved",
+                    "dont": "Your Withdrawal Request Was Approved"
+                  },
+                  {
+                    "title": "Be careful with emotional moments",
+                    "desc": "For losses, failures, or risk events, keep tone neutral and supportive.",
+                    "do": "Your position was closed due to insufficient margin",
+                    "dont": "You lost your position"
+                  }
+                ]
+              },
+              {
+                "t": "examples",
+                "items": [
+                  {
+                    "label": "Trade execution",
+                    "good": "Your order for Apple was executed at $182.30"
+                  },
+                  {
+                    "label": "Price alert",
+                    "good": "Bitcoin reached your target price of $40,000"
+                  },
+                  {
+                    "label": "Deposit status",
+                    "good": "Your deposit is being processed"
+                  },
+                  {
+                    "label": "Failure",
+                    "good": "Payment failed. Try another method or contact support"
+                  },
+                  {
+                    "label": "Risk event",
+                    "good": "Margin call: add funds to keep your positions open"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "num": "5",
+        "title": "Formatting and Mechanics",
+        "subs": [
+          {
+            "num": "5.1",
+            "title": "Capitalization",
+            "intro": [
+              "Capitalization defines how text appears across the product, including buttons, labels, navigation, and UI messaging. Consistent capitalization improves readability, creates a cohesive experience, and reinforces trust in a financial environment."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Style",
+                "items": [
+                  "Use sentence case by default — only the first word and proper nouns are capitalized",
+                  "Use Title Case selectively and intentionally (H1 page titles on web, nav bar titles on mobile, buttons)",
+                  "Avoid all caps — only in rare, exceptional cases, and must be approved by a UX writer"
+                ]
+              },
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Default to sentence case across all UI copy",
+                    "desc": "Applies to body text, form labels, helper text, error messages, tooltips, notifications.",
+                    "do": [
+                      "Add funds to start trading",
+                      "Enter your email",
+                      "We couldn't process your payment"
+                    ],
+                    "dont": [
+                      "Add Funds To Start Trading",
+                      "Enter Your Email"
+                    ]
+                  },
+                  {
+                    "title": "Use Title Case only in specific components",
+                    "desc": "H1 titles (web) and nav bar titles (mobile); buttons.",
+                    "do": [
+                      "Portfolio Overview (H1)",
+                      "Add Funds (button)"
+                    ],
+                    "dont": [
+                      "Portfolio overview (H1)",
+                      "Add funds (button)"
+                    ]
+                  },
+                  {
+                    "title": "Keep capitalization consistent within flows",
+                    "desc": "Do not mix sentence case and Title Case in the same component type.",
+                    "dont": [
+                      "Button: 'Add Funds'",
+                      "Button: 'Withdraw funds'"
+                    ]
+                  },
+                  {
+                    "title": "Never use all caps for emphasis",
+                    "desc": "All caps increases cognitive load and feels aggressive, especially in financial contexts.",
+                    "do": "Verify your account to continue",
+                    "dont": [
+                      "VERIFY YOUR ACCOUNT",
+                      "TRADE NOW"
+                    ]
+                  },
+                  {
+                    "title": "Exceptions for all caps require approval",
+                    "desc": "All caps may be used only when required for legal or regulatory reasons, or as part of standardized financial abbreviations (e.g. USD, CFD). All other uses must be explicitly approved by a UX writer."
+                  },
+                  {
+                    "title": "Capitalize proper nouns correctly",
+                    "desc": "Brand names: etoro. Assets: Bitcoin, Tesla. Legal and financial terms when required."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "5.2",
+            "title": "Numbers",
+            "intro": [
+              "Numbers communicate critical financial information such as balances, performance, risk, and timeframes. Clear and consistent formatting is essential to ensure accuracy, reduce misinterpretation, and support fast decision-making in trading environments."
+            ],
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Percent formatting",
+                    "desc": "Use the % symbol, not the word 'percent'. Place the symbol directly after the number, no space. Use '+' for positive change where relevant; avoid excessive precision.",
+                    "do": [
+                      "+5%",
+                      "-2.3%"
+                    ],
+                    "dont": [
+                      "5 percent",
+                      "+5 %"
+                    ]
+                  },
+                  {
+                    "title": "Currency formatting",
+                    "desc": "Always include a currency symbol or code; follow standard financial conventions; keep placement consistent. Avoid mixing symbols and codes in the same context; show decimals only when relevant.",
+                    "do": [
+                      "$1,250.00",
+                      "€500",
+                      "1,250 USD (when the symbol is unclear or in multi-currency contexts)"
+                    ],
+                    "dont": [
+                      "1250",
+                      "$ 1,250"
+                    ]
+                  },
+                  {
+                    "title": "Large numbers",
+                    "desc": "Use comma separators for thousands. Abbreviate only when space is limited and meaning is clear.",
+                    "do": [
+                      "1,250,000",
+                      "1.2M (in compact UI contexts)"
+                    ],
+                    "dont": [
+                      "1250000",
+                      "1,2M"
+                    ]
+                  },
+                  {
+                    "title": "Timeframes",
+                    "desc": "Use clear, standard abbreviations; avoid ambiguity. Spell out timeframes in explanatory text; use abbreviated formats in data-heavy UI.",
+                    "do": [
+                      "1D, 1W, 1M, 1Y (charts and trading contexts)",
+                      "Last 30 days",
+                      "Jan 5 to Feb 5"
+                    ],
+                    "dont": [
+                      "1 day (in chart selectors)",
+                      "30d"
+                    ]
+                  },
+                  {
+                    "title": "Rounding and precision",
+                    "desc": "Match precision to the context and user need. Avoid over-precision that adds noise.",
+                    "do": [
+                      "$1,250.50 (when exact value matters)",
+                      "$1.2K (in summaries or dashboards)"
+                    ],
+                    "dont": "$1,250.503829"
+                  },
+                  {
+                    "title": "Consistency across related data",
+                    "desc": "Numbers that appear together should follow the same format.",
+                    "dont": "$1,200, €950.00, 1200 USD in the same table"
+                  },
+                  {
+                    "title": "Use numerals for clarity and scannability",
+                    "desc": "Use numerals (1, 2, 3…) instead of spelling out numbers in product UI. Exception: spell out numbers only in full sentences where readability benefits, such as long-form or educational content.",
+                    "do": [
+                      "3 days",
+                      "2 attempts remaining",
+                      "5 positions open"
+                    ],
+                    "dont": [
+                      "three days",
+                      "two attempts remaining"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "5.3",
+            "title": "Dates and Time",
+            "intro": [
+              "Dates and time communicate when actions happen, when markets operate, and when financial events occur. In a global trading environment, clarity is essential to prevent misinterpretation of time-sensitive data."
+            ],
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Use locale-based formatting for everyday UI",
+                    "desc": "Dates and time should follow the user's device or account locale. E.g. US: '04/12/2026, 2:30 PM'; EU: '12/04/2026, 14:30'."
+                  },
+                  {
+                    "title": "Use a clear fallback format when locale is unavailable",
+                    "desc": "Use an unambiguous format: Day Month Year (month written out or abbreviated), 24-hour time.",
+                    "do": "12 Apr 2026, 14:30",
+                    "dont": "04/12/2026 (ambiguous)"
+                  },
+                  {
+                    "title": "Market time clarity",
+                    "desc": "For trading activity, use the relevant market timezone and explicitly state the timezone abbreviation. Applies to market open/close times, order execution timestamps, instrument-specific events.",
+                    "do": [
+                      "Market closes at 16:00 EST",
+                      "Executed at 09:30 GMT"
+                    ],
+                    "dont": [
+                      "Market closes at 16:00",
+                      "Market closes at 16:00 (NYSE)"
+                    ]
+                  },
+                  {
+                    "title": "Use full dates and time in high-risk or permanent contexts",
+                    "desc": "Always show complete, explicit timestamps for transactions and confirmations, account statements, legal or compliance-related content.",
+                    "do": "12 Apr 2026 at 14:30",
+                    "dont": "Today at 14:30"
+                  },
+                  {
+                    "title": "Use relative time only for recent, low-risk contexts",
+                    "desc": "Helps with quick scanning but should not replace exact timestamps when accuracy matters. Applies to notifications, activity feeds, status updates.",
+                    "do": [
+                      "2 minutes ago",
+                      "Yesterday"
+                    ],
+                    "dont": "Relative time as the only reference in financial records"
+                  },
+                  {
+                    "title": "Be consistent within the same context",
+                    "desc": "Do not mix formats within the same screen or flow.",
+                    "dont": "'12/04/2026' and 'Apr 12, 2026' in the same table"
+                  },
+                  {
+                    "title": "Avoid ambiguity in numeric dates",
+                    "desc": "Ensure dates are clear within the user's locale. When clarity is critical, prefer month names."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "5.4",
+            "title": "Punctuation",
+            "intro": [
+              "Punctuation should support clarity, readability, and trust. In etoro's product UI, punctuation must feel deliberate and restrained. It should help users move through the experience with confidence, not add noise, urgency, or emotion."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Style",
+                "items": [
+                  "Keep punctuation minimal, intentional, and functional",
+                  "Write in a way that feels clean and controlled, not expressive or conversational"
+                ]
+              },
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Use punctuation to clarify, not decorate",
+                    "desc": "Only include punctuation when it improves readability or prevents ambiguity.",
+                    "do": [
+                      "Your verification is in progress",
+                      "Funds will arrive within 2-3 business days"
+                    ],
+                    "dont": [
+                      "Your verification is in progress...",
+                      "Funds will arrive within 2-3 business days!!!"
+                    ]
+                  },
+                  {
+                    "title": "Avoid exclamation marks",
+                    "desc": "Exclamation marks create hype or urgency, which does not fit a financial product.",
+                    "do": "Your account is ready",
+                    "dont": "Your account is ready!"
+                  },
+                  {
+                    "title": "Do not use emojis in product UI",
+                    "desc": "Emojis reduce professionalism and can create inconsistency across markets and contexts."
+                  },
+                  {
+                    "title": "Avoid ellipses",
+                    "desc": "Ellipses can feel vague, unfinished, or overly casual.",
+                    "do": "Processing your request",
+                    "dont": "Processing your request..."
+                  },
+                  {
+                    "title": "Use periods only where they help readability",
+                    "desc": "UI elements like titles, labels, and buttons do not need periods. Full sentences do.",
+                    "do": [
+                      "Button: 'Deposit Funds'",
+                      "Label: 'Email address'",
+                      "Body: 'Enter a valid email address.'"
+                    ],
+                    "dont": [
+                      "Button: 'Deposit funds.'",
+                      "Label: 'Email address.'"
+                    ]
+                  },
+                  {
+                    "title": "Use colons only when introducing structured information",
+                    "desc": "Colons should signal that more detail follows.",
+                    "do": [
+                      "Required documents:",
+                      "Next steps:"
+                    ],
+                    "dont": "Next steps :"
+                  },
+                  {
+                    "title": "Keep sentence structure simple",
+                    "desc": "Avoid punctuation-heavy sentences that make copy harder to scan.",
+                    "do": "Review your details before continuing.",
+                    "dont": "Before continuing, review your details, and make sure everything is correct."
+                  },
+                  {
+                    "title": "Use hyphens and dashes correctly",
+                    "desc": "Hyphens for compound terms: 'real-time data'. En dashes for ranges: '1-3 days'."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "num": "6",
+        "title": "Terminology and Financial Language",
+        "subs": [
+          {
+            "num": "6.1",
+            "title": "Approved Terminology",
+            "intro": [
+              "Approved terminology defines the exact words and phrases that must be used in the product UI. This section standardizes language across flows and removes ambiguity, so both humans and AI agents generate consistent, accurate, and compliant copy.",
+              "This is a controlled vocabulary system, not a glossary. Only the terms defined here should be used. Synonyms are not allowed unless explicitly approved."
+            ],
+            "subs": [
+              {
+                "num": "6.1.1",
+                "title": "Terminology Rules",
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": null,
+                    "items": [
+                      "Always use the canonical terms defined in this section",
+                      "Do not introduce synonyms or variations",
+                      "Do not copy inconsistent terms from existing UI",
+                      "When a term exists in both product and glossary, follow the approved term below",
+                      "If a concept is not listed, default to plain, widely understood financial language"
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "6.1.2",
+                "title": "Canonical Terminology (by concept)",
+                "blocks": [
+                  {
+                    "t": "terms",
+                    "items": [
+                      {
+                        "concept": "Authentication",
+                        "use": "Log in (login when used as a noun, e.g. 'Go back to login'), Log out, Sign up",
+                        "doNotUse": "Sign In, Sign Out"
+                      },
+                      {
+                        "concept": "Verification",
+                        "use": "Verification, Verification code",
+                        "doNotUse": "OTP, MFA (user-facing)"
+                      },
+                      {
+                        "concept": "Adding funds",
+                        "use": "Deposit Funds (preferred), or Add Funds (when space is limited)",
+                        "doNotUse": "Top up, Fund account"
+                      },
+                      {
+                        "concept": "Withdrawing funds",
+                        "use": "Withdraw",
+                        "doNotUse": "Cash out"
+                      },
+                      {
+                        "concept": "Account and portfolio",
+                        "use": "Portfolio, Account Overview, Account (for settings/banking context)",
+                        "doNotUse": "Balance page, My account (generic replacements)"
+                      },
+                      {
+                        "concept": "Saved assets",
+                        "use": "Watchlist",
+                        "doNotUse": "Watch list"
+                      },
+                      {
+                        "concept": "Tradable items",
+                        "use": "Asset",
+                        "doNotUse": "Market, Markets"
+                      },
+                      {
+                        "concept": "Trading actions",
+                        "use": "Trade, Buy, Sell, Short",
+                        "doNotUse": "Execute, Open trade (as CTA), Long (as primary CTA)"
+                      },
+                      {
+                        "concept": "Orders and execution",
+                        "use": "Order, Market Order, Limit Order, Order Type",
+                        "doNotUse": "Trade type"
+                      },
+                      {
+                        "concept": "Automated trading",
+                        "use": "Recurring Orders",
+                        "doNotUse": "Auto invest, Automated trading"
+                      },
+                      {
+                        "concept": "Social trading",
+                        "use": "Copy (action), Copiers, Followers, Following, Popular Investor, Pro Investor",
+                        "doNotUse": "Copy trading (as CTA), Subscribers"
+                      },
+                      {
+                        "concept": "Pre-built portfolios",
+                        "use": "Smart Portfolios",
+                        "doNotUse": "Managed portfolios, Bundles"
+                      },
+                      {
+                        "concept": "Performance metrics",
+                        "use": "Net Profit, P/L (in tables only), Annualized return",
+                        "doNotUse": "Earnings, Gains (as primary label), ROI (unless required)"
+                      },
+                      {
+                        "concept": "Recent activity",
+                        "use": "Recently Traded",
+                        "doNotUse": "Recently Invested, Recent activity"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "6.1.3",
+                "title": "Contextual Distinctions (critical)",
+                "intro": [
+                  "These terms are related but not interchangeable. Use them precisely."
+                ],
+                "blocks": [
+                  {
+                    "t": "guidelines",
+                    "items": [
+                      {
+                        "title": "Trade vs Order vs Position",
+                        "desc": "Order — a request to buy or sell an asset that has not yet been executed ('Your order is pending'). Trade — a completed execution of an order; a moment in time ('Your trade was executed at 14:32'). Position — the result of one or more executed trades that is still open; ongoing exposure ('Your position is currently +5%'). Do not use interchangeably."
+                      },
+                      {
+                        "title": "Buy vs Long",
+                        "desc": "Use Buy for all primary actions and CTAs (the user action of opening or increasing exposure). Use Long only to describe a position type in data, analytics, and advanced contexts ('Long' in a positions table). Use Buy for actions; use Long only to describe position types, not as an action."
+                      },
+                      {
+                        "title": "Sell vs Short",
+                        "desc": "Use Sell for all primary actions and CTAs related to reducing or closing exposure. Use Short only to describe a position type where the user benefits from price decreases, in data and advanced contexts. Use Sell for actions; use Short only to describe position types."
+                      },
+                      {
+                        "title": "Asset vs Instrument",
+                        "desc": "Use Asset in all user-facing UI."
+                      },
+                      {
+                        "title": "Trade vs Invest",
+                        "desc": "Use Trade for active buying and selling. Use Invest for broader, passive, or marketing contexts."
+                      },
+                      {
+                        "title": "Copy vs Follow",
+                        "desc": "Copy — replicate another investor's trades. Follow — track an investor without copying."
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "6.1.4",
+                "title": "Enforced Replacements (resolve inconsistencies)",
+                "intro": [
+                  "The following terms exist in the product but must not be used going forward:"
+                ],
+                "blocks": [
+                  {
+                    "t": "table",
+                    "headers": [
+                      "Do not use",
+                      "Use instead"
+                    ],
+                    "rows": [
+                      [
+                        "OTP",
+                        "Verification code"
+                      ],
+                      [
+                        "Add funds / Top up",
+                        "Deposit Funds"
+                      ],
+                      [
+                        "Withdraw Funds",
+                        "Withdraw"
+                      ],
+                      [
+                        "Recently Invested",
+                        "Recently Traded"
+                      ],
+                      [
+                        "Instrument (UI)",
+                        "Asset"
+                      ]
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "6.1.5",
+                "title": "Notes for Implementation",
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": null,
+                    "items": [
+                      "Existing inconsistencies in the product do not define the standard",
+                      "This section overrides legacy strings and partial implementations",
+                      "When updating UI, prioritize alignment with these terms",
+                      "When generating new copy, never introduce a new synonym for an existing concept"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "6.2",
+            "title": "Words to Avoid",
+            "intro": [
+              "Words to avoid are terms that must not be used in product UI because they create legal risk, mislead users, or introduce the wrong emotional tone."
+            ],
+            "subs": [
+              {
+                "num": "6.2.1",
+                "title": "Core Rules",
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": null,
+                    "items": [
+                      "Do not use language that implies guaranteed outcomes",
+                      "Do not use language that gamifies trading",
+                      "Do not use language that overpromises ease or safety",
+                      "Do not use emotionally charged or hype-driven wording",
+                      "Always prefer neutral, factual alternatives"
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "6.2.2",
+                "title": "Prohibited Language (by category)",
+                "blocks": [
+                  {
+                    "t": "guidelines",
+                    "items": [
+                      {
+                        "title": "Gambling and gaming language",
+                        "desc": "These terms frame trading as entertainment rather than financial decision-making.",
+                        "do": [
+                          "Trade",
+                          "Invest",
+                          "Open a position"
+                        ],
+                        "dont": [
+                          "Gamble",
+                          "Bet",
+                          "Wager",
+                          "Jackpot",
+                          "Play (in a trading context)"
+                        ]
+                      },
+                      {
+                        "title": "Guaranteed or risk-free language",
+                        "desc": "These terms create legal and trust issues by implying certainty.",
+                        "do": [
+                          "'Returns are not guaranteed' (when needed)",
+                          "Neutral descriptions of outcomes"
+                        ],
+                        "dont": [
+                          "Guaranteed",
+                          "Risk-free",
+                          "Safe",
+                          "No risk",
+                          "Secure profits"
+                        ]
+                      },
+                      {
+                        "title": "Hype and exaggerated success language",
+                        "desc": "These terms create unrealistic expectations.",
+                        "do": [
+                          "Profit / Loss",
+                          "Net Profit",
+                          "Return"
+                        ],
+                        "dont": [
+                          "Win",
+                          "Winning trade",
+                          "Big gains",
+                          "Massive returns",
+                          "Get rich",
+                          "Profit fast"
+                        ]
+                      },
+                      {
+                        "title": "Passive income claims",
+                        "desc": "These terms oversimplify investing and may mislead users.",
+                        "do": [
+                          "Returns",
+                          "Performance",
+                          "Earnings (only in appropriate contexts)"
+                        ],
+                        "dont": [
+                          "Passive income",
+                          "Earn effortlessly",
+                          "Make money automatically"
+                        ]
+                      },
+                      {
+                        "title": "Urgency and pressure language",
+                        "desc": "These terms push users toward rushed decisions.",
+                        "do": [
+                          "Neutral, time-based information",
+                          "'Market is closing soon' (factual only)"
+                        ],
+                        "dont": [
+                          "Act now",
+                          "Don't miss out",
+                          "Limited time",
+                          "Hurry"
+                        ]
+                      },
+                      {
+                        "title": "Over-simplification of complexity",
+                        "desc": "These terms hide the reality of trading risk.",
+                        "do": [
+                          "Clear, factual explanations",
+                          "'Copying involves risk' (when relevant)"
+                        ],
+                        "dont": [
+                          "Easy money",
+                          "Simple profits",
+                          "Just copy and earn"
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "6.2.3",
+                "title": "Conditional Language (use with caution)",
+                "intro": [
+                  "These terms are not strictly banned, but should only be used in specific contexts:"
+                ],
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": null,
+                    "items": [
+                      "Return / Returns → OK in performance context, not as a promise",
+                      "Earn → avoid in trading flows, acceptable in interest/dividend contexts",
+                      "Opportunity → use sparingly, avoid in high-risk flows"
+                    ]
+                  }
+                ]
+              },
+              {
+                "num": "6.2.4",
+                "title": "AI Enforcement Rules",
+                "blocks": [
+                  {
+                    "t": "bullets",
+                    "label": null,
+                    "items": [
+                      "Never generate language that implies certainty of profit",
+                      "Never introduce gambling metaphors",
+                      "Never amplify emotion during high-risk moments (losses, volatility, liquidation)",
+                      "Default to neutral, descriptive language"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "6.3",
+            "title": "Product Naming and System Language",
+            "intro": [
+              "Defines how etoro products, accounts, and financial entities are referred to in the UI. Ensures consistent and unambiguous language across all flows."
+            ],
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Distinguish between product, app, and account",
+                    "desc": "App / product → the platform or experience. Account → where funds are held. Portfolio → the user's investments and positions.",
+                    "do": [
+                      "Open the etoro app",
+                      "Your USD account balance",
+                      "Your portfolio performance"
+                    ],
+                    "dont": [
+                      "Your etoro balance (ambiguous)",
+                      "Your app balance (incorrect)"
+                    ]
+                  },
+                  {
+                    "title": "Always specify account context when needed",
+                    "desc": "When users have multiple accounts, always clarify which one is being referenced.",
+                    "do": [
+                      "Available cash in your USD account",
+                      "Transfer funds to your GBP account"
+                    ],
+                    "dont": "Available balance (if multiple accounts exist)"
+                  },
+                  {
+                    "title": "Use currency-based account naming",
+                    "desc": "Refer to accounts by their currency when relevant (USD account, EUR account, GBP account). Use currency labels when the distinction affects user decisions or actions."
+                  },
+                  {
+                    "title": "Use full product names on first mention",
+                    "desc": "When clarity is needed, use the full product name (etoro Money, etoro Options, Smart Portfolios). Then shorten only if context is clear."
+                  },
+                  {
+                    "title": "Avoid ambiguity in financial context",
+                    "desc": "Always prioritize clarity over brevity when referring to money, balances, or holdings.",
+                    "do": [
+                      "Available cash",
+                      "Total portfolio value"
+                    ],
+                    "dont": "Balance (can mean multiple things)"
+                  },
+                  {
+                    "title": "Do not invent new product terms",
+                    "desc": "Only use approved product and system terminology. Do not create new labels, rename existing concepts, or mix terms across contexts."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "num": "7",
+        "title": "Localization and Globalization",
+        "subs": [
+          {
+            "num": "7.1",
+            "title": "Writing for Translation",
+            "intro": [
+              "Writing for translation ensures that product copy can be accurately translated across languages and cultures without losing meaning, clarity, or tone.",
+              "etoro is a global product. Copy must be written so it works not just in English, but in every supported language. This means avoiding language patterns that break, confuse, or expand unpredictably when translated."
+            ],
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Avoid idioms and informal expressions",
+                    "desc": "Idioms do not translate well and often lose meaning entirely.",
+                    "do": [
+                      "Start trading",
+                      "Add funds to continue"
+                    ],
+                    "dont": [
+                      "Hit the ground running",
+                      "Get the ball rolling"
+                    ]
+                  },
+                  {
+                    "title": "Avoid wordplay, humor, and puns",
+                    "desc": "Clever language rarely survives translation and can confuse users.",
+                    "do": "Track your performance",
+                    "dont": "Stay on top of your game"
+                  },
+                  {
+                    "title": "Avoid culturally specific references",
+                    "desc": "Do not rely on metaphors, examples, or phrasing tied to a specific culture or region.",
+                    "do": "Market is closed",
+                    "dont": "Closed for the holidays (unless localized explicitly)"
+                  },
+                  {
+                    "title": "Use simple and direct sentence structures",
+                    "desc": "Complex sentences are harder to translate and more likely to break.",
+                    "do": "We couldn't process your payment. Try another method.",
+                    "dont": "Unfortunately, due to an issue with your selected payment method, we were unable to process your transaction at this time."
+                  },
+                  {
+                    "title": "Avoid ambiguous wording",
+                    "desc": "Words with multiple meanings create translation errors.",
+                    "do": "Close trade",
+                    "dont": "Close (unclear without context)"
+                  },
+                  {
+                    "title": "Avoid phrasal verbs when possible",
+                    "desc": "Phrasal verbs are harder to translate and often ambiguous.",
+                    "do": "Continue",
+                    "dont": "Carry on"
+                  },
+                  {
+                    "title": "Avoid string concatenation",
+                    "desc": "Do not split sentences into fragments that are combined dynamically. This breaks grammar in many languages.",
+                    "do": "You copied John's portfolio",
+                    "dont": "'You copied ' + username + \"'s portfolio\""
+                  },
+                  {
+                    "title": "Design for variable text length",
+                    "desc": "Translations are often longer than English. Expect up to 30 percent expansion; avoid tight character limits; do not rely on fixed-width layouts."
+                  }
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "AI enforcement rules",
+                "items": [
+                  "Default to literal, clear phrasing over expressive language",
+                  "Do not generate idioms, humor, or culturally specific phrasing",
+                  "Always use approved terminology consistently",
+                  "Avoid restructuring sentences in ways that depend on English grammar"
+                ]
+              }
+            ]
+          },
+          {
+            "num": "7.2",
+            "title": "Expansion Rules",
+            "intro": [
+              "Expansion rules ensure that UI copy remains clear, readable, and functional across all languages, even when translated text becomes longer than the original English. When content is localized, text can expand by up to 30 percent or more."
+            ],
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Keep UI text as short as possible",
+                    "desc": "Shorter source text reduces the risk of breakage after translation.",
+                    "do": [
+                      "Add funds",
+                      "Close trade"
+                    ],
+                    "dont": [
+                      "Add funds to your account to begin trading",
+                      "Close your open trade position"
+                    ]
+                  },
+                  {
+                    "title": "Avoid writing to exact character limits",
+                    "desc": "Do not assume text will fit perfectly in a fixed space. Avoid maxing out button or label length; leave room for longer translations."
+                  },
+                  {
+                    "title": "Do not rely on line breaks or layout structure",
+                    "desc": "Text should work regardless of how it wraps. Write self-contained phrases; don't assume a two-line structure will hold in other languages."
+                  },
+                  {
+                    "title": "Avoid multi-part phrases that must stay together",
+                    "desc": "Some languages require different word order or structure.",
+                    "do": "Close trade",
+                    "dont": "'Close' + 'trade' as separate UI elements that depend on each other"
+                  },
+                  {
+                    "title": "Be careful with dynamic variables",
+                    "desc": "Variables (names, numbers, assets) can expand unpredictably. Avoid placing variables in positions that require possessive forms or strict grammar.",
+                    "do": "You copied {{username}}",
+                    "dont": "{{username}}'s portfolio was copied"
+                  },
+                  {
+                    "title": "Avoid abbreviations unless universally understood",
+                    "desc": "Abbreviations may not translate or may expand differently. Exception: widely recognized standards (e.g. USD, %).",
+                    "do": "Maximum drawdown",
+                    "dont": "Max DD"
+                  },
+                  {
+                    "title": "Keep buttons and labels especially tight",
+                    "desc": "Buttons: 1-3 words preferred. Labels: 1-3 words preferred. Avoid adding qualifiers or extra context in these components."
+                  }
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "AI enforcement rules",
+                "items": [
+                  "Default to the shortest clear version of any phrase",
+                  "Do not expand copy unnecessarily",
+                  "Respect length constraints for buttons, labels, and headlines"
+                ]
+              }
+            ]
+          },
+          {
+            "num": "7.3",
+            "title": "Source Language Standard",
+            "intro": [
+              "All English source content must use US English. This ensures consistency across the product and supports the automated localization pipeline. AI systems use US English as the base language and generate other variants (such as UK English) during localization."
+            ],
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Use US English spelling and conventions by default",
+                    "do": [
+                      "color",
+                      "optimize",
+                      "center"
+                    ],
+                    "dont": [
+                      "colour",
+                      "optimise",
+                      "centre"
+                    ]
+                  },
+                  {
+                    "title": "Do not mix English variants",
+                    "desc": "Avoid combining US and UK English within the same string or flow."
+                  },
+                  {
+                    "title": "Do not localize English manually",
+                    "desc": "Do not write separate UK English variants. Localization systems handle regional differences automatically."
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "num": "9",
+        "title": "Compliance Alignment",
+        "subs": [
+          {
+            "num": "9.1",
+            "title": "Purpose",
+            "intro": [
+              "Compliance is a core constraint for all UX writing at etoro. Content must protect users, support informed decision-making, and meet regulatory requirements across jurisdictions. AI can assist with drafting, but it does not replace compliance judgment."
+            ]
+          },
+          {
+            "num": "9.2",
+            "title": "Core Principles",
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Fair, clear, and not misleading",
+                    "desc": "Do not exaggerate benefits, hide risks, or create false expectations."
+                  },
+                  {
+                    "title": "Transparency over persuasion",
+                    "desc": "Prioritize clarity of risks, fees, and conditions over conversion."
+                  },
+                  {
+                    "title": "User protection over growth",
+                    "desc": "Do not pressure, rush, or manipulate users into decisions."
+                  },
+                  {
+                    "title": "Compliance is a hard constraint",
+                    "desc": "If there is any conflict between UX, product, marketing, and regulation, compliance takes priority."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "9.3",
+            "title": "Risk Sensitivity Framework",
+            "intro": [
+              "Use this to determine when compliance involvement is required."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Low risk (no compliance review required)",
+                "items": [
+                  "UI microcopy (buttons, labels, tooltips, empty states)",
+                  "Grammar, clarity, and tone improvements",
+                  "Plain-language rewrites of approved content (no change in meaning)",
+                  "Educational, non-promotional explanations"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Medium risk (requires compliance review)",
+                "items": [
+                  "Content referencing risk, fees, or conditions",
+                  "CFDs, leverage, or complex products",
+                  "Onboarding, KYC, deposits, withdrawals, or fund flows",
+                  "Performance language (returns, P&L, ROI)",
+                  "Testimonials or comparison claims",
+                  "Upgrade prompts or nudges that may feel pressuring",
+                  "Jurisdiction-specific content"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "High risk (do not write or modify)",
+                "items": [
+                  "Legal disclaimers or regulatory disclosures",
+                  "Risk warnings or consent language",
+                  "Privacy policies or terms and conditions",
+                  "Fee disclosures"
+                ]
+              },
+              {
+                "t": "callout",
+                "text": "If content falls into the high-risk category, use approved text only and involve Compliance."
+              }
+            ]
+          },
+          {
+            "num": "9.4",
+            "title": "Writing Rules for Compliant UX Copy",
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "Use plain, neutral language",
+                    "desc": "Avoid jargon, hype, or technical overload."
+                  },
+                  {
+                    "title": "Write action-based, not outcome-based CTAs",
+                    "do": [
+                      "Continue",
+                      "Review details",
+                      "See fees"
+                    ],
+                    "dont": [
+                      "Start winning",
+                      "Profit today"
+                    ]
+                  },
+                  {
+                    "title": "Keep risks, fees, and conditions visible",
+                    "desc": "Do not hide, compress, or paraphrase required disclosures."
+                  },
+                  {
+                    "title": "Support informed decisions",
+                    "desc": "Place key information at the point of action."
+                  },
+                  {
+                    "title": "Do not pressure users",
+                    "desc": "Avoid urgency or manipulation, including 'Act now', 'Limited time', countdown messaging."
+                  },
+                  {
+                    "title": "Protect users with varying literacy levels",
+                    "desc": "Use clear, accessible, and unambiguous language."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "9.5",
+            "title": "When to Involve Compliance",
+            "intro": [
+              "Involve Compliance when:"
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": null,
+                "items": [
+                  "Writing or modifying regulated content",
+                  "Simplifying or summarizing disclosures",
+                  "Designing flows involving money, risk, or identity",
+                  "Introducing new product experiences or user journeys",
+                  "You are unsure whether content could mislead"
+                ]
+              },
+              {
+                "t": "callout",
+                "text": "When in doubt, escalate."
+              }
+            ]
+          },
+          {
+            "num": "9.6",
+            "title": "Compliance Review Checklist",
+            "intro": [
+              "Before publishing, ask:"
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": null,
+                "items": [
+                  "Could this mislead or pressure a reasonable user?",
+                  "Are risks, fees, and conditions clear and visible?",
+                  "Does this preserve consent and suitability requirements?",
+                  "Would this pass a regulator review?",
+                  "Would this be acceptable if publicly scrutinized?"
+                ]
+              },
+              {
+                "t": "callout",
+                "text": "If any answer is unclear, escalate to Compliance."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "num": "10",
+        "title": "Content Governance",
+        "intro": [
+          "Content governance ensures that product language stays consistent, compliant, and scalable across all surfaces. It defines ownership, review flow, and how AI systems are safely integrated into content creation and localization."
+        ],
+        "subs": [
+          {
+            "num": "10.1",
+            "title": "Ownership",
+            "intro": [
+              "Clear ownership ensures accountability, even in AI-assisted workflows."
+            ],
+            "blocks": [
+              {
+                "t": "guidelines",
+                "items": [
+                  {
+                    "title": "UX Writing",
+                    "desc": "Owns product copy standards, voice, tone, and clarity. Approves user-facing UX copy before localization. Maintains this style guide and AI guardrails."
+                  },
+                  {
+                    "title": "Product and Design",
+                    "desc": "Responsible for creating and implementing copy within flows. Ensure copy is ready for review before entering localization."
+                  },
+                  {
+                    "title": "Compliance and Legal",
+                    "desc": "Own regulated content and risk-related language. Approve disclosures and sensitive financial messaging."
+                  },
+                  {
+                    "title": "Localization (AI-driven)",
+                    "desc": "Fully automated via AI pipeline. PMs are responsible for submitting clean, approved English copy."
+                  },
+                  {
+                    "title": "Terminology Ownership",
+                    "desc": "UX Writing maintains the source of truth for terminology. AI systems must align with approved terminology."
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "num": "10.2",
+            "title": "Review Process",
+            "intro": [
+              "Because localization is automated, quality control must happen before content enters the pipeline."
+            ],
+            "blocks": [
+              {
+                "t": "structure",
+                "label": "Standard flow",
+                "items": [
+                  "Product and Design draft the experience (crucial screens or flows should consult the UX writer already at the draft stage)",
+                  "UX Writing reviews and refines the copy",
+                  "Compliance reviews where required",
+                  "PM submits final English strings (keys and values) via Google Sheet → Monday board",
+                  "AI vetting tool validates spelling, grammar, and style",
+                  "If passed, AI localization process begins"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Guidelines",
+                "items": [
+                  "Do not send unreviewed or draft copy to localization",
+                  "AI vetting is a safeguard, not a replacement for UX writing review",
+                  "Poor English input will scale into poor localization output"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "When to escalate",
+                "items": [
+                  "New financial concepts or features",
+                  "Changes to regulated or risk-related content",
+                  "Any ambiguity that could break in translation"
+                ]
+              }
+            ]
+          },
+          {
+            "num": "10.3",
+            "title": "Versioning and Documentation",
+            "intro": [
+              "The system must remain traceable despite automation."
+            ],
+            "blocks": [
+              {
+                "t": "bullets",
+                "label": "Source of truth",
+                "items": [
+                  "This style guide is the single reference for writing standards",
+                  "English source copy is the foundation for all localized versions"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "All updates must include",
+                "items": [
+                  "What changed",
+                  "Why it changed",
+                  "When it takes effect"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "The localization pipeline depends on",
+                "items": [
+                  "Clean, structured source strings",
+                  "Consistent terminology",
+                  "Stable key naming"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Communication",
+                "items": [
+                  "Changes to terminology or structure must be communicated before localization runs",
+                  "Breaking changes to keys or phrasing should be avoided post-localization"
+                ]
+              },
+              {
+                "t": "bullets",
+                "label": "Maintenance — regularly audit",
+                "items": [
+                  "AI localization output quality",
+                  "Terminology consistency across languages",
+                  "Update guidelines based on recurring issues or failure patterns"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
+;
+
+if (typeof module !== 'undefined' && module.exports) module.exports = STYLE_GUIDE;
+if (typeof window !== 'undefined') window.STYLE_GUIDE = STYLE_GUIDE;
+
+</script>
+  <script>
+    // Renders window.STYLE_GUIDE.fullGuide (the complete guide) recursively.
+    var sg = window.STYLE_GUIDE, fg = sg.fullGuide;
+    var content = document.getElementById('content');
+    var nav = document.getElementById('sidenav');
+    function el(tag, cls, txt){ var e=document.createElement(tag); if(cls)e.className=cls; if(txt!=null)e.textContent=txt; return e; }
+    function idFor(num){ return 's'+String(num).replace(/\./g,'-'); }
+    function asArr(x){ return Array.isArray(x)?x:[x]; }
+
+    function doDont(parent, doVal, dontVal){
+      var grid=el('div','example-grid');
+      if(doVal!=null){ var d=el('div','example-do'); d.appendChild(el('span','example-label','Do')); asArr(doVal).forEach(function(t){ d.appendChild(el('div',null,t)); }); grid.appendChild(d); }
+      if(dontVal!=null){ var n=el('div','example-dont'); n.appendChild(el('span','example-label',"Don't")); asArr(dontVal).forEach(function(t){ n.appendChild(el('div',null,t)); }); grid.appendChild(n); }
+      parent.appendChild(grid);
+    }
+    function renderBlock(b){
+      if(b.t==='prose'){ var w=el('div'); asArr(b.text).forEach(function(t){ w.appendChild(el('p','gd-prose',t)); }); return w; }
+      if(b.t==='callout'){ return el('div','gd-callout', b.text); }
+      if(b.t==='bullets'){ var w=el('div','gd-block'); if(b.label) w.appendChild(el('div','gd-sub',b.label)); var ul=el('ul','gd-list'); b.items.forEach(function(it){ ul.appendChild(el('li',null,it)); }); w.appendChild(ul); return w; }
+      if(b.t==='structure'){ var w=el('div','gd-block'); if(b.label) w.appendChild(el('div','gd-sub',b.label)); var ol=el('ol','gd-structure'); b.items.forEach(function(it){ ol.appendChild(el('li',null,it)); }); w.appendChild(ol); return w; }
+      if(b.t==='guidelines'){ var w=el('div','gd-block'); b.items.forEach(function(g){ var c=el('div','rule-card'); var row=el('div','rule-row'); var tx=el('div','rule-text'); tx.appendChild(el('strong',null,g.title)); if(g.desc){ tx.appendChild(document.createTextNode(' — '+g.desc)); } row.appendChild(tx); c.appendChild(row); if(g.do!=null||g.dont!=null){ doDont(c,g.do,g.dont); } w.appendChild(c); }); return w; }
+      if(b.t==='table'){ var w=el('div','gd-block'); var dd=b.headers&&b.headers.length===2&&/do|avoid|use/i.test(b.headers[0]); var t=el('table','gd-table'); var thead=el('thead'), htr=el('tr'); b.headers.forEach(function(h,i){ var th=el('th',null,h); if(dd) th.className=(i===0?'th-do':'th-dont'); htr.appendChild(th); }); thead.appendChild(htr); t.appendChild(thead); var tb=el('tbody'); b.rows.forEach(function(r){ var tr=el('tr'); r.forEach(function(cell,i){ var td=el('td',null,cell); if(dd) td.className=(i===0?'td-do':'td-dont'); tr.appendChild(td); }); tb.appendChild(tr); }); t.appendChild(tb); w.appendChild(t); return w; }
+      if(b.t==='examples'){ var w=el('div','gd-block'); b.items.forEach(function(x){ var c=el('div','rule-card'); c.appendChild(el('div','ex-label',x.label)); if(x.good!=null){ var gd=el('div','example-do'); gd.appendChild(el('span','example-label','Good')); gd.appendChild(el('div',null,x.good)); c.appendChild(gd);} if(x.bad!=null){ var bd=el('div','example-dont ex-gap'); bd.appendChild(el('span','example-label','Bad')); bd.appendChild(el('div',null,x.bad)); c.appendChild(bd);} w.appendChild(c); }); return w; }
+      if(b.t==='terms'){ var w=el('div','gd-block'); b.items.forEach(function(tm){ var c=el('div','rule-card'); c.appendChild(el('div','term-concept',tm.concept)); doDont(c, tm.use, tm.doNotUse); if(tm.note) c.appendChild(el('div','rule-note',tm.note)); var lbls=c.querySelectorAll('.example-label'); if(lbls[0])lbls[0].textContent='Use'; if(lbls[1])lbls[1].textContent="Don't use"; w.appendChild(c); }); return w; }
+      return el('div');
+    }
+    function renderSection(sec, depth, parent){
+      var s=el('section','section'); s.id=idFor(sec.num);
+      var head=sec.num+'  '+sec.title;
+      if(depth===0){ s.appendChild(el('div','section-head',head)); }
+      else { s.appendChild(el('div', depth===1?'sub-head':'sub-head sub-head-2', head)); }
+      if(sec.intro){ asArr(sec.intro).forEach(function(t){ s.appendChild(el('p','gd-prose gd-intro',t)); }); }
+      if(sec.blocks){ sec.blocks.forEach(function(b){ s.appendChild(renderBlock(b)); }); }
+      if(sec.subs){ sec.subs.forEach(function(sub){ renderSection(sub, depth+1, s); }); }
+      parent.appendChild(s);
+    }
+
+    fg.sections.forEach(function(sec){
+      nav.appendChild(el('h4', null, sec.num+' '+sec.title));
+      if(sec.subs && sec.subs.length){
+        sec.subs.forEach(function(sub){ var a=el('a',null,sub.num+' '+sub.title); a.href='#'+idFor(sub.num); nav.appendChild(a); });
+      } else {
+        var a=el('a',null,'Overview'); a.href='#'+idFor(sec.num); nav.appendChild(a);
+      }
+      renderSection(sec, 0, content);
+    });
+
+    // hero stats
+    function countG(secs){ var g=0; secs.forEach(function(s){ if(s.blocks) s.blocks.forEach(function(b){ if(b.t==='guidelines') g+=b.items.length; }); if(s.subs) g+=countG(s.subs); }); return g; }
+    var subCount=0; fg.sections.forEach(function(s){ subCount+=(s.subs?s.subs.length:0); });
+    var hs=document.getElementById('heroStats');
+    if(hs){ hs.innerHTML='';
+      function pill(n,label,dot){ var p=el('span','hstat'); if(dot){ var d=el('span','dotm'); d.style.background=dot; p.appendChild(d);} p.appendChild(el('b',null,String(n))); p.appendChild(document.createTextNode(' '+label)); return p; }
+      hs.appendChild(pill(fg.sections.length,'sections'));
+      hs.appendChild(pill(subCount,'topics'));
+      hs.appendChild(pill(countG(fg.sections),'guidelines','var(--accent)'));
+    }
+
+    // search
+    var search=document.getElementById('searchBox');
+    if(search){ search.addEventListener('input', function(){ var q=search.value.trim().toLowerCase(); document.querySelectorAll('#content > .section').forEach(function(sec){ if(!q){ sec.classList.remove('hidden'); return; } sec.classList.toggle('hidden', sec.textContent.toLowerCase().indexOf(q)===-1); }); }); }
+
+    // nav smooth-scroll
+    nav.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', function(e){ e.preventDefault(); var t=document.getElementById(a.getAttribute('href').slice(1)); if(t) t.scrollIntoView({behavior:'smooth',block:'start'}); }); });
+  </script>
+
+  <script>
+    // === presentation enhancements (no effect on content/data) ===
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('themeToggle');
+      function label() {
+        var dark = root.getAttribute('data-theme') !== 'light';
+        btn.textContent = dark ? '☀  Light mode' : '☾  Dark mode';
+      }
+      if (btn) {
+        label();
+        btn.addEventListener('click', function () {
+          var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+          root.setAttribute('data-theme', next);
+          try { localStorage.setItem('cf-theme', next); } catch (e) {}
+          label();
+        });
+      }
+
+
+      // scrollspy: highlight the section currently in view
+      var links = {};
+      document.querySelectorAll('#sidenav a').forEach(function (a) {
+        links[a.getAttribute('href').slice(1)] = a;
+      });
+      if ('IntersectionObserver' in window) {
+        var obs = new IntersectionObserver(function (entries) {
+          entries.forEach(function (en) {
+            if (en.isIntersecting && links[en.target.id]) {
+              document.querySelectorAll('#sidenav a.active').forEach(function (x) { x.classList.remove('active'); });
+              links[en.target.id].classList.add('active');
+              links[en.target.id].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            }
+          });
+        }, { rootMargin: '-84px 0px -68% 0px', threshold: 0 });
+        document.querySelectorAll('#content .section').forEach(function (s) {
+          if (s.id) obs.observe(s);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

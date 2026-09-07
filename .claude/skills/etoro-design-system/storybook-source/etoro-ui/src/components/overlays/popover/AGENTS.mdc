@@ -1,0 +1,757 @@
+---
+description: Agent guide for EtPopover - contextual overlay compound component with directional positioning, arrow alignment, theme-aware color inversion, auto-hide timing, and RTL support
+alwaysApply: false
+---
+
+# EtPopover Component
+
+## Purpose & Scope
+
+`EtPopover` is a compound component for displaying contextual overlays attached to target elements. It provides:
+
+- **Directional positioning**: Appears above, below, left, or right of the target
+- **Arrow shown by default**: Arrow is automatically rendered unless `hideArrow` is set
+- **Arrow alignment**: Arrow can be positioned at start, center, or end
+- **Theme-aware colors**: Automatically inverts colors based on light/dark theme
+- **Timing control**: Show delay and auto-hide functionality
+- **Modal-based rendering**: Renders outside normal layout flow for proper positioning
+- **RTL support**: Full right-to-left language support
+
+**Does NOT handle:**
+
+- Tooltip functionality (use this for richer content popovers)
+- Complex forms or interactive content beyond simple buttons
+- Nested popovers
+
+## Entry Points & Contracts
+
+### Compound Component Structure
+
+```tsx
+<EtPopover.Root>
+  // Main wrapper - provides context
+  <EtPopover.Target>
+    // Wraps the element the popover points to
+    {/* Target element */}
+  </EtPopover.Target>
+  <EtPopover.Content>
+    // Contains popover content
+    <EtPopover.Title /> // Optional title with icon
+    <EtPopover.Text /> // Optional description text with icon
+    <EtPopover.Button /> // Optional action button
+    <EtPopover.CloseButton /> // Optional close button
+    {/* Arrow is shown by default - no need to add <EtPopover.Arrow /> */}
+  </EtPopover.Content>
+</EtPopover.Root>
+```
+
+### `EtPopover.Root` (main wrapper)
+
+```tsx
+<EtPopover.Root
+  visible?: boolean             // default: true - controls popover visibility
+  popoverDirection?: PopoverDirection  // default: 'above'
+  arrowAlignment?: PopoverArrowAlignment  // default: 'center'
+  showDelay?: number            // default: 500 (milliseconds)
+  autoHideDelay?: number        // default: 3000 (ms, 0 = no auto-hide)
+  onClose?: () => void          // called on close/auto-hide
+  closeOnOutsidePress?: boolean // default: true
+  hideArrow?: boolean           // default: false - arrow is shown by default
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+/>
+```
+
+**Important defaults:**
+
+- `visible={true}` - Popover is visible by default
+- `showDelay={500}` - 500ms delay before showing
+- `autoHideDelay={3000}` - Auto-hides after 3 seconds (set to `0` to disable)
+- `hideArrow={false}` - Arrow is shown by default (set to `true` to hide it)
+
+### `EtPopover.Target` (target wrapper)
+
+```tsx
+<EtPopover.Target
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {/* Your target element goes here */}
+</EtPopover.Target>
+```
+
+### `EtPopover.Content` (content container)
+
+Supports two APIs: **compound children** (traditional) and **props-based** (simpler).
+
+#### Compound Children API (traditional)
+
+```tsx
+<EtPopover.Content
+  style?: StyleProp<ViewStyle>
+>
+  {/* Title, Text, Button, CloseButton, Arrow */}
+</EtPopover.Content>
+```
+
+#### Props-Based API (simpler)
+
+```tsx
+<EtPopover.Content
+  title?: string | { text: string; iconName?: string; style?: StyleProp<ViewStyle> }
+  text?: string | { text: string; iconName?: string; style?: StyleProp<ViewStyle> }
+  button?: string | { label: string; onPress: () => void; style?: StyleProp<ViewStyle> }
+  onButtonPress?: () => void      // Used when button is a string
+  closeButton?: boolean | PopoverCloseButtonProps
+  arrow?: boolean | PopoverArrowProps
+  style?: StyleProp<ViewStyle>
+/>
+```
+
+#### String Shorthand
+
+```tsx
+<EtPopover.Content>Simple text content as a string</EtPopover.Content>
+```
+
+### `EtPopover.Title` (title with optional icon)
+
+```tsx
+<EtPopover.Title
+  iconName?: string  // optional icon before title
+  style?: StyleProp<ViewStyle>
+>
+  {/* Title text (string) */}
+</EtPopover.Title>
+```
+
+### `EtPopover.Text` (description text with optional icon)
+
+```tsx
+<EtPopover.Text
+  iconName?: string  // optional icon before text
+  style?: StyleProp<ViewStyle>
+>
+  {/* Description text (string) */}
+</EtPopover.Text>
+```
+
+### `EtPopover.Button` (action button)
+
+```tsx
+<EtPopover.Button
+  onPress: () => void  // required - press handler
+  style?: StyleProp<ViewStyle>
+>
+  {/* Button label (string) */}
+</EtPopover.Button>
+```
+
+### `EtPopover.CloseButton` (close button)
+
+```tsx
+<EtPopover.CloseButton
+  onPress?: () => void  // optional - overrides context onClose
+  style?: StyleProp<ViewStyle>
+  testID?: string
+/>
+```
+
+### `EtPopover.Arrow` (arrow pointer - shown by default)
+
+Arrow is **automatically rendered** by default. You only need to explicitly add `<EtPopover.Arrow />` if you want to customize its style. Use `hideArrow` prop on `EtPopover.Root` to hide it.
+
+```tsx
+// Arrow is shown automatically - no need to add this unless customizing
+<EtPopover.Arrow
+  style?: StyleProp<ViewStyle>
+/>
+```
+
+### Types
+
+| Type                    | Values                                                                             |
+| ----------------------- | ---------------------------------------------------------------------------------- |
+| `PopoverDirection`      | `'above'` \| `'below'` \| `'left'` \| `'right'`                                    |
+| `PopoverArrowAlignment` | `'start'` \| `'center'` \| `'end'`                                                 |
+| `PopoverTitleConfig`    | `string` \| `{ text: string; iconName?: string; style?: StyleProp<ViewStyle> }`    |
+| `PopoverTextConfig`     | `string` \| `{ text: string; iconName?: string; style?: StyleProp<ViewStyle> }`    |
+| `PopoverButtonConfig`   | `string` \| `{ label: string; onPress: () => void; style?: StyleProp<ViewStyle> }` |
+
+**Direction behavior:**
+
+- `above`: Popover appears above target, arrow at bottom pointing down
+- `below`: Popover appears below target, arrow at top pointing up
+- `left`: Popover appears to left of target, arrow on right pointing right
+- `right`: Popover appears to right of target, arrow on left pointing left
+
+**Arrow alignment:**
+
+- `start`: Arrow at the start edge (left in LTR, right in RTL)
+- `center`: Arrow centered on the edge
+- `end`: Arrow at the end edge (right in LTR, left in RTL)
+
+## Project Structure
+
+```text
+libs/etoro-ui/src/components/overlays/popover/
+├── et-popover.tsx               # Main compound component
+├── et-popover.test.tsx          # Component tests
+├── index.ts                     # Public exports
+├── api/
+│   ├── index.ts                 # Type exports
+│   └── types.ts                 # TypeScript interfaces
+├── context/
+│   ├── index.ts                 # Context exports
+│   └── popover-context.tsx      # React context for subcomponents
+├── hooks/
+│   ├── index.ts                 # Hook exports
+│   └── use-popover-timing.ts    # Show delay and auto-hide logic
+├── subcomponents/
+│   ├── index.ts                 # Subcomponent exports
+│   ├── popover-arrow.tsx        # Arrow pointer
+│   ├── popover-button.tsx       # Action button
+│   ├── popover-close-button.tsx # Close button (X icon)
+│   ├── popover-content.tsx      # Content container with positioning
+│   ├── popover-target.tsx       # Target wrapper
+│   ├── popover-text.tsx         # Description text
+│   └── popover-title.tsx        # Title with icon
+├── utils/
+│   ├── index.ts                 # Utility exports
+│   └── styles.ts                # Shared styles and color utilities
+└── AGENTS.mdc                    # This file
+```
+
+## Usage Patterns
+
+### Basic popover with default behavior
+
+By default, popover appears after 500ms delay, auto-hides after 3 seconds, and shows the arrow:
+
+```tsx
+<EtPopover.Root popoverDirection="above" onClose={() => console.log('Popover closed')}>
+  <EtPopover.Target>
+    <View style={styles.target} />
+  </EtPopover.Target>
+  <EtPopover.Content>
+    <EtPopover.Title>Welcome!</EtPopover.Title>
+    <EtPopover.Text>This tip will auto-hide in 3 seconds.</EtPopover.Text>
+    <EtPopover.CloseButton />
+    {/* Arrow is shown by default - no need to add <EtPopover.Arrow /> */}
+  </EtPopover.Content>
+</EtPopover.Root>
+```
+
+### Interactive popover with state control
+
+For user-controlled visibility, disable auto-hide and manage state:
+
+```tsx
+const [visible, setVisible] = useState(false);
+
+<EtPopover.Root
+  visible={visible}
+  popoverDirection="above"
+  showDelay={0} // Show immediately
+  autoHideDelay={0} // Don't auto-hide
+  onClose={() => setVisible(false)}
+>
+  <EtPopover.Target>
+    <Pressable onPress={() => setVisible(true)}>
+      <EtText>Show Info</EtText>
+    </Pressable>
+  </EtPopover.Target>
+  <EtPopover.Content>
+    <EtPopover.Title>Welcome!</EtPopover.Title>
+    <EtPopover.Text>This is a helpful tip for you.</EtPopover.Text>
+    <EtPopover.CloseButton />
+  </EtPopover.Content>
+</EtPopover.Root>;
+```
+
+### Popover with action button
+
+```tsx
+<EtPopover.Root
+  popoverDirection="below"
+  autoHideDelay={0} // Disable auto-hide for action popovers
+  onClose={() => setVisible(false)}
+>
+  <EtPopover.Target>
+    <Button onPress={() => setVisible(true)}>Open Popover</Button>
+  </EtPopover.Target>
+  <EtPopover.Content>
+    <EtPopover.Title>Confirm Action</EtPopover.Title>
+    <EtPopover.Text>Are you sure you want to proceed?</EtPopover.Text>
+    <EtPopover.Button onPress={handleConfirm}>Confirm</EtPopover.Button>
+    <EtPopover.CloseButton />
+  </EtPopover.Content>
+</EtPopover.Root>
+```
+
+### Title with icon
+
+```tsx
+<EtPopover.Content>
+  <EtPopover.Title iconName="info">Important Notice</EtPopover.Title>
+  <EtPopover.Text>Please read this carefully.</EtPopover.Text>
+</EtPopover.Content>
+```
+
+### Text with icon (no title)
+
+```tsx
+<EtPopover.Content>
+  <EtPopover.Text iconName="lightbulb">Pro tip: Use keyboard shortcuts!</EtPopover.Text>
+  <EtPopover.CloseButton />
+</EtPopover.Content>
+```
+
+### Hide the arrow
+
+```tsx
+<EtPopover.Root popoverDirection="below" hideArrow>
+  <EtPopover.Target>
+    <View style={styles.target} />
+  </EtPopover.Target>
+  <EtPopover.Content>
+    <EtPopover.Text>Popover without arrow</EtPopover.Text>
+  </EtPopover.Content>
+</EtPopover.Root>
+```
+
+### Arrow alignment options
+
+```tsx
+// Arrow at start (left in LTR)
+<EtPopover.Root popoverDirection="below" arrowAlignment="start">
+  ...
+</EtPopover.Root>
+
+// Arrow centered (default)
+<EtPopover.Root popoverDirection="below" arrowAlignment="center">
+  ...
+</EtPopover.Root>
+
+// Arrow at end (right in LTR)
+<EtPopover.Root popoverDirection="below" arrowAlignment="end">
+  ...
+</EtPopover.Root>
+```
+
+### Auto-hide popover (default behavior)
+
+Auto-hide after 3 seconds is now the **default behavior**. No extra props needed:
+
+```tsx
+<EtPopover.Root popoverDirection="above" onClose={() => setVisible(false)}>
+  <EtPopover.Target>
+    <InfoIcon />
+  </EtPopover.Target>
+  <EtPopover.Content>
+    <EtPopover.Text>This will disappear in 3 seconds (default)</EtPopover.Text>
+  </EtPopover.Content>
+</EtPopover.Root>
+```
+
+### Custom auto-hide duration
+
+```tsx
+<EtPopover.Root
+  popoverDirection="above"
+  autoHideDelay={5000} // Custom: auto-hide after 5 seconds
+  onClose={() => setVisible(false)}
+>
+  ...
+</EtPopover.Root>
+```
+
+### Disable auto-hide
+
+```tsx
+<EtPopover.Root
+  popoverDirection="above"
+  autoHideDelay={0} // Disable auto-hide
+  onClose={() => setVisible(false)}
+>
+  ...
+</EtPopover.Root>
+```
+
+### Show delay (default behavior)
+
+500ms show delay is now the **default behavior**. No extra props needed:
+
+```tsx
+<EtPopover.Root popoverDirection="above" onClose={() => setVisible(false)}>
+  ... {/* Appears after 500ms delay by default */}
+</EtPopover.Root>
+```
+
+### Instant show (no delay)
+
+```tsx
+<EtPopover.Root
+  popoverDirection="above"
+  showDelay={0} // Show immediately, no delay
+  onClose={() => setVisible(false)}
+>
+  ...
+</EtPopover.Root>
+```
+
+### Prevent close on outside press
+
+```tsx
+<EtPopover.Root
+  visible={visible}
+  popoverDirection="above"
+  closeOnOutsidePress={false} // Only close via CloseButton or back button
+  onClose={() => setVisible(false)}
+>
+  ...
+</EtPopover.Root>
+```
+
+### Horizontal positioning (left/right)
+
+```tsx
+// Popover to the left of target
+<EtPopover.Root popoverDirection="left" arrowAlignment="center">
+  <EtPopover.Target>
+    <SettingsIcon />
+  </EtPopover.Target>
+  <EtPopover.Content>
+    <EtPopover.Text>Settings info</EtPopover.Text>
+  </EtPopover.Content>
+</EtPopover.Root>
+
+// Popover to the right of target
+<EtPopover.Root popoverDirection="right" arrowAlignment="start">
+  ...
+</EtPopover.Root>
+```
+
+### Props-based API (simpler alternative)
+
+Instead of compound children, use props for a more concise syntax:
+
+```tsx
+// Simple text-only popover
+<EtPopover.Content text="This is a helpful tip" arrow />
+
+// With title and close button
+<EtPopover.Content
+  title="Welcome!"
+  text="This is a helpful tip for you."
+  closeButton
+  arrow
+/>
+
+// With icons
+<EtPopover.Content
+  title={{ text: "Important Notice", iconName: "info" }}
+  text={{ text: "Please read this carefully.", iconName: "warning" }}
+  arrow
+/>
+
+// With action button (string shorthand)
+<EtPopover.Content
+  title="Confirm Action"
+  text="Are you sure you want to proceed?"
+  button="Confirm"
+  onButtonPress={handleConfirm}
+  closeButton
+  arrow
+/>
+
+// With action button (config object)
+<EtPopover.Content
+  title="Confirm Action"
+  text="Are you sure you want to proceed?"
+  button={{ label: "Confirm", onPress: handleConfirm }}
+  closeButton
+  arrow
+/>
+```
+
+### String shorthand for simple text
+
+For text-only popovers, pass a string directly as children:
+
+```tsx
+<EtPopover.Content>Pro tip: Use keyboard shortcuts for faster navigation!</EtPopover.Content>
+```
+
+## Anti-patterns
+
+### ❌ Missing Target or Content
+
+```tsx
+// BAD - Target and Content are required
+<EtPopover.Root visible={visible}>
+  <EtPopover.Title>Hello</EtPopover.Title>
+</EtPopover.Root>
+```
+
+**Fix:** Always wrap target element in `EtPopover.Target` and content in `EtPopover.Content`:
+
+```tsx
+<EtPopover.Root visible={visible}>
+  <EtPopover.Target>
+    <Button>Show</Button>
+  </EtPopover.Target>
+  <EtPopover.Content>
+    <EtPopover.Title>Hello</EtPopover.Title>
+    {/* Arrow is shown by default */}
+  </EtPopover.Content>
+</EtPopover.Root>
+```
+
+### ❌ Forgetting to disable auto-hide for interactive popovers
+
+```tsx
+// BAD - popover will auto-hide in 3 seconds while user is reading/interacting
+<EtPopover.Root onClose={() => setVisible(false)}>
+  <EtPopover.Content>
+    <EtPopover.Title>Important Action</EtPopover.Title>
+    <EtPopover.Text>Long text that needs time to read...</EtPopover.Text>
+    <EtPopover.Button onPress={handleAction}>Take Action</EtPopover.Button>
+  </EtPopover.Content>
+</EtPopover.Root>
+```
+
+**Fix:** Disable auto-hide for popovers that require user interaction:
+
+```tsx
+<EtPopover.Root
+  autoHideDelay={0} // Disable auto-hide
+  onClose={() => setVisible(false)}
+>
+  ...
+</EtPopover.Root>
+```
+
+### ❌ Using state when not needed
+
+```tsx
+// UNNECESSARY - for simple auto-hide popovers, state management is optional
+const [visible, setVisible] = useState(true);
+<EtPopover.Root visible={visible} onClose={() => setVisible(false)}>
+  ...
+</EtPopover.Root>;
+```
+
+**Simpler:** For auto-hide popovers that appear once, just use defaults:
+
+```tsx
+// visible defaults to true, auto-hides after 3 seconds
+<EtPopover.Root onClose={() => console.log('closed')}>...</EtPopover.Root>
+```
+
+### ❌ Placing custom Arrow outside Content
+
+Note: Arrow is now shown by default, so you don't need to add it. But if you want to customize it:
+
+```tsx
+// BAD - Custom Arrow must be inside Content
+<EtPopover.Root visible={visible}>
+  <EtPopover.Target>...</EtPopover.Target>
+  <EtPopover.Content>
+    <EtPopover.Title>Hello</EtPopover.Title>
+  </EtPopover.Content>
+  <EtPopover.Arrow style={{ ... }} />  {/* Wrong! */}
+</EtPopover.Root>
+```
+
+**Fix:** Custom Arrow must be a child of Content (or use `hideArrow` prop to hide default arrow):
+
+```tsx
+// Option 1: Arrow is automatic - no need to add it
+<EtPopover.Content>
+  <EtPopover.Title>Hello</EtPopover.Title>
+</EtPopover.Content>
+
+// Option 2: Customize the arrow
+<EtPopover.Content>
+  <EtPopover.Title>Hello</EtPopover.Title>
+  <EtPopover.Arrow style={{ marginTop: 4 }} />
+</EtPopover.Content>
+
+// Option 3: Hide the arrow
+<EtPopover.Root hideArrow>
+  <EtPopover.Content>
+    <EtPopover.Title>Hello</EtPopover.Title>
+  </EtPopover.Content>
+</EtPopover.Root>
+```
+
+### ❌ Manually styling text/icon colors
+
+```tsx
+// BAD - colors are automatically managed by theme
+<EtPopover.Title style={{ color: 'white' }}>Hello</EtPopover.Title>
+```
+
+**Fix:** Let the component manage colors automatically based on theme. Use `style` only for layout (margins, padding, etc.).
+
+### ❌ Forgetting onClose handler
+
+```tsx
+// BAD - no way to close the popover
+<EtPopover.Root visible={visible}>
+  ...
+  <EtPopover.CloseButton /> {/* Won't work without onClose */}
+  ...
+</EtPopover.Root>
+```
+
+**Fix:** Always provide `onClose` when using close functionality:
+
+```tsx
+<EtPopover.Root visible={visible} onClose={() => setVisible(false)}>
+  ...
+</EtPopover.Root>
+```
+
+### ❌ Using for complex forms
+
+```tsx
+// BAD - popovers are for simple content only
+<EtPopover.Content>
+  <TextInput />
+  <CheckBox />
+  <Button>Submit</Button>
+</EtPopover.Content>
+```
+
+**Fix:** Use a bottom sheet or modal for complex interactive content.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for automatic dark/light mode handling
+- `useTheme` from `@react-navigation/native` - provides `dark` flag for theme detection
+- `EtText` - text rendering for title, text, and button labels
+- `EtoroIcon` - icons for title, text, and close button (uses `iconColor` from context)
+- Spacing constants from `core/styles/spacing` (X1, X3, X4, X5)
+
+### External Dependencies
+
+- `react-native` - `View`, `Pressable`, `Modal`, `StyleSheet`, `Dimensions`, `I18nManager`
+
+### Design System Integration
+
+- **Colors** (theme-aware, inverted from app theme):
+  - Light mode app → Dark popover background with light text/icons
+  - Dark mode app → Light popover background with dark text/icons
+  - Uses semantic tokens `textPrimaryNeutral` (background) and `textInvertedPrimaryNeutral` (text/icons) which naturally invert
+- **Typography**:
+  - Title: `body-base-semibold`
+  - Text: `body-base-regular`
+  - Button: `label-tertiary-semibold`
+- **Arrow**: 14x7px triangle with explicit container dimensions for flex layout
+- **Layout**:
+  - Min width: 250px
+  - Max width: 350px
+  - Padding: 20px (X5)
+  - Border radius: 8px
+  - Gap between elements: 4px (X1)
+
+## Patterns & Pitfalls
+
+### Compound Component Pattern
+
+`EtPopover` uses the compound component pattern:
+
+- `Root` provides context to all children
+- Subcomponents read from context for colors and state
+- Content is restructured internally so it renders inside Target for proper positioning
+- **Important**: Subcomponents are detected by `displayName`. When using `React.memo()`, the `displayName` must be set on BOTH the inner component AND the memo wrapper:
+
+```tsx
+function MySubcomponent() { ... }
+MySubcomponent.displayName = 'EtPopover.MySubcomponent';
+
+export const MySubcomponent = React.memo(MySubcomponentComponent);
+MySubcomponent.displayName = 'EtPopover.MySubcomponent'; // Required!
+```
+
+### Positioning System
+
+The popover uses Modal for rendering outside normal layout flow:
+
+1. Target element is measured using `measureInWindow`
+2. Popover position is calculated based on direction and alignment
+3. Screen bounds are respected with automatic clamping
+
+### Theme Inversion
+
+Colors are automatically inverted based on theme:
+
+- In light mode: popover has dark background with light text
+- In dark mode: popover has light background with dark text
+
+This ensures popovers always have good contrast against their content.
+
+### Timing Control
+
+The `usePopoverTiming` hook manages:
+
+- **showDelay** (default: 500ms): Delays showing the popover after `visible` becomes true
+- **autoHideDelay** (default: 3000ms): Automatically hides the popover after the specified duration
+
+**Disabling timing:**
+
+- Set `showDelay={0}` for instant display
+- Set `autoHideDelay={0}` to disable auto-hide (popover stays until manually closed)
+
+### RTL Support
+
+Full RTL support is built-in:
+
+- Arrow alignment respects logical directions (start/end)
+- Horizontal positioning is RTL-aware
+- Horizontal popovers use LTR direction to prevent layout flip issues
+
+### Accessibility
+
+Built-in accessibility features:
+
+- Content container has `accessibilityRole="alert"` and `accessibilityViewIsModal`
+- Close button and action button have proper accessibility roles
+- Modal supports hardware back button for closing
+
+## Troubleshooting
+
+**Q: Popover not appearing**
+A: Ensure both `Target` and `Content` are provided. Note: there's a 500ms default show delay
+
+**Q: Popover disappears too quickly**
+A: Default auto-hide is 3 seconds. Set `autoHideDelay={0}` to disable, or increase the value
+
+**Q: Popover positioned incorrectly**
+A: Check that target element has proper dimensions; ensure parent doesn't have overflow hidden
+
+**Q: Arrow not showing**
+A: Arrow is now shown by default. Check that `hideArrow` is not set to `true` on `EtPopover.Root`. If you need to customize the arrow, place `<EtPopover.Arrow style={...} />` inside `<EtPopover.Content>`
+
+**Q: Close button not working**
+A: Ensure `onClose` prop is provided to `Root`
+
+**Q: Colors look wrong**
+A: Don't override text/icon colors; let theme handle them automatically
+
+**Q: Popover not closing on outside press**
+A: Check `closeOnOutsidePress` prop (defaults to `true`)
+
+## Related Context
+
+- `EtBottomSheetV2 (components/overlays/bottom-sheet-v2/)` - For complex content that needs more space
+- `EtModal (components/overlays/modal/)` - For dialogs and confirmations
+- `EtText (foundations/text/)` - Text component used internally
+- `EtoroIcon (foundations/icon-assets/)` - Icon component used internally
+- `api/types.ts` - Full type definitions for all props

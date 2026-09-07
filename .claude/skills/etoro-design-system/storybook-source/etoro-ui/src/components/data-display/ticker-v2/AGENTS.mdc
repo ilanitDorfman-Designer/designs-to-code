@@ -1,0 +1,287 @@
+---
+description: Architecture and API reference for EtTicker v2 — composable infinite-scrolling financial ticker
+alwaysApply: false
+---
+
+# EtTicker Component (v2)
+
+## Purpose & Scope
+
+`EtTicker` is a composable, infinite-scrolling ticker for financial market data. It provides:
+
+- **60-120fps animation** via a custom Marquee built on Reanimated 3
+- **Drag gesture support** for manual scrolling control
+- **Pressable asset names** with `onItemPress` callback for navigation
+- **Full dark/light mode support** via context-driven theme colors
+- **Dual API**: simple data-driven mode and advanced compound composition
+
+**Does NOT handle:**
+
+- Data fetching (accepts pre-built `TickerItem[]`)
+- Navigation logic (consumers provide an `onItemPress` callback)
+- Price polling or real-time updates (handled by parent hooks)
+
+## Entry Points & Contracts
+
+### `EtTicker` (main component)
+
+```tsx
+<EtTicker
+  items?: TickerItem[]           // data for simple mode
+  speed?: number                 // default: 0.25 (range 0.1-2.0)
+  gradient?: boolean             // default: true (simple mode only)
+  onItemPress?: (item: TickerItem) => void  // navigation callback
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+  accessibilityHint?: string
+>
+  {children}                     // compound mode (overrides items/gradient)
+</EtTicker>
+```
+
+**Behavior:**
+
+- If no `children` and no `items` (or empty array): returns `null`
+- If `children` provided: renders children directly, ignores `items` and `gradient`
+- If `items` provided without children: renders Marquee + Content + Gradient internally
+
+### `EtTicker.Item`
+
+```tsx
+<EtTicker.Item
+  item: TickerItem        // required - data for this item
+  testID?: string
+/>
+```
+
+Renders a two-row ticker item:
+- **Row 1**: Symbol name
+- **Row 2**: Formatted price + change icon + percentage
+
+Colors come from `TickerContext`. The entire item is pressable when `onItemPress` is provided.
+
+### `EtTicker.Content`
+
+```tsx
+<EtTicker.Content
+  items: TickerItem[]     // required - all items to render
+/>
+```
+
+Renders a list of `EtTicker.Item` components. Spacing between items is handled by the individual item styles (left margin). Should be used inside `EtTicker.Marquee` for infinite scrolling behavior.
+
+### `EtTicker.Start` / `EtTicker.End`
+
+```tsx
+<EtTicker.Start style?: StyleProp<ViewStyle> testID?: string>
+  {children}
+</EtTicker.Start>
+```
+
+Fixed slots at the start or end of the ticker row. Use in compound mode for elements that shouldn't scroll (e.g. filter/sort buttons). Spacing between the slot and adjacent content is handled by margins (16px).
+
+### `EtTicker.Gradient`
+
+```tsx
+<EtTicker.Gradient width?: number rightOnly?: boolean>
+  {children}
+</EtTicker.Gradient>
+```
+
+Opacity mask wrapper using `MaskedView` with `LinearGradient` overlays. Creates 30px fade-to-transparent regions at both edges by default. Works on any background color by masking content opacity. The `rightOnly` prop skips the left fade (useful when `EtTicker.Start` is present to avoid double fade effect).
+
+### `EtTicker.Marquee`
+
+```tsx
+<EtTicker.Marquee
+  spacing?: number
+  reverse?: boolean
+  withGesture?: boolean
+  style?: ViewStyle
+>
+  {children}
+</EtTicker.Marquee>
+```
+
+Infinite horizontal scrolling animation wrapper with gesture support. **Speed is inherited from the parent `EtTicker` via context** — no need to pass it again.
+
+### Types
+
+| Type | Description |
+| --- | --- |
+| `TickerItem` | Data model: `instrumentId`, `name`, `currentPrice`, `dailyChange`, `navigationUrl`, optional `currencySymbol`/`minPrecision`/`maxPrecision` |
+| `EtTickerProps` | Main component props (includes `onItemPress` callback) |
+| `TickerItemProps` | Props for `EtTicker.Item` subcomponent |
+| `TickerContentProps` | Props for `EtTicker.Content` subcomponent |
+| `TickerGradientProps` | Props for `EtTicker.Gradient` subcomponent |
+| `TickerSlotProps` | Props for `EtTicker.Start` / `EtTicker.End` subcomponents |
+
+## Usage Patterns
+
+### Simple (most common)
+
+```tsx
+<EtTicker items={tickerData} speed={0.5} />
+```
+
+### Without gradient
+
+```tsx
+<EtTicker items={tickerData} gradient={false} />
+```
+
+### Compound (advanced customization)
+
+```tsx
+<EtTicker speed={0.5}>
+  <EtTicker.Gradient>
+    <EtTicker.Marquee withGesture={true}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <EtTicker.Content items={tickerData} />
+      </View>
+    </EtTicker.Marquee>
+  </EtTicker.Gradient>
+</EtTicker>
+```
+
+### With navigation callback
+
+```tsx
+<EtTicker
+  items={tickerData}
+  onItemPress={(item) => {
+    router.push({
+      pathname: '/discover/market',
+      params: serializeRouteParams({ InstrumentID: item.instrumentId }),
+    });
+  }}
+/>
+```
+
+### With custom accessibility
+
+```tsx
+<EtTicker
+  items={tickerData}
+  accessibilityLabel="Live stock market ticker"
+  accessibilityHint="Swipe to pause scrolling"
+  testID="main-ticker"
+/>
+```
+
+### With Start/End slots
+
+```tsx
+<EtTicker speed={0.25}>
+  <EtTicker.Start>
+    <Pressable onPress={() => openSortMenu()} hitSlop={8}>
+      <EtTicker.FilterIcon />
+    </Pressable>
+  </EtTicker.Start>
+  <EtTicker.Gradient>
+    <EtTicker.Marquee withGesture>
+      <EtTicker.Content items={tickerData} />
+    </EtTicker.Marquee>
+  </EtTicker.Gradient>
+  <EtTicker.End>
+    <Pressable onPress={() => openSettings()} hitSlop={8}>
+      <SettingsIcon />
+    </Pressable>
+  </EtTicker.End>
+</EtTicker>
+```
+
+## Anti-patterns
+
+### Using subcomponents outside EtTicker
+
+```tsx
+// BAD - will throw runtime error (no context)
+<EtTicker.Item item={data} />
+```
+
+**Fix:** Always wrap in `<EtTicker>`.
+
+### Passing both items and children
+
+```tsx
+// BAD - items will be silently ignored
+<EtTicker items={data}>
+  <CustomContent />
+</EtTicker>
+```
+
+**Fix:** Use one mode or the other, not both.
+
+### Using EtTicker.Content without Marquee
+
+```tsx
+// BAD - content will be static and likely cut off
+<EtTicker speed={0.5}>
+  <View style={{ flexDirection: 'row' }}>
+    <EtTicker.Content items={data} />
+  </View>
+</EtTicker>
+```
+
+**Problem:** Without `EtTicker.Marquee`, the ticker items render as a static horizontal row. If the total width of all items exceeds the screen width, items on the right will be cut off and invisible to users. No scrolling or animation occurs, defeating the purpose of a ticker component.
+
+**Fix:** Always wrap `EtTicker.Content` inside `EtTicker.Marquee` for automatic infinite scrolling:
+
+```tsx
+// GOOD - content scrolls infinitely
+<EtTicker speed={0.5}>
+  <EtTicker.Marquee>
+    <EtTicker.Content items={data} />
+  </EtTicker.Marquee>
+</EtTicker>
+```
+
+**Exception:** Only use `EtTicker.Content` directly if you're implementing a custom scrolling solution (e.g., with `FlatList` or `ScrollView`), but this is not recommended as `EtTicker.Marquee` is optimized for 60-120fps performance with Reanimated 3.
+
+### Manually styling colors
+
+```tsx
+// BAD - bypasses theme system
+<EtTicker.Item item={data} style={{ color: 'red' }} />
+```
+
+**Fix:** Colors are theme-driven via context. Modify the theme if needed.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for context
+- `EtText` - text rendering in `TickerItem`
+- `EtoroIcon` - change direction indicators
+- `TickerContext` - shares theme colors with all subcomponents
+
+### External Dependencies
+
+- `@react-native-masked-view/masked-view` - opacity mask for edge fades
+- `expo-linear-gradient` - gradient mask elements
+- `react-native-reanimated` - marquee animation
+- `react-native-gesture-handler` - drag gesture support
+
+### Data Flow
+
+- `EtTickerProps.items` -> `useTickerConfig` -> `TickerContext.Provider` -> subcomponents
+- `EtTickerProps.speed` -> `useTickerConfig` -> `TickerContextValue.speed` -> `EtTicker.Marquee`
+- Theme colors: `useEtoroTheme()` -> `useTickerConfig` -> `TickerContextValue` -> `useTickerContext()`
+- Price formatting: `TickerItem.currentPrice` -> `formatPrice()` -> display string
+
+## Speed Guidelines
+
+| Speed | Use Case | Description |
+| --- | --- | --- |
+| 1.5-2.0 | Breaking news | Fast updates for urgent alerts |
+| 0.5-1.0 | Standard | Balanced speed for general data |
+| 0.1-0.4 | Detailed | Slow pace for easy reading |
+
+## Related Context
+
+- `EtText` - Text component used internally for labels and prices
+- `EtoroIcon` - Icon component for change direction indicators
+- `ticker/` (v1) - Previous implementation, kept for backward compatibility

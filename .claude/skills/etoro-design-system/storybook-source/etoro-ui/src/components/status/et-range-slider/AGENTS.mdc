@@ -1,0 +1,63 @@
+---
+description: Agent guide for EtRangeSlider - interactive draggable range slider with min/max labels, bar track with ticks, and positive/negative cursor colors
+alwaysApply: false
+---
+
+# EtRangeSlider Component
+
+## Purpose & Scope
+
+Interactive range slider that displays min/max labels, a bar track with 13 ticks, and a draggable thumb. It emits updated values as the thumb moves. Designed for status/preview use cases that need lightweight interaction.
+
+- Fully controlled: `value` comes from parent, `onValueChange` emits the next value.
+- Thumb moves along the track; tap or pan to reposition.
+- Edge-fade gradients to soften the bar edges.
+- Responsive: fills parent width.
+
+## Entry Points & Props
+
+### `EtRangeSlider`
+
+```tsx
+<EtRangeSlider
+  min?: number                // default 0
+  max?: number                // default 100
+  value?: number              // default midpoint between min/max
+  cursorColor?: 'positive' | 'negative' // default 'positive'; positive = green, negative = red
+  minLabel?: string           // default 'MIN'; already translated label
+  maxLabel?: string           // default 'MAX'; already translated label
+  onValueChange?: (value: number) => void
+  testID?: string
+/>
+```
+
+## Behaviors
+
+- Normalizes/clamps value between min/max.
+- 13 vertical bars auto-spaced across full width; thumb overlays track.
+- Pan and tap gestures supported; wider hitSlop for usability.
+- `cursorColor`: thumb color preset — `'positive'` (green) or `'negative'` (red); default `'positive'`.
+- Edge gradients are a planned enhancement to fade bars near edges using theme neutrals (not yet implemented).
+
+## Dependencies
+
+- Theme: `useEtoroTheme` for colors.
+- Gestures/animation: `react-native-gesture-handler`, `react-native-reanimated`.
+- Gradients: `expo-linear-gradient`.
+
+## Usage
+
+```tsx
+// Default labels (MIN/MAX)
+const [val, setVal] = useState(50);
+<EtRangeSlider min={0} max={100} value={val} onValueChange={setVal} />;
+
+// Custom translated labels
+const [val, setVal] = useState(50);
+<EtRangeSlider min={0} max={100} value={val} onValueChange={setVal} minLabel="Low" maxLabel="High" />;
+```
+
+## Notes
+
+- Keep parent layout controlling width; component stretches to 100% of its container.
+- Ensure gesture handler and reanimated are configured in the app (per RN GH/Reanimated setup).

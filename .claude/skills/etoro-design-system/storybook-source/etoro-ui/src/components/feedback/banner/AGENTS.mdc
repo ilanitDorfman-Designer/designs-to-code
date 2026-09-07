@@ -1,0 +1,170 @@
+---
+description: Agent guide for EtBanner - inline promo/info banner with Title, Description, Actions (button/link), Illustration, and optional dismiss
+alwaysApply: false
+---
+
+# EtBanner Component
+
+## Purpose & Scope
+
+`EtBanner` is an inline, dismissible promo/info banner for the eToro design system.
+It matches the DS React **Banner** variants ([Figma](https://www.figma.com/design/cMyPhFndkPeXR6UkIuZujT/DS---React?node-id=56563-58537)):
+
+- **Title + description** (always)
+- **Optional actions**: primary `EtButton` (`size="tiny"`) and/or `EtLink` (`size="small"`)
+- **Optional trailing illustration** (`small` | `medium` | `large`)
+- **Optional dismiss** via `onClose` (xmark, top-end)
+
+**Does NOT handle:**
+
+- Eligibility, Mixpanel cohorts, or once-per-user persistence (host / PMM promo layer)
+- Navigation / deeplinks (wire `onPress` on button/link in the host)
+- Full-screen carousels (use `EtWizard`) or modal sheets (use `EtBottomSheet`)
+
+## File Structure
+
+```
+banner/
+├── api/
+│   ├── index.ts
+│   └── types.ts
+├── hooks/
+│   ├── index.ts
+│   └── use-banner-children.ts
+├── subcomponents/
+│   ├── index.ts
+│   ├── banner-title.tsx
+│   ├── banner-description.tsx
+│   ├── banner-actions.tsx
+│   └── banner-illustration.tsx
+├── et-banner.tsx
+├── et-banner.test.tsx
+├── index.ts
+└── AGENTS.mdc
+```
+
+## Entry Points & Contracts
+
+### `EtBanner` (root)
+
+```tsx
+<EtBanner
+  onClose?: () => void
+  closeAccessibilityLabel?: string  // default: 'Close'
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}
+</EtBanner>
+```
+
+### Compound children
+
+| Slot | Role |
+| --- | --- |
+| `EtBanner.Title` | Label/Primary/Semibold heading |
+| `EtBanner.Description` | Body/Secondary/Regular copy |
+| `EtBanner.Actions` | Row for `EtButton` / `EtLink` |
+| `EtBanner.Illustration` | Trailing side art (`size` preset) |
+
+### Types
+
+| Type | Values |
+| --- | --- |
+| `BannerIllustrationSize` | `'small'` \| `'medium'` \| `'large'` |
+| `EtBannerChildren` | Compound child element(s) for the root `children` prop |
+
+## Usage Patterns
+
+### 1. Title + description + close
+
+```tsx
+<EtBanner onClose={handleClose}>
+  <EtBanner.Title>Title</EtBanner.Title>
+  <EtBanner.Description>
+    Apple Inc. is a technology company that engages in the design, manufacturing, and marketing of.
+  </EtBanner.Description>
+</EtBanner>
+```
+
+### 2. With text link
+
+```tsx
+<EtBanner onClose={handleClose}>
+  <EtBanner.Title>Title</EtBanner.Title>
+  <EtBanner.Description>Supporting copy.</EtBanner.Description>
+  <EtBanner.Actions>
+    <EtLink size="small" onPress={onLearnMore}>
+      <EtLink.Label>Label</EtLink.Label>
+      <EtLink.Icon name="chevronRight" />
+    </EtLink>
+  </EtBanner.Actions>
+</EtBanner>
+```
+
+### 3. With button + illustration
+
+```tsx
+<EtBanner onClose={handleClose}>
+  <EtBanner.Title>Title</EtBanner.Title>
+  <EtBanner.Description>Supporting copy.</EtBanner.Description>
+  <EtBanner.Actions>
+    <EtButton size="tiny" variant="primary-filled" onPress={onCta}>
+      Label
+    </EtButton>
+  </EtBanner.Actions>
+  <EtBanner.Illustration size="large">
+    <Image source={art} style={{ width: 112, height: 144 }} />
+  </EtBanner.Illustration>
+</EtBanner>
+```
+
+Illustration **requires children** for production art. Without children the slot renders nothing (no dashed preview chrome in the kit).
+
+### 4. Button + link together
+
+```tsx
+<EtBanner.Actions>
+  <EtButton size="tiny" variant="primary-filled" onPress={onCta}>
+    Label
+  </EtButton>
+  <EtLink size="small" onPress={onSecondary}>
+    <EtLink.Label>Label</EtLink.Label>
+    <EtLink.Icon name="chevronRight" />
+  </EtLink>
+</EtBanner.Actions>
+```
+
+## Design Tokens
+
+| Token | Usage |
+| --- | --- |
+| `colors.cardDefault` | Banner background |
+| `colors.textPrimaryNeutral` | Title, description, close icon |
+| `X4` | Content padding, border radius |
+| `X3` | Gap content↔illustration, description↔actions, close inset |
+| `X1` | Gap title↔body |
+
+Reuse kit primitives — do **not** restyle button/link inside the banner:
+
+- Button: `EtButton` `variant="primary-filled"` `size="tiny"` (32px, matches Figma Label button S)
+- Link: `EtLink` `size="small"` with trailing `chevronRight`
+
+## Notes for Agents
+
+- Margins are **not** baked in — host screens pass `style` for spacing.
+- Slot detection uses compound `displayName` (same pattern as most kit compounds).
+- When `onClose` is set, content reserves trailing space so title/body never sit under the X.
+- Illustration without children renders `null` — Storybook may pass its own dashed preview child.
+- For PMM in-app promos, wrap with failsafe gating per `.cursor/skills/domains/pmm-in-app-promos/SKILL.md`.
+- Import: `import { EtBanner, EtButton, EtLink } from 'etoro-ui'` — never `@etoro/etoro-ui`.
+
+## Anti-Patterns
+
+❌ Hardcoded hex colors instead of `useEtoroTheme`  
+❌ Pixel paddings instead of `X*` spacing tokens  
+❌ Putting business eligibility inside the kit component  
+❌ Using `EtButton` `size="small"` when matching Figma Banner (use `tiny`)  
+❌ Shipping dashed illustration placeholders in the kit (keep preview chrome in Storybook)  
+❌ Overriding `label-primary-semibold` line-height — use the typography token as-is

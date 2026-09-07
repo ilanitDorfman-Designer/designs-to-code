@@ -1,0 +1,293 @@
+---
+description: Agent guide for EtCheckbox - controlled checkbox with square/round/add variants, compound Label subcomponent, indeterminate state, animated transitions, and haptic feedback
+alwaysApply: false
+---
+
+# EtCheckbox Component
+
+## Purpose & Scope
+
+`EtCheckbox` is a controlled checkbox component for the eToro design system. It provides a flexible, accessible checkbox with:
+
+- **Three variants**: square (default, supports indeterminate), round, and add (plus icon when unchecked)
+- **Compound component pattern**: `EtCheckbox.Label` subcomponent
+- **Built-in states**: checked, unchecked, error, indeterminate (square only)
+- **Animated transitions**: smooth background, border, and icon animations
+- **Haptic feedback**: enabled by default
+
+**Does NOT handle:**
+
+- Form validation logic (handle in parent)
+- Checkbox group management (handle selection state in parent)
+- Uncontrolled mode (always requires `value` + `onChange`)
+
+## Entry Points & Contracts
+
+### `EtCheckbox` (main component)
+
+```tsx
+<EtCheckbox
+  value: CheckboxValue          // required - controlled state
+  onChange: (checked: boolean) => void  // required - toggle callback
+  variant?: CheckboxVariant     // default: 'square'
+  disabled?: boolean            // default: false
+  haptics?: boolean             // default: true
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+>
+  {children}
+</EtCheckbox>
+```
+
+**Children constraints:**
+
+- Optional: `EtCheckbox.Label` for text label
+- String shorthand is NOT supported - use compound component
+
+### `EtCheckbox.Label`
+
+```tsx
+<EtCheckbox.Label
+  style?: StyleProp<TextStyle>
+  disabled?: boolean            // auto-passed from parent
+>
+  {ReactNode}
+</EtCheckbox.Label>
+```
+
+### Types
+
+| Type                      | Values                                              |
+| ------------------------- | --------------------------------------------------- |
+| `CheckboxVariant`         | `'square'` \| `'round'` \| `'add'`                  |
+| `CheckboxValueSquare`     | `true` \| `false` \| `'error'` \| `'indeterminate'` |
+| `CheckboxValueRoundOrAdd` | `true` \| `false` \| `'error'`                      |
+
+**Note:** TypeScript enforces correct value types per variant via discriminated union.
+
+## Usage Patterns
+
+### Basic (square variant)
+
+```tsx
+const [value, setValue] = useState<CheckboxValueSquare>(false);
+<EtCheckbox value={value} onChange={setValue} />;
+```
+
+### With label
+
+```tsx
+<EtCheckbox value={value} onChange={setValue}>
+  <EtCheckbox.Label>Subscribe to Newsletter</EtCheckbox.Label>
+</EtCheckbox>
+```
+
+### Round variant
+
+```tsx
+const [value, setValue] = useState<CheckboxValueRoundOrAdd>(false);
+<EtCheckbox value={value} onChange={setValue} variant="round" />;
+```
+
+### Add variant
+
+```tsx
+<EtCheckbox value={value} onChange={setValue} variant="add" />
+```
+
+### Indeterminate state (square only)
+
+```tsx
+<EtCheckbox value="indeterminate" onChange={setValue} variant="square" />
+```
+
+### Error state
+
+```tsx
+<EtCheckbox value="error" onChange={setValue} />
+```
+
+### Multi-selection pattern
+
+```tsx
+const [selected, setSelected] = useState<string[]>([]);
+
+const toggleItem = (id: string, checked: boolean) => {
+  setSelected((prev) => (checked ? [...prev, id] : prev.filter((item) => item !== id)));
+};
+
+{
+  items.map((item) => (
+    <EtCheckbox key={item.id} value={selected.includes(item.id)} onChange={(checked) => toggleItem(item.id, checked)}>
+      <EtCheckbox.Label>{item.name}</EtCheckbox.Label>
+    </EtCheckbox>
+  ));
+}
+```
+
+## Anti-patterns
+
+### ❌ Using string children (not supported)
+
+```tsx
+// BAD - EtCheckbox doesn't support string shorthand
+<EtCheckbox value={value} onChange={setValue}>
+  Subscribe
+</EtCheckbox>
+```
+
+**Fix:** Always use compound component:
+
+```tsx
+<EtCheckbox value={value} onChange={setValue}>
+  <EtCheckbox.Label>Subscribe</EtCheckbox.Label>
+</EtCheckbox>
+```
+
+### ❌ Using indeterminate with round/add variants
+
+```tsx
+// BAD - TypeScript will error, indeterminate only valid for square
+const [value, setValue] = useState<CheckboxValueRoundOrAdd>('indeterminate');
+<EtCheckbox value={value} onChange={setValue} variant="round" />;
+```
+
+**Fix:** Use `CheckboxValueSquare` type only with `variant="square"`.
+
+### ❌ Using wrong value type for variant
+
+```tsx
+// BAD - mixing value types
+const [value, setValue] = useState<CheckboxValueSquare>(false);
+<EtCheckbox value={value} onChange={setValue} variant="add" />;
+```
+
+**Fix:** Match value type to variant:
+
+```tsx
+// For square variant
+const [value, setValue] = useState<CheckboxValueSquare>(false);
+
+// For round or add variants
+const [value, setValue] = useState<CheckboxValueRoundOrAdd>(false);
+```
+
+### ❌ Manually styling colors
+
+```tsx
+// BAD - bypasses design system
+<EtCheckbox.Label style={{ color: 'red' }}>Label</EtCheckbox.Label>
+```
+
+**Fix:** Colors are automatically managed based on theme. Use `style` prop only for layout adjustments.
+
+### ❌ Expecting toggled value in onChange
+
+```tsx
+// BAD - onChange always emits boolean (true or false)
+<EtCheckbox
+  value="indeterminate"
+  onChange={(checked) => {
+    // checked will be `true`, not the previous value
+    setValue(checked ? 'indeterminate' : false); // Wrong!
+  }}
+/>
+```
+
+**Fix:** `onChange` emits the new checked state as boolean. Indeterminate/error → toggles to `true`, `true` → toggles to `false`.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for styling
+- `EtoroIcon` - underlying icon component (checkLine, plusLine)
+- Hooks:
+  - `useCheckboxConfig` - derives colors, size, borderRadius from props
+  - `useCheckboxState` - manages animations and press handler
+  - `useCheckboxChildren` - processes children with disabled prop
+
+### External Dependencies
+
+- `expo-haptics` - haptic feedback on press
+- `react-native` - `Pressable`, `View`, `StyleSheet`
+- `react-native-reanimated` - animations for background, border, scale, and icons
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`):
+  - Checked: theme primary color
+  - Unchecked: theme border color
+  - Error: theme error color
+  - Icon: white (inverted)
+- Sizes:
+  - Square: 24×24, 4px border radius
+  - Round/Add: 30×30, fully round (15px radius)
+- Icon size: 20px (fixed)
+
+## Patterns & Pitfalls
+
+### Controlled Component Pattern
+
+The checkbox is always controlled - parent owns state via `value` + `onChange`:
+
+- `value` determines visual state
+- `onChange` receives toggled boolean (`true` or `false`)
+- Never stores internal state
+
+### onChange Behavior
+
+`onChange` always emits a boolean, regardless of input state:
+
+| Current Value     | onChange Emits |
+| ----------------- | -------------- |
+| `true`            | `false`        |
+| `false`           | `true`         |
+| `'error'`         | `true`         |
+| `'indeterminate'` | `true`         |
+
+### Variant Visual Differences
+
+| Variant  | Unchecked    | Checked   |
+| -------- | ------------ | --------- |
+| `square` | Empty box    | Checkmark |
+| `round`  | Empty circle | Checkmark |
+| `add`    | Plus icon    | Checkmark |
+
+### Indeterminate State
+
+Only supported for `square` variant:
+
+- Shows filled background (like checked)
+- Does NOT show check icon
+- Useful for "select all" with partial selection
+- Clicking toggles to `true` (checked)
+
+### Animation Behavior
+
+Animations are handled by `useCheckboxState`:
+
+- **Background**: Fades in/out with scale pulse (0.95 → 1)
+- **Border**: Color transitions between unchecked/checked/error
+- **Check icon**: Fades and scales in (0.3 → 1) at 70% of animation
+- **Plus icon (add variant)**: Fades out and rotates when checking
+
+Animation duration and easing are defined in `utils/animation-constants.ts`.
+
+### Accessibility
+
+Built-in accessibility support:
+
+- `accessibilityRole="checkbox"`
+- `accessibilityState={{ checked: isIndeterminate ? 'mixed' : isChecked }}`
+- `accessibilityLabel` prop for custom screen reader text
+- `hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}` for easier touch
+
+## Related Context
+
+- `EtChip (controls/chips/)` - Similar compound pattern for selection chips
+- `EtButton (button/)` - Similar compound pattern for buttons
+- `api/types.ts` - Type definitions for props and values
+- `hooks/` - State management and configuration hooks
+- `utils/` - Animation constants and color utilities

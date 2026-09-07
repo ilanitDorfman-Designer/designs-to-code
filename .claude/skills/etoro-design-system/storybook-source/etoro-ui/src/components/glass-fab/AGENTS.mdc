@@ -1,0 +1,78 @@
+---
+description: Agent guide for EtGlassFab - circular liquid-glass floating action button (iOS 26+ native GlassView, dark BlurView fallback elsewhere)
+alwaysApply: false
+---
+
+# EtGlassFab Component
+
+## Purpose & Scope
+
+`EtGlassFab` is a single circular floating action button with the eToro liquid-glass
+surface. It is the shared primitive behind the user-page "Ask Tori" FAB and the
+watchlist "Add" FAB.
+
+- On **iOS 26+** it renders the native `GlassView` (via `EtGlassView`).
+- On **every other platform** it falls back to a primary Carbon circle
+  (`carbon900`) with an `expo-blur` `BlurView` underlay.
+- **Self-contained**: detects liquid-glass support (`useLiquidGlass`) and provides
+  the `LiquidGlassContext` for its own subtree — consumers only pass an icon + handler.
+
+**Does NOT handle:**
+
+- Positioning — wrap it in a positioned `View` / `Animated.View`.
+- Scroll-driven show/hide animation — own that in the consumer.
+- Multiple actions / expansion — use `EtFabMenu` for that.
+
+## Contract
+
+```tsx
+<EtGlassFab
+  iconName: IconName            // required — center icon
+  onPress: () => void           // required — fires after the optional haptic
+  accessibilityLabel: string    // required
+  size?: number                 // default: 44 (diameter)
+  iconSize?: number             // default: 24
+  iconColor?: string            // default: icon/theme default
+  glassEffectStyle?: GlassEffectStyle  // default: 'regular'
+  tintColor?: string
+  haptics?: boolean             // default: true (light impact)
+  disabled?: boolean            // default: false
+  hitSlop?: number
+  style?: StyleProp<ViewStyle>  // merged onto the glass surface
+  testID?: string               // applied to the pressable
+/>
+```
+
+## Usage
+
+### Watchlist add FAB (neutral glass)
+
+```tsx
+<Animated.View style={[styles.fab, fabAnimatedStyle]}>
+  <EtGlassFab iconName="plus" onPress={handleAdd} accessibilityLabel={t('a11y.addToWatchlist')} hitSlop={X4} />
+</Animated.View>
+```
+
+### User-page Tori FAB
+
+```tsx
+<EtGlassFab iconName="sparkles-dark" onPress={openTori} accessibilityLabel={t('floatingFooter.toriA11y')} testID="UserScreenFloatingFooter.Tori" />
+```
+
+## Design System Integration
+
+- **Fallback color**: `colors.carbon900` (only when liquid glass is off).
+- **Fallback icon color**: `colors.carbon050` unless the consumer passes `iconColor`.
+- **Default size**: 44×44 circle, 24px icon — matches the user-page Tori FAB.
+- **Blur fallback**: `BlurView` `intensity={70}` `tint="regular"` with `experimentalBlurMethod="dimezisBlurView"` and no `blurReductionFactor`.
+
+## Dependencies
+
+- `EtGlassView`, `LiquidGlassContext`, `useLiquidGlass` — `etoro-ui/core/liquid-glass`
+- `EtIconV2` — center icon
+- `useEtoroTheme` — fallback color
+- `expo-blur` — fallback blur
+- `expo-haptics` — press feedback
+
+> Requires `registerGlassEffect()` at app startup for the native glass to activate;
+> without it (or on non-iOS-26 platforms) the blurred fallback is used automatically.

@@ -1,0 +1,166 @@
+---
+description: Agent guide for EtCountryFlag - presentational component rendering circular country flag SVGs by ISO code with fallback placeholder support
+alwaysApply: false
+---
+
+# EtCountryFlag Component
+
+## Purpose & Scope
+
+`EtCountryFlag` is a simple, presentational component that renders a country flag SVG by ISO country code. It uses the local SVG flag assets stored in `core/country-flags/svg/`.
+
+**Does:**
+
+- Renders a country flag SVG given an ISO code (e.g., "IL", "US", "GB")
+- Displays **circular flags** (36x36px by default) from native circular SVG assets
+- Scales the flag based on the `size` prop
+- Falls back to a generic placeholder flag (`zz`) for unrecognized ISO codes
+
+**Does NOT:**
+
+- Handle country selection logic
+- Fetch flags remotely (all flags are bundled locally)
+- Apply any styling beyond sizing
+
+## Visual Design
+
+The component renders a circular flag SVG:
+
+```text
+  ╭────╮
+ │  🇮🇱  │   36 x 36 px circle (default)
+  ╰────╯
+```
+
+The `size` prop controls the flag diameter (default: 36px). All flag SVGs are natively circular with `viewBox="0 0 36 36"` and rendered directly without additional clipping.
+
+## Entry Points & Contracts
+
+### `EtCountryFlag` (main component)
+
+```tsx
+<EtCountryFlag
+  isoCode: string              // Required - ISO country code (e.g., "IL", "US")
+  size?: number                // Circle diameter in px (default: 36)
+  testID?: string              // Test identifier
+  accessibilityLabel?: string  // Accessibility label (defaults to isoCode)
+/>
+```
+
+### Types
+
+```typescript
+export interface EtCountryFlagProps {
+  /** ISO country code (e.g., "IL", "US", "GB") */
+  isoCode: string;
+
+  /** Flag circle diameter in pixels. @default 36 */
+  size?: number;
+
+  /** Test identifier */
+  testID?: string;
+
+  /** Accessibility label (defaults to isoCode if not provided) */
+  accessibilityLabel?: string;
+}
+```
+
+## Usage Patterns
+
+### Basic flag
+
+```tsx
+<EtCountryFlag isoCode="IL" />
+```
+
+### Custom size
+
+```tsx
+<EtCountryFlag isoCode="US" size={56} />
+```
+
+### With accessibility
+
+```tsx
+<EtCountryFlag isoCode="GB" accessibilityLabel="United Kingdom" testID="user-flag" />
+```
+
+## Anti-patterns
+
+### Using lowercase ISO codes
+
+```tsx
+// OK - getFlagComponent handles lowercase conversion internally
+<EtCountryFlag isoCode="il" />
+```
+
+### Expecting remote flag loading
+
+```tsx
+// BAD - EtCountryFlag does not fetch remote images
+// All flags must exist in core/country-flags/svg/
+<EtCountryFlag isoCode="XX" /> // Falls back to 'zz' placeholder flag
+```
+
+### Setting width and height separately
+
+```tsx
+// BAD - use size prop only, it controls the circle diameter
+<EtCountryFlag isoCode="IL" style={{ width: 50, height: 50 }} />
+```
+
+**Fix:** Use the `size` prop which controls the circle diameter.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `getFlagComponent` from `core/country-flags` — resolves ISO code to SVG component
+- SVG flag files in `core/country-flags/svg/` — 260 circular country flag SVGs (36x36) from Figma
+- `react-native-svg` — SVG rendering (used under the hood by svg-transformer)
+
+### External Dependencies
+
+- `react` — `memo`, `useMemo`
+
+## Patterns & Pitfalls
+
+### Memoized flag lookup
+
+`getFlagComponent(isoCode)` is wrapped in `useMemo` to avoid unnecessary registry lookups on re-renders. The component itself is wrapped in `React.memo` to skip re-renders when props haven't changed.
+
+### Fallback flag (`zz`)
+
+If the ISO code doesn't match any flag in the registry, the component automatically falls back to the `zz` flag — a generic placeholder (question mark icon). This ensures the UI never shows an empty gap. If even the `zz` flag is missing from the registry, the component renders `null` as a last resort.
+
+### Circular rendering
+
+All flag SVGs have `viewBox="0 0 36 36"` and are natively circular. The component renders them directly at the specified `size` without additional clipping or transformations.
+
+## File Structure
+
+```text
+country-flag/
+├── api/
+│   ├── index.ts                    # Public type exports
+│   └── types.ts                    # EtCountryFlagProps definition
+├── et-country-flag.tsx             # Main component
+├── et-country-flag.test.tsx        # Tests
+├── index.ts                        # Public exports
+└── AGENTS.mdc                       # This file
+```
+
+### Storybook Stories Location
+
+```text
+.rnstorybook/stories/components/country-flag/
+└── et-country-flag.stories.tsx     # Interactive stories
+```
+
+## Related Context
+
+- `core/country-flags/flag-registry.ts` — ISO code to SVG component mapping (260 flags)
+- `core/country-flags/svg/` — Circular SVG flag assets exported from Figma (36x36 viewBox)
+- `EtPhoneInput` — Uses `EtCountryFlag` via `isoCode` prop for flag rendering in the prefix section
+- `react-native-country-flag` — Third-party package used in `about-drawer` (could be replaced by `EtCountryFlag`)
+- `Country` type (`libs/common/services/src/lib/countries/types.ts`) — `isoCode` field used to pass to this component

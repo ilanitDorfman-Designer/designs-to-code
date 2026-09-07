@@ -1,0 +1,398 @@
+---
+description: Agent guide for Input v2 - compound text input with floating label, compound Field/Label/TextAdornment/IconAdornment subcomponents, auto password toggle, split context architecture, and uncontrolled mode
+alwaysApply: false
+---
+
+# Input Component v2
+
+## Purpose & Scope
+
+`Input` is a compound component for text input fields in the eToro design system. It provides a flexible, accessible input with:
+
+- **Compound component pattern**: `Input.Label`, `Input.Field`, `Input.TextAdornment`, `Input.IconAdornment` subcomponents
+- **Uncontrolled by default**: Uses `defaultValue` instead of `value` for better performance
+- **Built-in states**: focus, error, disabled, readonly
+- **Password visibility toggle**: Automatically rendered when `type="password"` (no need to include in JSX)
+- **Helper text & character counter**: Automatically rendered when `error` exists or `showCharCounter` is true (no need to include in JSX)
+- **Floating label animation**: Animated label that floats when focused or filled
+- **Context-based state sharing**: No prop drilling, all state shared via React Context
+
+**Does NOT handle:**
+
+- Form validation logic (handle in parent)
+- Form submission logic (handle in parent)
+- Navigation logic (use with router/navigation handlers)
+- Auto-complete/suggestions (use separate components)
+- Multi-line text input (use TextArea component instead)
+
+## Entry Points & Contracts
+
+### `Input` (main component - context provider)
+
+```tsx
+<Input
+  style?: StyleProp<ViewStyle>  // Container style override
+  backgroundColor?: string      // Input surface fill override (inside border)
+  type?: InputType              // Input type (default: 'text')
+  defaultValue?: string         // Initial value for uncontrolled mode
+  error?: string | null         // Error message (helper text; border follows focus only)
+  disabled?: boolean            // Disabled state (default: false)
+  readonly?: boolean            // Read-only state (default: false)
+  maxLength?: number            // Maximum character length
+  showCharCounter?: boolean     // Shows character counter when maxLength is set (default: false)
+  showPasswordToggleWhenDisabled?: boolean // Keeps the eye toggle rendered + tappable while disabled (default: false — disabled password fields hide it)
+>
+  {children}
+</Input>
+```
+
+**Children constraints:**
+
+- Must contain `Input.Label` and `Input.Field` at minimum
+- Optional: `Input.TextAdornment`, `Input.IconAdornment`
+- Password toggle is automatically rendered when `type="password"` - do not include it in JSX
+- Helper text is automatically rendered when `error` exists or `showCharCounter` is true - do not include it in JSX
+- Order matters for visual layout
+
+### `Input.Label`
+
+```tsx
+<Input.Label
+  required?: boolean            // Shows asterisk if required
+  style?: StyleProp<TextStyle>  // Optional override, merged on top of the DS-driven animated typography (size/lineHeight/letterSpacing/color/fontFamily). Omit for default look.
+>
+  {string}                      // Label text (e.g., "Label" or "Label(Read only)")
+</Input.Label>
+```
+
+### `Input.Field`
+
+```tsx
+<Input.Field
+  onChangeText?: (text: string) => void
+  placeholder?: string
+  ref?: Ref<TextInput>
+  // ...all other TextInput props (except value, onChangeText, defaultValue)
+  testID?: string
+  accessibilityLabel?: string
+  accessibilityHint?: string
+/>
+```
+
+**Note:** `type`, `disabled`, `readonly`, `maxLength`, and `defaultValue` are set on the `Input` root component, not on `Input.Field`. The `defaultValue` flows from the root component to `Input.Field` via context. The component only supports uncontrolled mode with `defaultValue` - controlled mode with `value` is not supported.
+
+### `Input.TextAdornment`
+
+```tsx
+<Input.TextAdornment>{string} // e.g., "Suffix", "USD"</Input.TextAdornment>
+```
+
+### `Input.IconAdornment`
+
+```tsx
+<Input.IconAdornment
+  iconName: IconName            // Required - icon from icon library
+  size?: number                 // Default: 20
+  color?: string                // Optional color override
+  onPress?: () => void          // Optional interaction handler
+/>
+```
+
+### Types
+
+| Type        | Values                                                           |
+| ----------- | ---------------------------------------------------------------- |
+| `InputType` | `'text'` \| `'password'` \| `'email'` \| `'number'` \| `'phone'` |
+
+## Usage Patterns
+
+### Basic input (simplest)
+
+```tsx
+<Input defaultValue="">
+  <Input.Label>Label</Input.Label>
+  <Input.Field onChangeText={setValue} />
+</Input>
+```
+
+### With character counter
+
+```tsx
+<Input type="email" maxLength={50} showCharCounter defaultValue="">
+  <Input.Label>Email</Input.Label>
+  <Input.Field onChangeText={setEmail} placeholder="your@email.com" />
+</Input>
+```
+
+### With error state
+
+```tsx
+<Input type="password" defaultValue="" error="Password must be at least 8 characters">
+  <Input.Label>Password</Input.Label>
+  <Input.Field onChangeText={setPassword} />
+</Input>
+```
+
+**Note:** The password toggle and helper text are automatically rendered when `type="password"` or `error` exists - no need to include them in JSX.
+
+### With text adornment
+
+```tsx
+<Input type="number" maxLength={10} showCharCounter defaultValue="">
+  <Input.Label>Amount</Input.Label>
+  <Input.Field onChangeText={setAmount} placeholder="0.00" />
+  <Input.TextAdornment>USD</Input.TextAdornment>
+</Input>
+```
+
+### With icon adornment
+
+```tsx
+<Input defaultValue="">
+  <Input.Label>Search</Input.Label>
+  <Input.Field onChangeText={setSearch} placeholder="Search..." />
+  <Input.IconAdornment iconName="search" />
+</Input>
+```
+
+### Read-only state
+
+```tsx
+<Input readonly defaultValue="1234567890">
+  <Input.Label>Account Number</Input.Label>
+  <Input.Field />
+  <Input.TextAdornment>Read only</Input.TextAdornment>
+</Input>
+```
+
+## Anti-patterns
+
+### ❌ Using Input outside of Input root
+
+```tsx
+// BAD - will throw runtime error
+<Input.Field onChangeText={setValue} />
+
+// BAD - will throw runtime error
+<Input.Label>Label</Input.Label>
+```
+
+**Fix:** Always wrap Input sub-components inside `<Input>`.
+
+### ❌ Using defaultValue on Input.Field instead of Input root
+
+```tsx
+// BAD - defaultValue should be on Input root, not Input.Field
+<Input>
+  <Input.Label>Label</Input.Label>
+  <Input.Field defaultValue="value" onChangeText={setValue} />
+</Input>
+```
+
+**Fix:** Set `defaultValue` on the `Input` root component. It will automatically flow to `Input.Field` via context.
+
+### ❌ Using value prop (controlled mode not supported)
+
+```tsx
+// BAD - controlled mode is not supported
+<Input defaultValue={name}>
+  <Input.Field value={name} onChangeText={setName} />
+</Input>
+```
+
+**Fix:** Only use `defaultValue` on the `Input` root component for uncontrolled mode. Controlled mode with `value` prop is not supported.
+
+### ❌ Missing required children
+
+```tsx
+// BAD - missing Input.Label
+<Input defaultValue="">
+  <Input.Field onChangeText={setValue} />
+</Input>
+
+// BAD - missing Input.Field
+<Input defaultValue="">
+  <Input.Label>Label</Input.Label>
+</Input>
+```
+
+**Fix:** Always include both `Input.Label` and `Input.Field` as minimum.
+
+### ❌ Manually styling colors/sizes for no reason
+
+```tsx
+// BAD - bypasses design system with no design justification
+<Input.Label style={{ color: 'red', fontSize: 20 }}>Label</Input.Label>
+```
+
+**Fix:** Use component props and variants. Colors come from theme automatically. `Input.Label`'s `style` prop exists only to match a specific, verified Figma spec that diverges from the default animated variant (e.g. a bespoke typography spec on one screen) — not as a shortcut for arbitrary one-off styling. Always use theme tokens (`colors.*`) for color, never raw hex/named colors.
+
+### ❌ Using showCharCounter without maxLength
+
+```tsx
+// BAD - counter won't show without maxLength
+<Input showCharCounter defaultValue="">
+  <Input.Label>Name</Input.Label>
+  <Input.Field onChangeText={setName} />
+</Input>
+```
+
+**Fix:** Set `maxLength` on `Input` root component for character counter to work.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for styling
+- `EtText` - underlying text component for `Input.TextAdornment` and helper text (auto-rendered)
+- `EtoroIcon` - underlying icon component for `Input.IconAdornment` and password toggle (automatically rendered)
+- Split context architecture (see "Context Architecture" below):
+  - `InputConfigContext` - static props (type, disabled, readonly, etc.)
+  - `InputStateContext` - interaction state (focus, password visibility, hasValue, animations)
+  - `InputValueContext` - current value (hot path, changes on every keystroke)
+- `Animated.View` and `Animated.Text` (react-native-reanimated) - used for `Input.Label` with floating animation (View for transform, Text for fontSize)
+- `PasswordToggle` - automatically rendered by `Input` root when `type="password"` (not a user-facing component)
+
+### External Dependencies
+
+- `expo-haptics` - haptic feedback on focus and password toggle
+- `react-native` - `TextInput`, `View`, `StyleSheet`, `Pressable`
+- `react-native-reanimated` - animations for floating label and border color
+
+### Public layout constants
+
+`INPUT_LAYOUT_METRICS`, `INPUT_INNER_HEIGHT`, and `INPUT_COMPACT_LABEL_FIELD_GAP` are exported from the `input-v2` public barrel (`libs/etoro-ui/src/components/input/input-v2/index.ts`). Downstream kit consumers (e.g. EtDatepicker) may import them to share the same box model. Renaming or reshaping these is a breaking public API change.
+
+### Design System Integration
+
+Colors come from theme (`useEtoroTheme().colors`) — V2 tokens, per Figma `49177:4012`:
+
+| Slot                                              | V2 token                              |
+| ------------------------------------------------- | ------------------------------------- |
+| Container background (default)                    | `carbon900` at ~5% (`${carbon900}0D`) |
+| Container border (idle / unfocused)               | `transparent`                         |
+| Container border (focused, non-readonly)          | `carbon600`                           |
+| Container border (disabled)                       | `carbon300`                           |
+| Floating label (idle large + compact small)       | `carbon500`                           |
+| Floating label (disabled)                         | `carbon500`                           |
+| Input value text                                  | `carbon900`                           |
+| Input value text (disabled, compact)              | `carbon500`                           |
+| Placeholder                                       | `carbon400`                           |
+| Cursor + selection highlight                      | `primary600`                          |
+| Adornment / suffix / icon (idle)                  | `carbon500`                           |
+| Adornment / suffix / icon (focused)               | `carbon900`                           |
+| Adornment / suffix / icon (disabled)              | `carbon300`                           |
+| Password toggle (idle)                            | `carbon500`                           |
+| Password toggle (focused)                         | `carbon900`                           |
+| Password toggle (disabled)                        | `carbon300`                           |
+| Error helper text                                 | `verdictNegative500`                  |
+
+#### Behavior deltas (V1 → V2)
+
+- **Container fill** changes from a solid `bgNeutralGreyPrimary` grey to a `carbon900` overlay at ~5% opacity. Caller-supplied `backgroundColor` prop still wins.
+- **Disabled state** no longer dims the entire chrome via `opacity: 0.6`. Instead it renders with full opacity, a static `carbon300` border, `carbon500` for label / value (kept legible), and `carbon300` for adornments / password-toggle.
+- **Error helper text** moves from `actionBrandVarText` (`#D12515`) to `verdictNegative500` (`#F55249`) — a per-component decision driven by Figma `49177` (other components in the kit map V1 error to `verdictNegative600`).
+
+### Typography & Spacing
+
+- Typography:
+  - Label: `Animated.Text` driven by `useInputAnimations` (idle = `body-base-regular`, compact = `body-tiny-medium`)
+  - Helper / Error text: `body-tiny-regular` variant
+  - Text adornment: `body-base-regular` variant
+- Spacing uses design tokens:
+  - Left / right padding: `X4` (16px)
+  - Gap between input area and helper text: `X1` (4px)
+- Icon sizes default to 20px (configurable)
+
+## Patterns & Pitfalls
+
+### Uncontrolled mode only
+
+The component only supports uncontrolled mode with `defaultValue`. Set `defaultValue` on the `Input` root component (not on `Input.Field`). Controlled mode with `value` prop is not supported. The parent syncs via `onChangeText` callback. This design choice improves performance by avoiding unnecessary re-renders.
+
+### Password toggle auto-rendering
+
+When `Input` root has `type="password"`, the password toggle is automatically rendered by the `Input` component. **Do not include `<Input.PasswordToggle />` in your JSX** - it is not a user-facing subcomponent and will not work if you try to use it.
+
+### Helper text auto-rendering
+
+Helper text is automatically rendered when:
+
+- `error` prop is provided (shows error message in red), OR
+- `showCharCounter` is `true` and `maxLength` is set (shows character counter)
+
+**Do not include `<Input.HelperText />` in your JSX** - it is not exported and will not work if you try to use it. The helper text is automatically rendered below the input when needed.
+
+### Error takes precedence
+
+When `error` is provided to `Input`, the error message is shown (red). Character counter is hidden when an error is present.
+
+### Context Architecture
+
+The input uses a **split context pattern** for optimal re-render performance. State is divided into 3 contexts based on update frequency:
+
+| Context              | Contains                                                             | Updates when...              | Hook                    |
+| -------------------- | -------------------------------------------------------------------- | ---------------------------- | ----------------------- |
+| `InputConfigContext` | `type`, `disabled`, `readonly`, `maxLength`, `defaultValue`, `error` | Props change (rare)          | `useInputConfig()`      |
+| `InputStateContext`  | `isFocused`, `isPasswordVisible`, `hasValue`, handlers, animations   | Focus, toggle, empty↔filled | `useInputInteraction()` |
+| `InputValueContext`  | `currentValue`, `setValue`                                           | Every keystroke (hot path)   | `useInputValue()`       |
+
+**Which hook each component uses:**
+
+| Component        | Hooks Used                                               | Re-renders on typing?                |
+| ---------------- | -------------------------------------------------------- | ------------------------------------ |
+| `IconAdornment`  | `useInputConfig`                                         | No                                   |
+| `FloatingLabel`  | `useInputInteraction`                                    | No (only on empty↔filled)           |
+| `InputField`     | `useInputConfig`, `useInputInteraction`, `useInputValue` | Yes (needs setValue)                 |
+| `InputContainer` | `useInputConfig`, `useInputInteraction`                  | No                                   |
+| `HelperText`     | `useInputValue`                                          | Yes (needs currentValue for counter) |
+
+**File structure:**
+
+```
+context/
+├── config-context.tsx   # InputConfigContext + useInputConfig
+├── state-context.tsx    # InputStateContext + useInputInteraction
+├── value-context.tsx    # InputValueContext + useInputValue
+├── input-provider.tsx   # Composed provider (nests all 3)
+└── index.ts             # Re-exports hooks and provider
+```
+
+**Notes:**
+
+- `showCharCounter` does NOT flow to context - it's passed directly as a prop to `InputContainer` and then to `HelperText`
+- `HelperText` uses `useInputValue()` for the character counter
+
+### Read-only state
+
+When `readonly={true}`, the input:
+
+- Is non-editable (`editable={false}`)
+- Shows transparent border
+- Label shows "(Read only)" text (you should include this in the label text yourself)
+
+### Focus state management
+
+Focus state is managed internally and triggers:
+
+- Label animation (floats up)
+- Border color animation (changes to active color)
+- Haptic feedback (if enabled)
+
+### Character counter
+
+Character counter only displays when:
+
+- `showCharCounter={true}` on `Input` root component
+- `maxLength` is set on `Input` root component
+- No error is present (error takes precedence)
+
+The character counter is automatically rendered as part of the helper text component when these conditions are met.
+
+## Related Context
+
+- `EtText (et-text.tsx)` - EtText component used internally
+- `EtoroIcon (et-icon.tsx)` - EtoroIcon component used internally
+- `EtInput (input/et-input.tsx)` - Original Input v1 component (different API)
+- `context/` - Split context architecture for optimized re-renders
+- `BETTER-COMPONENTS.md` - Design principles this component follows

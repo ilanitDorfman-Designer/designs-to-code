@@ -1,0 +1,346 @@
+---
+description: Agent guide for EtWizard - multi-step guided flow layout with animated segmented progress bar. e.g. for onboarding flows, feature introductions, Instagram Stories-style slides, multi-step wizards
+alwaysApply: false
+---
+
+# EtWizard Component
+
+## Purpose & Scope
+
+`EtWizard` is a multi-step guided flow layout component. It manages step progression with an animated segmented progress bar (integrated in the topbar), optional left/right tap zones, and auto-play support.
+
+Behavior is configured via boolean props:
+
+- **`tapGestures`** - Enables left/right tap zones for step navigation and press-to-pause
+- **`autoPlay`** - Enables automatic timed progression through steps
+
+**Does NOT handle:**
+
+- Content rendering (you provide step content)
+- Screen presentation (use Expo Router Stack with `presentation: 'fullScreenModal'`)
+
+## Entry Points & Contracts
+
+### `EtWizard` (main component)
+
+```tsx
+<EtWizard
+  stepDuration?: number           // default 5000ms
+  autoPlay?: boolean              // default: false
+  tapGestures?: boolean           // default: false
+  initialStep?: number            // default: 0
+  onStepChange?: (step: number) => void
+  onComplete?: () => void
+  progressColor?: string          // override progress bar fill color
+  accessibilityLabelLeft?: string  // a11y label for left tap zone (used when tapGestures is true)
+  accessibilityLabelRight?: string // a11y label for right tap zone (used when tapGestures is true)
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  <EtWizard.TopbarStart>{/* back button */}</EtWizard.TopbarStart>
+  <EtWizard.TopbarMiddle>{/* title */}</EtWizard.TopbarMiddle>
+  <EtWizard.TopbarEnd>{/* close / menu */}</EtWizard.TopbarEnd>
+
+  {/* Footer is declared inside each Step */}
+  <EtWizard.Step>
+    {/* step 0 content */}
+    <EtWizard.Footer>{/* step 0 actions */}</EtWizard.Footer>
+  </EtWizard.Step>
+
+  <EtWizard.Step>
+    {/* step 1 content */}
+    <EtWizard.Footer>{/* step 1 actions */}</EtWizard.Footer>
+  </EtWizard.Step>
+</EtWizard>
+```
+
+### `EtWizard.TopbarStart`
+
+```tsx
+<EtWizard.TopbarStart>{ReactNode} // e.g. back button</EtWizard.TopbarStart>
+```
+
+### `EtWizard.TopbarMiddle`
+
+```tsx
+<EtWizard.TopbarMiddle>{ReactNode} // e.g. title</EtWizard.TopbarMiddle>
+```
+
+### `EtWizard.TopbarEnd`
+
+```tsx
+<EtWizard.TopbarEnd>{ReactNode} // e.g. close button, kebab menu</EtWizard.TopbarEnd>
+```
+
+### `EtWizard.Step`
+
+```tsx
+<EtWizard.Step
+  backgroundImage?: ImageSourcePropType   // full-bleed background image
+  backgroundVideo?: string                // video URL, plays once silently
+  stepDuration?: number                   // override per-step duration
+  contentPosition?: 'top' | 'bottom'     // vertical alignment (default: 'top')
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {ReactNode}
+  <EtWizard.Footer>{/* optional footer for this step */}</EtWizard.Footer>
+</EtWizard.Step>
+```
+
+### `EtWizard.Title`
+
+```tsx
+<EtWizard.Title
+  variant?: TextVariant              // default: 'display-main'
+  color?: string                     // override text color
+  style?: StyleProp<TextStyle>
+  testID?: string
+>
+  {ReactNode}   // step title text
+</EtWizard.Title>
+```
+
+### `EtWizard.Subtitle`
+
+```tsx
+<EtWizard.Subtitle
+  variant?: TextVariant              // default: 'body-secondary-regular'
+  color?: string                     // override text color
+  style?: StyleProp<TextStyle>
+  testID?: string
+>
+  {ReactNode}   // step description text
+</EtWizard.Subtitle>
+```
+
+### `EtWizard.Button`
+
+```tsx
+<EtWizard.Button
+  variant?: ButtonVariant            // default: 'primary-filled'
+  size?: ButtonSize                  // default: 'large'
+  stretch?: boolean                  // default: true
+  disabled?: boolean
+  loading?: boolean
+  onPress?: () => void               // default: goToNext from wizard context
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {/* Compose with subcomponents or pass a string */}
+  <EtWizard.Button.Icon name="star" />
+  <EtWizard.Button.Label>Next</EtWizard.Button.Label>
+</EtWizard.Button>
+```
+
+Compositional CTA button for wizard footers. Thin wrapper around `EtButton` with wizard defaults. Defaults `onPress` to `goToNext` from wizard context when not provided. Icon position is controlled by child order. Subcomponents `EtWizard.Button.Label` and `EtWizard.Button.Icon` are re-exports of `EtButton.Label` and `EtButton.Icon`.
+
+### `EtWizard.Icon`
+
+```tsx
+<EtWizard.Icon
+  name: string                       // icon name from Zappicons library
+  variant?: IconVariant              // default: 'regular'
+  size?: IconSize | number           // default: 24
+  color?: string                     // override icon color
+  style?: StyleProp<ViewStyle>
+  testID?: string
+/>
+```
+
+Standalone icon wrapping `EtIconV2`. Useful for decorative icons inside step content.
+
+### `EtWizard.Footer`
+
+```tsx
+<EtWizard.Footer
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {ReactNode}   // typically an EtWizard.Button
+</EtWizard.Footer>
+```
+
+Declare inside an `EtWizard.Step` to attach a footer to that step. The wizard extracts the footer and renders it in a fixed area below the step content. Steps without a Footer have no footer area.
+
+## Behavior
+
+### Progress Bar
+
+- Divided into N segments (one per Step child)
+- Completed steps are fully filled
+- Current step animates from 0 to 100% over `stepDuration` ms (when autoPlay is true)
+- Future steps show only background (8% opacity)
+- 2px gap between segments, each 4px tall with 16px border radius
+
+### Navigation
+
+- **Tap zones** (when `tapGestures` is true): Left half goes to previous step, right half goes to next step
+- **Button navigation**: No animation, immediately jumps to next/previous step
+- **Auto-advance** (when `autoPlay` is true): When a segment fills to 100%, auto-advances to next step
+- **Pause/resume** (when `tapGestures` and `autoPlay` are both true): Press-in pauses auto-play and background video, press-out resumes both
+
+### Full-Screen Backgrounds
+
+- `backgroundImage` and `backgroundVideo` declared on `EtWizard.Step` are rendered at the **wizard root level** (absolutely positioned behind topbar, content, and footer) so they fill the entire screen edge-to-edge.
+- When a step has a background, the topbar automatically becomes transparent.
+- When `contentPosition="bottom"` is combined with a background, a gradient scrim (transparent to 75% black) is auto-applied to ensure text readability.
+
+### Safe Area
+
+- The topbar container applies `useSafeAreaInsets().top` as padding so the progress bar and icons sit below the device status bar/notch.
+
+## Usage Patterns
+
+### Basic wizard flow (string shorthand)
+
+```tsx
+<EtWizard onComplete={() => navigation.navigate('Home')}>
+  <EtWizard.Step>
+    <EtWizard.Title>Welcome to eToro</EtWizard.Title>
+    <EtWizard.Subtitle>Start your trading journey</EtWizard.Subtitle>
+    <EtWizard.Footer>
+      <EtWizard.Button>Next</EtWizard.Button>
+    </EtWizard.Footer>
+  </EtWizard.Step>
+  <EtWizard.Step>
+    <EtWizard.Title>Discover Markets</EtWizard.Title>
+    <EtWizard.Footer>
+      <EtWizard.Button>Next</EtWizard.Button>
+    </EtWizard.Footer>
+  </EtWizard.Step>
+</EtWizard>
+```
+
+### Per-step footers with button icon
+
+```tsx
+<EtWizard onComplete={() => navigation.navigate('Home')}>
+  {/* Step 1 - icon left of label (child order controls position) */}
+  <EtWizard.Step>
+    <EtWizard.Title>Welcome to eToro</EtWizard.Title>
+    <EtWizard.Subtitle>Start your trading journey</EtWizard.Subtitle>
+    <EtWizard.Footer>
+      <EtWizard.Button>
+        <EtWizard.Button.Icon name="star" />
+        <EtWizard.Button.Label>Next</EtWizard.Button.Label>
+      </EtWizard.Button>
+    </EtWizard.Footer>
+  </EtWizard.Step>
+
+  {/* Step 2 - icon right of label */}
+  <EtWizard.Step>
+    <EtWizard.Title>You're all set</EtWizard.Title>
+    <EtWizard.Footer>
+      <EtWizard.Button onPress={handleClose}>
+        <EtWizard.Button.Label>Close</EtWizard.Button.Label>
+        <EtWizard.Button.Icon name="chevronRight" />
+      </EtWizard.Button>
+    </EtWizard.Footer>
+  </EtWizard.Step>
+</EtWizard>
+```
+
+### Auto-play with tap gestures
+
+```tsx
+<EtWizard autoPlay tapGestures stepDuration={3000} onComplete={handleDone} accessibilityLabelLeft="Previous" accessibilityLabelRight="Next">
+  <EtWizard.TopbarEnd>
+    <EtIconButton iconName="moreVertical" size={24} onPress={openMenu} />
+  </EtWizard.TopbarEnd>
+
+  <EtWizard.Step>
+    <EtWizard.Title>Feature 1</EtWizard.Title>
+    <EtWizard.Subtitle>Auto-advances in 3 seconds.</EtWizard.Subtitle>
+    <EtWizard.Footer>
+      <EtWizard.Button>
+        <EtWizard.Button.Icon name="star" />
+        <EtWizard.Button.Label>Next</EtWizard.Button.Label>
+      </EtWizard.Button>
+    </EtWizard.Footer>
+  </EtWizard.Step>
+
+  <EtWizard.Step>
+    <EtWizard.Title>Feature 2</EtWizard.Title>
+    <EtWizard.Footer>
+      <EtWizard.Button onPress={handleComplete}>Get Started</EtWizard.Button>
+    </EtWizard.Footer>
+  </EtWizard.Step>
+</EtWizard>
+```
+
+### Story variant (full-screen modal with backgrounds)
+
+```tsx
+// Stack.Screen options={{ presentation: 'fullScreenModal', gestureEnabled: true }}
+const { colors } = useEtoroTheme();
+
+<EtWizard autoPlay tapGestures stepDuration={4000} progressColor={colors.textBright} onComplete={() => router.back()}>
+  <EtWizard.TopbarEnd>
+    <EtIconButton iconName="moreVertical" size={24} onPress={openMenu} />
+  </EtWizard.TopbarEnd>
+
+  <EtWizard.Step contentPosition="bottom" backgroundImage={require('./slide1.png')}>
+    <EtWizard.Title color={colors.textBright}>Invest in Stocks</EtWizard.Title>
+    <EtWizard.Subtitle color={colors.textBright}>Buy fractional shares starting from $10.</EtWizard.Subtitle>
+    <EtWizard.Footer>
+      <EtWizard.Button>
+        <EtWizard.Button.Icon name="star" />
+        <EtWizard.Button.Label>Next</EtWizard.Button.Label>
+      </EtWizard.Button>
+    </EtWizard.Footer>
+  </EtWizard.Step>
+
+  <EtWizard.Step contentPosition="bottom" backgroundVideo={videoUrl} stepDuration={15000}>
+    <EtWizard.Title color={colors.textBright}>Copy Trading</EtWizard.Title>
+    <EtWizard.Footer>
+      <EtWizard.Button onPress={handleComplete}>Get Started</EtWizard.Button>
+    </EtWizard.Footer>
+  </EtWizard.Step>
+</EtWizard>;
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `EtTopbar` + `EtTopbar.StepProgress` - topbar with integrated progress bar
+- `react-native-reanimated` - segment fill animation (withTiming, useSharedValue)
+- `expo-linear-gradient` - gradient scrim for bottom-positioned content over backgrounds
+- `expo-video` - background video playback (VideoView, useVideoPlayer)
+- `react-native-safe-area-context` - topbar safe area insets
+
+### Design System Integration
+
+- Progress bar colors from theme (`textPrimaryNeutral` for light)
+- Spacing uses tokens (`X1`, `X6`, `X10`)
+- Topbar follows existing EtTopbar compound pattern
+
+## File Structure
+
+```text
+wizard/
+├── api/
+│   ├── index.ts
+│   └── types.ts
+├── context/
+│   ├── index.ts
+│   └── wizard-context.tsx
+├── hooks/
+│   ├── index.ts
+│   ├── use-wizard-state.ts
+│   └── use-step-progress-animation.ts
+├── subcomponents/
+│   ├── index.ts
+│   ├── wizard-button.tsx
+│   ├── wizard-footer.tsx
+│   ├── wizard-icon.tsx
+│   ├── wizard-step.tsx
+│   ├── wizard-subtitle.tsx
+│   ├── wizard-tap-zones.tsx
+│   ├── wizard-title.tsx
+│   └── wizard-topbar-slot.tsx
+├── et-wizard.tsx
+├── index.ts
+└── AGENTS.mdc
+```

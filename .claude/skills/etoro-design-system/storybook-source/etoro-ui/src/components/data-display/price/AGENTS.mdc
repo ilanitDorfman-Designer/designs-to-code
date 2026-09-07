@@ -1,0 +1,237 @@
+---
+description: Agent guide for EtPrice - compound data-display component for rendering an asset price with absolute change and percentage, using adaptive decimal precision and sign-based coloring
+alwaysApply: false
+---
+
+# EtPrice Component
+
+## Purpose & Scope
+
+`EtPrice` is a compound data-display component for rendering an asset price alongside its absolute change and percentage change. It provides:
+
+- **Compound component pattern**: `EtPrice.Value` and `EtPrice.Change` subcomponents
+- **Context-driven configuration**: Root passes `price`, `change`, `changePercentage` and optional `decimals`; subcomponents read values via context (no prop drilling)
+- **Caller-supplied precision**: Pass `decimals` when you know the instrument's real quote precision (from `InstrumentMetadata.Precision` / `AboveDollarPrecision`). Digits are pinned, so trailing zeros are kept
+- **Adaptive fallback**: With no `decimals`, sub-dollar prices (0 < price < 1) get up to 5 decimal places and all others up to 2, trailing zeros stripped. This is a magnitude heuristic — it renders above-dollar fine-tick instruments (forex) as `1.16` (PAH-349)
+- **Sign-based styling**: `EtPrice.Change` colors positive/zero → green, negative → red (theme-aware `verdict*600` by default; Static `*600Static` when `onBrightSurface`). `EtPrice.Value` is always neutral
+- **Composition over configuration**: Internally delegates to `EtNumber` for formatting, coloring, and sign handling
+
+**Intended use case:** EtPrice is designed exclusively for displaying prices on **list items** and **cards** (e.g. watchlist rows, portfolio cards, instrument tiles). For atypical layouts, custom formatting, or non-standard price displays, compose multiple `EtNumber` components directly instead of using EtPrice.
+
+**Does NOT handle:**
+
+- Input or editing of prices (display only)
+- Currency symbols or currency formatting (shows raw numeric value)
+- Fetching, loading, or skeleton states (caller owns data)
+- Navigation or press handlers (presentational only)
+- Atypical price layouts — use `EtNumber` composition for those
+
+## Entry Points & Contracts
+
+### `EtPrice` (main component – context provider)
+
+```tsx
+<EtPrice
+  price?: number            // Main price value (e.g. 113.24). Drives decimal precision
+  change?: number           // Absolute change amount. Sign determines color
+  changePercentage?: number // Pre-multiplied percentage (e.g. 0.86 means 0.86%)
+  decimals?: number         // Fixed decimals for price AND absolute change; overrides the magnitude rule
+  style?: StyleProp<ViewStyle>
+>
+  {children}
+</EtPrice>
+```
+
+**Children:** Use `EtPrice.Value` and/or `EtPrice.Change`. Order in JSX determines layout (container is `alignItems: 'flex-end'` column).
+
+### `EtPrice.Value`
+
+```tsx
+<EtPrice.Value
+  variant?: TextVariant   // default: 'num-ml'
+  style?: StyleProp<TextStyle>
+/>
+```
+
+- No own state. Reads `price` from context.
+- Precision: when `decimals` is supplied it pins `minDecimals = maxDecimals = decimals`, so trailing zeros are kept (`1.15650`). Otherwise the magnitude rule applies: `0 < price < 1` → maxDecimals 5, else → maxDecimals 2, with minDecimals 0 (trailing zeros stripped).
+- Uses neutral color (inherits from `EtNumber` default).
+- Renders **nothing** when `price` is `undefined` or non-finite.
+- Internally renders `<EtNumber value={price} format="number" minDecimals={minDecimals} maxDecimals={maxDecimals}>` with bounds from `resolvePriceDecimalBounds`.
+
+### `EtPrice.Change`
+
+```tsx
+<EtPrice.Change
+  variant?: TextVariant   // default: 'num-s'
+  style?: StyleProp<TextStyle>
+  percentageOnly?: boolean // default: false — render only `+0.86%` (no absolute / parentheses)
+  onBrightSurface?: boolean // default: false — use Static verdict tokens for light card surfaces
+  color?: string           // force a single colour, bypassing green/red (e.g. MediaCard glass footer)
+/>
+```
+
+- Reads `price`, `change`, `changePercentage`, and optional `decimals` from context.
+- Renders two adjacent `EtNumber` instances in a row: absolute change value and percentage (e.g. `0.96 (+0.86%)`).
+- Color:
+  - Default: `change >= 0` → `verdictPositive600`; `change < 0` → `verdictNegative600` (theme-aware; neon in dark mode).
+  - `onBrightSurface`: `verdictPositive600Static` / `verdictNegative600Static` so rates stay readable on white / bright MediaCard footers.
+  - `color`: a forced single colour that wins over both — pass the surface foreground where red/green isn't allowed (the MediaCard glass footer forbids verdict tokens).
+- Percentage is displayed with `showSign` and `hasParentheses` (e.g. `(+0.86%)`). The raw `changePercentage` value is divided by 100 before passing to `EtNumber` with `format="percentage"`.
+- Decimal precision for the absolute change follows `price`, not the change's own magnitude — `decimals` when supplied, otherwise the magnitude rule. The percentage always renders at 2 decimals; it is a ratio, so quote precision does not apply.
+- Renders **nothing** when `price` or `change` is `undefined` or non-finite.
+
+### Types
+
+| Type                   | Shape                                                       |
+| ---------------------- | ----------------------------------------------------------- |
+| `EtPriceProps`         | `{ price?, change?, changePercentage?, decimals?, children?, style? }` |
+| `EtPriceContextValue`  | `{ price?, change?, changePercentage?, decimals? }`                    |
+| `EtPrice.Change` props | `{ variant?, style?, percentageOnly?, onBrightSurface?, color? }` |
+
+## Usage Patterns
+
+### Standard price with change (list item / card)
+
+```tsx
+<EtPrice price={113.24} change={0.96} changePercentage={0.86}>
+  <EtPrice.Value />
+  <EtPrice.Change />
+</EtPrice>
+```
+
+### Negative change
+
+```tsx
+<EtPrice price={112.28} change={-1.06} changePercentage={-0.94}>
+  <EtPrice.Value />
+  <EtPrice.Change />
+</EtPrice>
+```
+
+### Value only (no change row)
+
+```tsx
+<EtPrice price={687.79}>
+  <EtPrice.Value />
+</EtPrice>
+```
+
+### Real quote precision (forex, fine-tick instruments)
+
+Pass `decimals` from the instrument's metadata so the price is not rounded to a misleading 2 places. Resolve it with `useInstrumentDisplayPrecision` (single instrument) or `useInstrumentDisplayPrecisions` (lists) from `@etoro/common/market-data/rn/hooks`.
+
+```tsx
+// EURUSD with AboveDollarPrecision 5 → "1.15650" instead of "1.16"
+<EtPrice price={1.1565} change={0.0009} changePercentage={0.08} decimals={5}>
+  <EtPrice.Value />
+  <EtPrice.Change />
+</EtPrice>
+```
+
+### Sub-dollar price (crypto)
+
+Without `decimals`, sub-dollar prices fall back to up to 5 decimal places.
+
+```tsx
+<EtPrice price={0.00012} change={0.00001} changePercentage={9.09}>
+  <EtPrice.Value />
+  <EtPrice.Change />
+</EtPrice>
+```
+
+### Custom typography variant
+
+```tsx
+<EtPrice price={113.24} change={0.96} changePercentage={0.86}>
+  <EtPrice.Value variant="num-l" />
+  <EtPrice.Change variant="num-sm" />
+</EtPrice>
+```
+
+### When NOT to use EtPrice (use EtNumber instead)
+
+For atypical layouts — e.g. inline price with arrow, currency-formatted values, custom color logic, or non-standard arrangements — compose `EtNumber` directly:
+
+```tsx
+<EtNumber value={113.24} format="currency" symbol="$">
+  <EtNumber.Value variant="num-ml" />
+</EtNumber>
+<EtNumber value={0.0086} format="percentage" isColored showSign hasParentheses>
+  <EtNumber.Arrow />
+  <EtNumber.Value variant="num-s" />
+</EtNumber>
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `EtNumber` – both subcomponents delegate all formatting and rendering to `EtNumber` and `EtNumber.Value`
+- `EtPriceContext` / `useEtPriceContext` – single context for passing price data to subcomponents
+- `useEtoroTheme` – theme-aware and Static verdict colors in `EtPriceChange`
+
+### External Dependencies
+
+- `react-native` – `View`, `StyleSheet`, `StyleProp`, `TextStyle`, `ViewStyle`
+
+### Design System Integration
+
+`EtPrice.Change` resolves change-line color via V2 tokens (implemented in [`subcomponents/et-price-change.tsx`](subcomponents/et-price-change.tsx)):
+
+| Slot | Default (theme-aware) | `onBrightSurface` (Static) |
+| --- | --- | --- |
+| Positive / zero change | `verdictPositive600` | `verdictPositive600Static` |
+| Negative change | `verdictNegative600` | `verdictNegative600Static` |
+
+Use `onBrightSurface` on MediaCard / AssetCard bright variants so dark-theme neon greens don't wash out on white footers. `EtAssetCard` / `EtTopTraderCard` pass MediaCard `isBright` automatically.
+
+`EtPrice.Value` inherits neutral text color from `EtNumber` (`carbon900`).
+
+- Typography: `num-ml` (default for Value), `num-s` (default for Change); overridable via `variant` prop
+- Layout: root container is `alignItems: 'flex-end'` (right-aligned column); Change row is `flexDirection: 'row'` with 4px gap between absolute change and percentage
+
+## Patterns & Pitfalls
+
+### Undefined and non-finite values
+
+Both subcomponents return `null` when their required data is missing or non-finite. The root `View` still renders (empty container). Handle missing data in the caller if an empty container is undesirable.
+
+### changePercentage is pre-multiplied
+
+`changePercentage` expects a pre-multiplied value: `0.86` means `0.86%`, not `86%`. Internally, `EtPriceChange` divides by 100 before passing to `EtNumber` with `format="percentage"`.
+
+### Decimal precision uses metadata when available
+
+When `decimals` is supplied, both `EtPrice.Value` and the absolute `EtPrice.Change` pin to that precision. Otherwise they use the same adaptive fallback: `0 < price < 1` → up to 5 decimals, else → up to 2 decimals. The percentage remains at 2 decimals.
+
+### Zero treated as positive
+
+Zero change is treated as non-negative: color is green (`verdictPositive600`).
+
+### Right-aligned column layout
+
+The root container uses `alignItems: 'flex-end'`, making it natural for right-side placement in list items (e.g. the End slot of `EtListItem`).
+
+### List items and cards ONLY
+
+This component is purpose-built for standard price display on list items and cards. For any non-standard or custom price presentation, compose multiple `EtNumber` instances directly — this gives full control over formatting, coloring, arrows, and layout.
+
+## File Map
+
+```
+price/
+├── api/
+│   ├── index.ts
+│   └── types.ts
+├── context/
+│   ├── et-price-context.tsx
+│   └── index.ts
+├── subcomponents/
+│   ├── index.ts
+│   ├── et-price-value.tsx
+│   └── et-price-change.tsx
+├── et-price.tsx
+├── index.ts
+└── AGENTS.mdc
+```

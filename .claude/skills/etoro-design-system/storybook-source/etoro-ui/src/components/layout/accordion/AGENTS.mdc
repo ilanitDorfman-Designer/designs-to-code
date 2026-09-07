@@ -1,0 +1,546 @@
+---
+description: Agent guide for EtAccordion - collapsible accordion with compound Item/Header/Content subcomponents, single or multiple expansion, animated height transitions, and controlled/uncontrolled modes
+alwaysApply: false
+---
+
+# EtAccordion Component
+
+## Purpose & Scope
+
+`EtAccordion` is a collapsible accordion component for the eToro design system. It provides a flexible, accessible accordion with:
+
+- **Compound component pattern**: `EtAccordion.Item`, `EtAccordion.Header`, and `EtAccordion.Content` subcomponents
+- **Expand/collapse states**: single or multiple items can be expanded simultaneously
+- **Built-in animations**: smooth height animation for content, rotating chevron icon
+- **Controlled & uncontrolled modes**: supports both state management approaches
+- **Context-based state sharing**: expansion state shared via React Context to subcomponents
+- **Accessibility support**: proper ARIA roles and states for screen readers
+
+**Does NOT handle:**
+
+- Custom expand/collapse icons (chevron only, can be hidden)
+- Nested accordions (single level only)
+- Drag-to-reorder functionality
+
+## Entry Points & Contracts
+
+### `EtAccordion` (main component)
+
+```tsx
+<EtAccordion
+  allowMultiple?: boolean         // default: false
+  defaultExpandedIds?: string[]   // default: []
+  expandedIds?: string[]          // controlled mode
+  onExpandedChange?: (ids: string[]) => void
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {children}
+</EtAccordion>
+```
+
+**Children constraints:**
+
+- Must contain one or more `EtAccordion.Item` components
+- Each item must have a unique `id` prop
+- No other components should be direct children
+
+**State management:**
+
+- **Uncontrolled**: Use `defaultExpandedIds` for initial state, component manages state internally
+- **Controlled**: Use `expandedIds` + `onExpandedChange` to manage state externally
+- When `allowMultiple` is `false` (default), only one item can be expanded at a time
+
+### `EtAccordion.Item`
+
+```tsx
+<EtAccordion.Item
+  id: string                      // required - unique identifier
+  disabled?: boolean              // default: false
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {children}
+</EtAccordion.Item>
+```
+
+**Children constraints:**
+
+- Should contain exactly one `EtAccordion.Header` and one `EtAccordion.Content`
+- Order doesn't matter (Header should typically come before Content for logical layout)
+
+**Behavior:**
+
+- Provides item-specific context (`id`, `isExpanded`, `disabled`, `toggle`) to children
+- Renders a divider below each item
+- When `disabled`, header is not clickable and shows reduced opacity
+
+### `EtAccordion.Header`
+
+```tsx
+<EtAccordion.Header
+  showChevron?: boolean           // default: true
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  <EtText variant="body-base-semibold">Question text</EtText>
+</EtAccordion.Header>
+```
+
+**Children constraints:**
+
+- **Must be EtText component(s) only** - throws runtime error if other components or raw text are passed
+- This ensures consistent typography and styling across all accordions
+- Recommended variant for questions: `body-base-semibold`
+- **Color override**: Any color passed via EtText `style` is overridden by the header's `textPrimaryNeutral` (Figma overlay-neutral-text)
+
+**Behavior:**
+
+- Clickable area that toggles the parent item's expanded state
+- Applies `textPrimaryNeutral` color to EtText children (Figma overlay-neutral-text)
+- Contains an animated chevron icon that rotates 180° when expanded
+- Receives expansion state via `AccordionItemContext` (no prop drilling needed)
+- Applies pressed opacity feedback on touch
+- Supports accessibility with `accessibilityRole="button"` and `accessibilityState`
+
+### `EtAccordion.Content`
+
+```tsx
+<EtAccordion.Content
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  <EtText variant="body-base-regular">Answer text</EtText>
+</EtAccordion.Content>
+```
+
+**Children constraints:**
+
+- **Must be EtText component(s) only** - throws runtime error if other components or raw text are passed
+- This ensures consistent typography and styling across all accordions
+- Recommended variant for answers: `body-base-regular`
+
+**Behavior:**
+
+- Animated container that smoothly expands/collapses
+- Height animation duration: 300ms
+- Uses absolute positioning internally to ensure proper layout during animation
+- Receives expansion state via `AccordionItemContext`
+- Hidden when collapsed (height: 0, overflow: hidden)
+
+## Usage Patterns
+
+### Basic accordion (single expansion)
+
+```tsx
+<EtAccordion>
+  <EtAccordion.Item id="1">
+    <EtAccordion.Header>
+      <EtText variant="body-base-semibold">What is copy trading?</EtText>
+    </EtAccordion.Header>
+    <EtAccordion.Content>
+      <EtText variant="body-base-regular">Copy trading allows you to automatically copy the trades of experienced investors.</EtText>
+    </EtAccordion.Content>
+  </EtAccordion.Item>
+  <EtAccordion.Item id="2">
+    <EtAccordion.Header>
+      <EtText variant="body-base-semibold">How do I get started?</EtText>
+    </EtAccordion.Header>
+    <EtAccordion.Content>
+      <EtText variant="body-base-regular">Sign up for an account and complete the verification process.</EtText>
+    </EtAccordion.Content>
+  </EtAccordion.Item>
+</EtAccordion>
+```
+
+### Multiple items expanded
+
+```tsx
+<EtAccordion allowMultiple defaultExpandedIds={['1', '2']}>
+  <EtAccordion.Item id="1">
+    <EtAccordion.Header>
+      <EtText variant="body-base-semibold">Section 1</EtText>
+    </EtAccordion.Header>
+    <EtAccordion.Content>
+      <EtText variant="body-base-regular">Content 1</EtText>
+    </EtAccordion.Content>
+  </EtAccordion.Item>
+  <EtAccordion.Item id="2">
+    <EtAccordion.Header>
+      <EtText variant="body-base-semibold">Section 2</EtText>
+    </EtAccordion.Header>
+    <EtAccordion.Content>
+      <EtText variant="body-base-regular">Content 2</EtText>
+    </EtAccordion.Content>
+  </EtAccordion.Item>
+</EtAccordion>
+```
+
+### Controlled accordion
+
+```tsx
+const [expandedIds, setExpandedIds] = useState<string[]>(['1']);
+
+<EtAccordion expandedIds={expandedIds} onExpandedChange={setExpandedIds}>
+  <EtAccordion.Item id="1">
+    <EtAccordion.Header>
+      <EtText variant="body-base-semibold">Question 1?</EtText>
+    </EtAccordion.Header>
+    <EtAccordion.Content>
+      <EtText variant="body-base-regular">Answer 1</EtText>
+    </EtAccordion.Content>
+  </EtAccordion.Item>
+  <EtAccordion.Item id="2">
+    <EtAccordion.Header>
+      <EtText variant="body-base-semibold">Question 2?</EtText>
+    </EtAccordion.Header>
+    <EtAccordion.Content>
+      <EtText variant="body-base-regular">Answer 2</EtText>
+    </EtAccordion.Content>
+  </EtAccordion.Item>
+</EtAccordion>;
+```
+
+### Disabled item
+
+```tsx
+<EtAccordion>
+  <EtAccordion.Item id="1">
+    <EtAccordion.Header>
+      <EtText variant="body-base-semibold">Active Section</EtText>
+    </EtAccordion.Header>
+    <EtAccordion.Content>
+      <EtText variant="body-base-regular">This can be expanded.</EtText>
+    </EtAccordion.Content>
+  </EtAccordion.Item>
+  <EtAccordion.Item id="2" disabled>
+    <EtAccordion.Header>
+      <EtText variant="body-base-semibold">Disabled Section</EtText>
+    </EtAccordion.Header>
+    <EtAccordion.Content>
+      <EtText variant="body-base-regular">This cannot be expanded.</EtText>
+    </EtAccordion.Content>
+  </EtAccordion.Item>
+</EtAccordion>
+```
+
+### Header without chevron
+
+```tsx
+<EtAccordion.Item id="1">
+  <EtAccordion.Header showChevron={false}>
+    <EtText variant="body-base-semibold">Custom Header</EtText>
+  </EtAccordion.Header>
+  <EtAccordion.Content>
+    <EtText variant="body-base-regular">Content here</EtText>
+  </EtAccordion.Content>
+</EtAccordion.Item>
+```
+
+### Dynamic items from data
+
+```tsx
+const faqItems = [
+  { id: '1', question: 'What is eToro?', answer: 'eToro is a social trading platform.' },
+  { id: '2', question: 'Is it safe?', answer: 'Yes, eToro is regulated by multiple authorities.' },
+];
+
+<EtAccordion>
+  {faqItems.map((item) => (
+    <EtAccordion.Item key={item.id} id={item.id}>
+      <EtAccordion.Header>
+        <EtText variant="body-base-semibold">{item.question}</EtText>
+      </EtAccordion.Header>
+      <EtAccordion.Content>
+        <EtText variant="body-base-regular">{item.answer}</EtText>
+      </EtAccordion.Content>
+    </EtAccordion.Item>
+  ))}
+</EtAccordion>;
+```
+
+## Anti-patterns
+
+### ❌ Using non-EtText children in Header or Content
+
+```tsx
+// BAD - raw string text will throw error
+<EtAccordion.Header>Question text</EtAccordion.Header>
+
+// BAD - View/other components will throw error
+<EtAccordion.Header>
+  <View><Text>Question</Text></View>
+</EtAccordion.Header>
+
+// BAD - React Native Text will throw error
+<EtAccordion.Content>
+  <Text>Answer text</Text>
+</EtAccordion.Content>
+```
+
+**Fix:** Always wrap content in EtText components:
+
+```tsx
+<EtAccordion.Header>
+  <EtText variant="body-base-semibold">Question text</EtText>
+</EtAccordion.Header>
+
+<EtAccordion.Content>
+  <EtText variant="body-base-regular">Answer text</EtText>
+</EtAccordion.Content>
+```
+
+### ❌ Missing item id
+
+```tsx
+// BAD - id is required for each item
+<EtAccordion.Item>
+  <EtAccordion.Header>Header</EtAccordion.Header>
+  <EtAccordion.Content>Content</EtAccordion.Content>
+</EtAccordion.Item>
+```
+
+**Fix:** Always provide a unique `id` prop:
+
+```tsx
+<EtAccordion.Item id="unique-id">
+  <EtAccordion.Header>Header</EtAccordion.Header>
+  <EtAccordion.Content>Content</EtAccordion.Content>
+</EtAccordion.Item>
+```
+
+### ❌ Using subcomponents outside of EtAccordion
+
+```tsx
+// BAD - will throw runtime error
+<EtAccordion.Header>Header</EtAccordion.Header>
+
+// BAD - will throw runtime error
+<EtAccordion.Content>Content</EtAccordion.Content>
+
+// BAD - will throw runtime error
+<EtAccordion.Item id="1">...</EtAccordion.Item>
+```
+
+**Fix:** Always wrap subcomponents inside their parent components:
+
+```tsx
+<EtAccordion>
+  <EtAccordion.Item id="1">
+    <EtAccordion.Header>Header</EtAccordion.Header>
+    <EtAccordion.Content>Content</EtAccordion.Content>
+  </EtAccordion.Item>
+</EtAccordion>
+```
+
+### ❌ Duplicate item IDs
+
+```tsx
+// BAD - duplicate IDs will cause unexpected behavior
+<EtAccordion>
+  <EtAccordion.Item id="1">...</EtAccordion.Item>
+  <EtAccordion.Item id="1">...</EtAccordion.Item>
+</EtAccordion>
+```
+
+**Fix:** Ensure each item has a unique ID:
+
+```tsx
+<EtAccordion>
+  <EtAccordion.Item id="1">...</EtAccordion.Item>
+  <EtAccordion.Item id="2">...</EtAccordion.Item>
+</EtAccordion>
+```
+
+### ❌ Mixing controlled and uncontrolled props
+
+```tsx
+// BAD - don't use defaultExpandedIds with expandedIds
+<EtAccordion defaultExpandedIds={['1']} expandedIds={expandedIds} onExpandedChange={setExpandedIds}>
+  ...
+</EtAccordion>
+```
+
+**Fix:** Use either controlled or uncontrolled mode, not both:
+
+```tsx
+// Controlled
+<EtAccordion expandedIds={expandedIds} onExpandedChange={setExpandedIds}>
+  ...
+</EtAccordion>
+
+// OR Uncontrolled
+<EtAccordion defaultExpandedIds={['1']}>
+  ...
+</EtAccordion>
+```
+
+### ❌ Manually managing expansion state incorrectly
+
+```tsx
+// BAD - onExpandedChange provides the new state array, don't compute it again
+<EtAccordion
+  expandedIds={expandedIds}
+  onExpandedChange={(ids) => {
+    // Wrong! The ids parameter already has the correct new state
+    if (ids.includes(currentId)) {
+      setExpandedIds(ids.filter((id) => id !== currentId));
+    } else {
+      setExpandedIds([...ids, currentId]);
+    }
+  }}
+>
+  ...
+</EtAccordion>
+```
+
+**Fix:** `onExpandedChange` receives the complete new state:
+
+```tsx
+<EtAccordion expandedIds={expandedIds} onExpandedChange={(ids) => setExpandedIds(ids)}>
+  ...
+</EtAccordion>
+```
+
+### ❌ Expecting multiple expansion without allowMultiple
+
+```tsx
+// BAD - without allowMultiple, only one item can be expanded
+<EtAccordion defaultExpandedIds={['1', '2', '3']}>...</EtAccordion>
+```
+
+**Fix:** Enable `allowMultiple` for multiple expanded items:
+
+```tsx
+<EtAccordion allowMultiple defaultExpandedIds={['1', '2', '3']}>
+  ...
+</EtAccordion>
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for styling (divider, chevron colors)
+- `EtoroIcon` - underlying icon component for chevron in `EtAccordion.Header`
+- `AccordionContext` - React context for sharing expanded state with items
+- `AccordionItemContext` - React context for sharing item-specific state with Header/Content
+- `useAccordionState` - hook managing expanded state (controlled/uncontrolled)
+- `useAccordionAnimation` - hook managing chevron rotation animation
+
+### External Dependencies
+
+- `react-native` - `View`, `Pressable`, `StyleSheet`
+- `react-native-reanimated` - height animation for content, rotation animation for chevron (Animated.View, useSharedValue, useAnimatedStyle, withTiming)
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`):
+  - Divider: `dividerSenary` (theme token for subtle separators)
+  - Header text: `textPrimaryNeutral` (Figma overlay-neutral-text)
+  - Chevron: `textPrimaryNeutral` (normal) or `textDisabledPrimaryNeutral` (disabled)
+- Spacing:
+  - Container: 20px vertical (X5), 28px horizontal (X7)
+  - AccordionItem: `paddingTop: X5` (20px) — top spacing per item; see `accordion-item.tsx` styles.container
+  - AccordionHeader: dynamic `marginBottom` only — X1 (4px) when expanded, X5 (20px) when collapsed; no paddingVertical; see `accordion-header.tsx`
+  - Content: `paddingBottom: X6` (24px), `paddingRight: X4` (16px)
+- Icon size: chevron uses `sm` size
+- Animation duration: 300ms for both height and rotation
+
+## Patterns & Pitfalls
+
+### Context Architecture
+
+The accordion uses a two-level context pattern:
+
+1. **AccordionContext** - Wraps the entire accordion, provides:
+   - `expandedIds` - array of currently expanded item IDs
+   - `toggleItem` - function to toggle an item's expanded state
+   - `allowMultiple` - whether multiple items can be expanded
+
+2. **AccordionItemContext** - Wraps each item, provides:
+   - `id` - unique identifier for this item
+   - `isExpanded` - whether this item is currently expanded
+   - `disabled` - whether this item is disabled
+   - `toggle` - function to toggle this item
+
+**File structure:**
+
+```
+context/
+├── accordion-context.tsx       # AccordionContext + useAccordionContext hook
+├── accordion-item-context.tsx  # AccordionItemContext + useAccordionItemContext hook
+└── index.ts                    # exports
+```
+
+### Controlled vs Uncontrolled State
+
+The accordion supports two state management patterns:
+
+1. **Uncontrolled** (default): Use `defaultExpandedIds` for initial state
+   - Component manages state internally
+   - Use `onExpandedChange` to react to changes if needed
+   - Simpler for basic use cases
+
+2. **Controlled**: Use `expandedIds` + `onExpandedChange`
+   - Parent manages state externally
+   - Full control over which items are expanded
+   - Useful for complex state logic or persisting state
+
+### Single vs Multiple Expansion
+
+The `allowMultiple` prop controls expansion behavior:
+
+- **Single expansion** (`allowMultiple={false}`, default):
+  - Clicking a collapsed item expands it and collapses any previously expanded item
+  - Only one item can be expanded at a time
+
+- **Multiple expansion** (`allowMultiple={true}`):
+  - Each item toggles independently
+  - Multiple items can be expanded simultaneously
+
+### Animation Behavior
+
+The accordion has two animations:
+
+1. **Chevron rotation**:
+   - Rotates from 0° (collapsed) to 180° (expanded)
+   - Duration: 300ms with timing animation
+   - Handled by `useAccordionAnimation` hook
+
+2. **Content height**:
+   - Animates from 0 to measured content height
+   - Duration: 300ms with timing animation
+   - Uses absolute positioning for proper layout during animation
+   - First render measures content height, subsequent renders animate
+
+### Accessibility
+
+The accordion includes built-in accessibility support:
+
+- `EtAccordion.Header`:
+  - `accessibilityRole="button"` - announces as button to screen readers
+  - `accessibilityState={{ expanded, disabled }}` - communicates expansion and disabled state
+  - `accessibilityLabel` - uses children text if string
+
+### Visual States
+
+Each item has visual feedback:
+
+- **Normal**: Full opacity, clickable
+- **Pressed**: Reduced opacity (0.7) on touch
+- **Disabled**: Reduced opacity (0.5), not clickable, chevron uses disabled color
+- **Expanded**: Chevron rotated 180°, content visible
+
+### Dividers
+
+Each `EtAccordion.Item` renders a divider below it using `dividerSenary` (theme token). This is built-in and cannot be disabled.
+
+## Related Context
+
+- `EtText` - Text component used inside Header and Content for typography
+- `EtoroIcon` - Icon component used internally for chevron icon
+- `api/types.ts` - Type definitions for all props (`EtAccordionProps`, `EtAccordionItemProps`, `EtAccordionHeaderProps`, `EtAccordionContentProps`)
+- `context/` - Context architecture for state sharing
+- `hooks/use-accordion-state.ts` - State management logic
+- `hooks/use-accordion-animation.ts` - Chevron animation logic

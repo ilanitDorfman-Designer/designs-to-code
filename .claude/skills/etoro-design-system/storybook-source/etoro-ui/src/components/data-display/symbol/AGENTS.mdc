@@ -1,0 +1,195 @@
+# EtSymbol Component
+
+## Purpose & Scope
+
+`EtSymbol` is a styled box component for displaying currency symbols, icons, dates, or text labels. It provides:
+
+- **Multiple sizes**: small (24px), medium (36px), large (48px)
+- **Multiple shapes**: rounded (border radius), sharp (square corners)
+- **Compound component pattern**: `EtSymbol.Currency`, `EtSymbol.Icon`, `EtSymbol.Date`, `EtSymbol.Text` subcomponents
+- **Gradient overlay**: Always-on gradient overlay matching the design system
+
+**Does NOT handle:**
+
+- Navigation or press interactions (wrap in Pressable if needed)
+- Image-based symbols (use EtAvatar for image avatars)
+- Loading states (use EtSkeleton separately)
+
+## Entry Points & Contracts
+
+### `EtSymbol` (main component)
+
+```tsx
+<EtSymbol
+  size?: SymbolSize           // default: 'medium'
+  shape?: SymbolShape         // default: 'rounded'
+  backgroundColor?: string    // default: DEFAULT_SYMBOL_BG_COLOR ('#232733')
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {children}
+</EtSymbol>
+```
+
+### `EtSymbol.Currency`
+
+```tsx
+<EtSymbol.Currency
+  color?: string             // default: DEFAULT_SYMBOL_COLOR ('#FFFFFF')
+>
+  {children: string}          // Currency symbol text (e.g., "€", "$", "£", "A$")
+</EtSymbol.Currency>
+```
+
+### `EtSymbol.Icon`
+
+```tsx
+<EtSymbol.Icon
+  name: string               // EtIconV2 icon name (required)
+  color?: string             // default: DEFAULT_SYMBOL_COLOR ('#FFFFFF')
+/>
+```
+
+### `EtSymbol.Date`
+
+```tsx
+<EtSymbol.Date
+  day: string                // "29"
+  month: string              // "Apr"
+  color?: string             // default: DEFAULT_SYMBOL_COLOR ('#FFFFFF')
+/>
+```
+
+### `EtSymbol.Text`
+
+```tsx
+<EtSymbol.Text
+  color?: string             // default: DEFAULT_SYMBOL_COLOR ('#FFFFFF')
+>
+  {children: string}          // Text to display (e.g., "PNG", "BTC")
+</EtSymbol.Text>
+```
+
+### Types
+
+| Type          | Values                               |
+| ------------- | ------------------------------------ |
+| `SymbolSize`  | `'small'` \| `'medium'` \| `'large'` |
+| `SymbolShape` | `'rounded'` \| `'sharp'`             |
+
+## Usage Patterns
+
+### Currency symbol
+
+```tsx
+<EtSymbol backgroundColor="#005ca4">
+  <EtSymbol.Currency>€</EtSymbol.Currency>
+</EtSymbol>
+```
+
+### Icon
+
+```tsx
+<EtSymbol shape="sharp">
+  <EtSymbol.Icon name="chat" />
+</EtSymbol>
+```
+
+### Date
+
+```tsx
+<EtSymbol shape="sharp">
+  <EtSymbol.Date day="29" month="Apr" />
+</EtSymbol>
+```
+
+### Text label
+
+```tsx
+<EtSymbol>
+  <EtSymbol.Text>PNG</EtSymbol.Text>
+</EtSymbol>
+```
+
+### Different sizes and shapes
+
+```tsx
+<EtSymbol size="small" shape="sharp" backgroundColor="#037fd9">
+  <EtSymbol.Currency>£</EtSymbol.Currency>
+</EtSymbol>
+
+<EtSymbol size="large" shape="rounded" backgroundColor="#00A44B">
+  <EtSymbol.Currency>$</EtSymbol.Currency>
+</EtSymbol>
+```
+
+## Anti-patterns
+
+### Using subcomponents outside EtSymbol
+
+```tsx
+// BAD - will throw runtime error
+<EtSymbol.Currency>€</EtSymbol.Currency>
+<EtSymbol.Icon name="chat" />
+<EtSymbol.Text>PNG</EtSymbol.Text>
+```
+
+**Fix:** Always wrap in `<EtSymbol>`.
+
+## Architecture
+
+### File Structure
+
+```
+libs/etoro-ui/src/components/data-display/symbol/
+├── api/                     # Type definitions
+├── constants.ts             # Shared constants (DEFAULT_SYMBOL_COLOR, DEFAULT_SYMBOL_BG_COLOR)
+├── context/                 # SymbolContext for subcomponent communication
+├── hooks/                   # useSymbolConfig - resolves size, borderRadius
+├── subcomponents/           # Currency, Icon, Date, Text subcomponents
+├── utils/                   # SIZE_CONFIGS, getBorderRadius, getSizeValue
+├── et-symbol.tsx            # Main compound component
+└── index.ts                 # Barrel exports
+```
+
+### Size Configurations
+
+| Size   | Pixels | Rounded Radius | Sharp Radius | Currency Variant   | Text Variant            | Icon Size |
+| ------ | ------ | -------------- | ------------ | ------------------ | ----------------------- | --------- |
+| small  | 24px   | 4px (X1)       | 0px          | body-base-semibold | caption-regular         | 14px      |
+| medium | 36px   | 8px (X2)       | 0px          | heading-large      | caption-medium          | 20px      |
+| large  | 48px   | 8px (X2)       | 0px          | display-hero       | body-secondary-semibold | 24px      |
+
+### Theme Colors
+
+The component **does NOT apply currency colors automatically**. Currency theme colors are exposed via `useEtoroTheme` for consumers to manually pass into the `EtSymbol` `backgroundColor` prop:
+
+- **`colors.eur`** - European Euro background color (blue)
+- **`colors.usd`** - US Dollar background color (green)
+- **`colors.gbp`** - British Pound background color (blue)
+- **`colors.aud`** - Australian Dollar background color (dark blue)
+
+**Example usage:**
+```tsx
+const { colors } = useEtoroTheme();
+
+<EtSymbol backgroundColor={colors.eur}>
+  <EtSymbol.Currency>€</EtSymbol.Currency>
+</EtSymbol>
+```
+
+When `backgroundColor` is not provided, the component defaults to `DEFAULT_SYMBOL_BG_COLOR` (`#232733` - dark gray). The internal `EtSymbol.Currency` subcomponent renders the currency symbol text.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides overlay gradient colors
+- `EtText` - text rendering for Currency, Date, and Text subcomponents
+- `EtIconV2` - icon rendering for Icon subcomponent
+- `SymbolContext` - React context for passing size info to subcomponents
+
+### External Dependencies
+
+- `expo-linear-gradient` - gradient overlay
+- `react-native` - View, StyleSheet

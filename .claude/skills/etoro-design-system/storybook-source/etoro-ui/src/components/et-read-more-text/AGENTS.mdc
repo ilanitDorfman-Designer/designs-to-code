@@ -1,0 +1,166 @@
+---
+description: Agent guide for EtReadMoreText - truncatable text component with inline Show More/Show Less toggle, supporting plain string with URL detection and rich ReactNode children modes
+alwaysApply: false
+---
+
+# EtReadMoreText
+
+A text component that truncates content to a configurable number of lines with an inline "Show More" / "Show Less" toggle action. Supports two content modes: plain string with URL auto-detection, and rich ReactNode children with pre-built interactive elements.
+
+## Overview
+
+`EtReadMoreText` displays text that can be collapsed to a maximum number of lines. Unlike block-level expand/collapse components, the "Show More" action appears **inline** at the end of the last visible line, maintaining a natural reading flow.
+
+**Two content modes:**
+
+1. **String mode** — Pass `text` only. URLs are auto-detected via `onLinkPress`.
+2. **Children mode** — Pass `children` (ReactNode) with pre-built interactive elements. Rich content is visible in **both** collapsed and expanded states. The children tree is truncated by character count when collapsed.
+
+**Tap behavior**: Only the "Show More" / "Show Less" action text (or custom action component) toggles expansion. Tapping elsewhere in the text has no effect.
+
+**Render Prop Pattern**: The component uses `customActionComponent` prop for maximum flexibility in customizing the action button.
+
+## Props
+
+| Prop                    | Type                                 | Default                     | Description                                                                                                 |
+| ----------------------- | ------------------------------------ | --------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `text`                  | `string`                             | **required**                | Plain text content — required in both string and children modes (used for measurement and reset detection). |
+| `children`              | `ReactNode`                          | -                           | Rich content with pre-built interactive elements                                                            |
+| `customActionComponent` | `(isExpanded: boolean) => ReactNode` | -                           | Custom render function for the action button                                                                |
+| `maxLines`              | `number`                             | `4`                         | Maximum lines when collapsed                                                                                |
+| `showMoreText`          | `string`                             | `'Show More'`               | Text for the expand action                                                                                  |
+| `showLessText`          | `string`                             | `'Show Less'`               | Text for the collapse action                                                                                |
+| `textVariant`           | `TextVariant`                        | `'body-secondary-regular'`  | Typography variant                                                                                          |
+| `actionTextVariant`     | `TextVariant`                        | `'body-secondary-semibold'` | Typography variant for the action text                                                                      |
+| `initialExpanded`       | `boolean`                            | `false`                     | Start in expanded state                                                                                     |
+| `onExpandedChange`      | `(expanded: boolean) => void`        | -                           | Expansion state callback                                                                                    |
+| `onLinkPress`           | `(url: string) => void`              | -                           | URL press callback (string mode only)                                                                       |
+| `style`                 | `StyleProp<ViewStyle>`               | -                           | Container style                                                                                             |
+| `testID`                | `string`                             | -                           | Test identifier                                                                                             |
+| `accessibilityLabel`    | `string`                             | -                           | Accessibility label                                                                                         |
+
+## Usage
+
+### String mode (plain text with URL auto-detection)
+
+```tsx
+// Basic
+<EtReadMoreText maxLines={3} text={longTextContent} />
+
+// With URL auto-detection
+<EtReadMoreText
+  maxLines={3}
+  text="Check out https://example.com for more info"
+  onLinkPress={(url) => Linking.openURL(url)}
+/>
+```
+
+### Children mode (rich content with interactive elements)
+
+```tsx
+// Feed post with $tags, @mentions, and links
+<EtReadMoreText text={plainText} maxLines={3}>
+  Buy{' '}
+  <EtText onPress={() => navigateToMarket('AAPL')} style={linkStyle}>
+    $AAPL
+  </EtText>
+  ! Follow{' '}
+  <EtText onPress={() => navigateToProfile('meiramar')} style={linkStyle}>
+    @meiramar
+  </EtText>{' '}
+  at{' '}
+  <EtText onPress={() => Linking.openURL(url)} style={linkStyle}>
+    https://example.com
+  </EtText>
+</EtReadMoreText>
+```
+
+**Important**: Use `<EtText onPress>` for inline interactive text, **not** `<EtLink>`. `EtLink` is View-based (`Animated.View > Pressable`) and cannot be nested inside `<Text>`.
+
+### Custom action component
+
+```tsx
+<EtReadMoreText
+  maxLines={3}
+  text={longTextContent}
+  customActionComponent={(isExpanded) => <EtIconV2 name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} />}
+/>
+```
+
+## Children Mode — How It Works
+
+1. Consumer pre-builds rich content with `<EtText onPress>` elements for interactive entities (@mentions, $tags, links)
+2. Consumer passes `text` as the plain-text representation (for measurement + reset detection)
+3. Consumer passes the rich content as `children`
+4. The component renders `children` in the hidden measurement area to determine line count
+5. When collapsed, the children tree is truncated by character count using `truncateChildren()` — element wrappers and their props (onPress, style) are preserved
+6. When expanded, the full children are rendered
+
+### UIKit-generic design
+
+The component handles **rendering** and **truncation** only. Domain-specific logic (entity detection, instrument lookup, user resolution, routing) is the consumer's responsibility:
+
+- Consumer detects @mentions, $tags in the text (e.g., via regex in BL layer)
+- Consumer builds interactive `<EtText onPress>` elements for each entity
+- Consumer handles navigation/routing in the onPress callbacks
+- The component simply truncates and renders whatever children it receives
+
+## Architecture
+
+### How Inline Truncation Works
+
+1. A hidden `<EtText>` renders the full content (`children` or `text`) to measure line count via `onTextLayout`
+2. The hidden text is **unmounted** after measurement to save resources
+3. While measuring, full content is shown optimistically to avoid a blank frame
+4. If lines exceed `maxLines`, the component calculates truncated text
+5. **String mode**: The last visible line is trimmed to make room for "... Show More"
+6. **Children mode**: `truncateChildren()` walks the ReactNode tree and truncates by character count, preserving element wrappers
+7. The "Show More" / "Show Less" action text handles its own `onPress` for toggling
+
+### Animation
+
+- **State toggle** — `toggleExpanded()` from `useReadMoreTextState` is called directly on press.
+- **Layout transition** — Expand uses reanimated's `LinearTransition.springify()`. Collapse is instantaneous (`layout` is unset while collapsed) so a parent FlashList can compensate `contentOffset` on the same commit (PE-1150). A collapsing spring would fight that correction and is clipped by `EtPost`'s `overflow: 'hidden'` anyway.
+
+### File Structure
+
+```text
+et-read-more-text/
+├── api/
+│   ├── index.ts          # Public type exports
+│   └── types.ts          # EtReadMoreTextProps interface
+├── hooks/
+│   ├── index.ts          # Hook exports
+│   ├── use-read-more-text-config.ts   # Config resolution (colors, defaults)
+│   ├── use-read-more-text-content.tsx  # Content assembly hook (rendering logic)
+│   └── use-read-more-text-state.ts    # Expansion state + text measurement
+├── utils/
+│   ├── index.ts                # Utils exports
+│   ├── parse-text-entities.ts  # URL regex detection + segment parser
+│   └── truncate-children.ts    # ReactNode tree truncation by char count
+├── constants.ts          # Shared constants (ELLIPSIS_SUFFIX, TRIM_CHARS)
+├── et-read-more-text.tsx # Main component
+├── et-read-more-text.spec.tsx
+├── AGENTS.mdc             # This file
+└── index.ts              # Public exports
+```
+
+## Do's and Don'ts
+
+### Do
+
+- Pass `text` as the plain-text version of your content (always required)
+- Use `children` for rich content with interactive elements
+- Use `<EtText onPress>` for inline interactive text within children
+- Use `onLinkPress` for auto-detecting URLs in string mode
+- Use `customActionComponent` for custom icons or complex actions
+- Use `maxLines` to control the visible text amount
+- Use `onExpandedChange` to track analytics or sync state
+
+### Don't
+
+- Don't use `<EtLink>` inside children — it's View-based and can't be nested in Text
+- Don't use for short text that won't need truncation (no visual effect)
+- Don't hardcode colors — the component uses theme colors automatically
+- Don't forget to pass `text` when using children (needed for measurement)
+- Don't use `onLinkPress` with children (handle links in children's onPress instead)

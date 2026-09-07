@@ -1,0 +1,142 @@
+---
+description: Agent guide for EtButtonGroup - horizontal group of icon buttons with pill-shaped container, animated press transitions, and haptic feedback for action-only button rows
+alwaysApply: false
+---
+
+# EtButtonGroup Component
+
+## Purpose & Scope
+
+`EtButtonGroup` is a horizontal group of icon buttons for the eToro design system. It provides:
+
+- **Compound component pattern**: `EtButtonGroup.Item` subcomponent for each button
+- **Pill-shaped container**: Rounded ends on first/last items
+- **Smooth press animations**: Animated background color transitions using Reanimated
+- **Haptic feedback**: Enabled by default on press
+
+**Does NOT handle:**
+
+- Toggle/selection states (buttons are action-only)
+- Text labels (icon-only buttons)
+- Variable sizing (fixed height of 36px)
+
+## Entry Points & Contracts
+
+### `EtButtonGroup` (main component)
+
+```tsx
+<EtButtonGroup style?: StyleProp<ViewStyle> testID?: string>
+  {children}
+</EtButtonGroup>
+```
+
+**Children constraints:** Only `<EtButtonGroup.Item>` components are valid (enforced at runtime).
+
+### `EtButtonGroup.Item`
+
+```tsx
+<EtButtonGroup.Item
+  iconName: IconName           // required
+  onPress: () => void          // required
+  disabled?: boolean           // default: false
+  testID?: string
+  accessibilityLabel?: string
+/>
+```
+
+## Usage
+
+```tsx
+<EtButtonGroup>
+  <EtButtonGroup.Item iconName="priceAlert" onPress={handlePriceAlert} />
+  <EtButtonGroup.Item iconName="expand" onPress={handleExpand} />
+</EtButtonGroup>
+```
+
+## Anti-patterns
+
+❌ **Non-Item children** - Only `EtButtonGroup.Item` allowed, other elements throw runtime error
+
+❌ **Item outside EtButtonGroup** - Missing context will throw error
+
+❌ **Text labels** - Use `EtButton` or `EtChip` for buttons with text
+
+## Design System Integration
+
+- **Colors** (from `useEtoroTheme().colors`):
+  - Normal: `bgButtonGroupNormal` (Light: Neutral/50 `#F2F2F2`, Dark: Neutral/800 `#333333`)
+  - Pressed: `bgButtonGroupPressed` (Light: Neutral/600@25% `#66666625`, Dark: Neutral/600@25% `#66666625`)
+  - Icon: `textPrimaryNeutral`
+  - Disabled: 50% opacity
+- **Spacing** (from `etoro-ui/core/styles`):
+  - Padding: `X3` (12px)
+  - Border radius: `X8` (32px)
+  - Icon size: `X5` (20px)
+  - Height: `X9` (36px)
+  - Gap: 2px
+
+## Patterns & Pitfalls
+
+### Context Architecture
+
+- `ButtonGroupProvider` wraps each item with `isFirst` and `isLast` flags
+- Position determines border radius (rounded on first/last only)
+
+### Animation
+
+- 150ms transition using `interpolateColor` with `withTiming`
+- Always cleanup animations on unmount with `cancelAnimation`
+
+### Haptic Feedback
+
+- `ImpactFeedbackStyle.Light` on press (disabled buttons excluded)
+
+## Development Learnings
+
+### Use Design System Tokens
+
+Never hardcode values. Use spacing constants (`X3`, `X5`, `X8`, `X9`) and theme colors (`colors.bgGreyTransparentPrimary`).
+
+### Animation Cleanup
+
+Always cleanup Reanimated animations on unmount:
+
+```typescript
+useEffect(() => {
+  return () => {
+    cancelAnimation(pressed);
+  };
+}, [pressed]);
+```
+
+### Theme Reactivity
+
+Use `useDerivedValue` for colors to ensure theme changes (dark/light mode) are reflected:
+
+```typescript
+const colors = useDerivedValue(() => [normalColor, pressedColor]);
+
+const animatedStyle = useAnimatedStyle(() => ({
+  backgroundColor: interpolateColor(pressed.value, [0, 1], colors.value),
+}));
+```
+
+### Component-Specific Animation Timing
+
+Different components need different animation durations (ButtonGroup: 150ms, Checkbox: 300ms). Keep animation constants per-component in `utils/animation-constants.ts`.
+
+### Testing
+
+Tests require mocks for:
+
+- `useEtoroTheme` - provide mock colors
+- `EtoroIcon` - mock component
+- `expo-haptics` - mock haptic feedback
+- `cancelAnimation` - patch the existing Reanimated mock:
+
+```typescript
+const reanimatedModule = jest.requireMock('react-native-reanimated');
+if (reanimatedModule && !reanimatedModule.cancelAnimation) {
+  reanimatedModule.cancelAnimation = jest.fn();
+}
+```

@@ -1,0 +1,116 @@
+# EtSkeleton Component
+
+## Overview
+
+`EtSkeleton` is the loading-placeholder system. It is built around a **single
+app-wide pulse clock**, so a screen full of placeholders costs exactly one
+animation loop (not one per shape) and every pulse stays phase-synced.
+
+**Location:** `/libs/etoro-ui/src/components/status/skeleton/`
+
+## Architecture
+
+> Built for the **New Architecture (Fabric)**, where `MaskedView` alpha clipping
+> and Reanimated layout animations (`entering`/`exiting`) are both unreliable.
+> The system therefore depends on NEITHER: atoms pulse their opacity directly,
+> and the dissolve is a shared-value opacity crossfade.
+
+- **Shared clock** (`hooks/use-shimmer-clock.ts`): one module-level `makeMutable`
+  progress value driven by a single ref-counted `withRepeat` loop. Every skeleton
+  reads it, so all pulses are phase-synced and N skeletons = 1 timing animation.
+- **Shape atoms** (`EtSkeleton`, `EtSkeleton.Box`, `EtSkeleton.Circle`,
+  `EtSkeleton.Text`): each is a solid base-color shape whose opacity pulses from
+  `useShimmerClock()`. There is no gradient layer, travelling sheen, highlight
+  token, or transform animation in the shipped model. No `MaskedView`.
+- **`EtSkeleton.Group`** (`components/et-skeleton-group-host.tsx`): a pure flexbox
+  layout host. It lays atoms out to mirror real content and toggles their shimmer
+  for the whole section at once (`animated={false}`). It owns no animation of its
+  own.
+- **Skeleton↔content transition lives in `EtView` / `EtScrollView`**
+  (`components/view/`): the one true skeleton↔content transition is no longer a
+  skeleton subcomponent — it is owned by the loading-aware container components.
+  Pass `loading` + `skeleton` to an `EtView`/`EtScrollView` and it keeps both
+  layers mounted and dissolves the skeleton with a shared-value **opacity**
+  animation (reliable on Fabric), then unmounts it. While `loading` the skeleton
+  is in normal flow (reserves height); once loaded, `children` mount in flow and
+  the skeleton fades out as an `absoluteFill` overlay over them. Works the same in
+  a ScrollView, an `EtScreen.View`, a FlashList header, or any conditional branch
+  — no per-screen overlays. Honors OS reduce-motion. See `view/AGENTS.md`.
+- **`EtSkeleton.Chips`** / `EtSkeletonChips` (`components/et-skeleton-chips.tsx`):
+  a preset row of pill placeholders sized to `EtChip` (height 32, radius 20,
+  `gap: X2`). Reserve it in the exact slot a filter-chips rail
+  (`EtChipsGroupV2` / `EtSection.Chips`) will occupy during load so the chips
+  appearing on data-ready don't push the list down. Props: `count?`, `widths?`,
+  `style`, `testID`.
+- **Theme tokens only**: base = `bgNeutralGreyPrimary`. The pulse changes opacity
+  only; never hardcode colors.
+
+## Usage
+
+```tsx
+import { EtSkeleton, EtView } from 'etoro-ui';
+import { View } from 'react-native';
+
+// Preferred: a Group mirroring the real content, one synchronized shimmer.
+<EtSkeleton.Group style={{ gap: 16 }}>
+  {rows.map((id) => (
+    <View key={id} style={styles.row}>
+      <EtSkeleton.Circle width={40} height={40} />
+      <View style={{ flex: 1, gap: 8 }}>
+        <EtSkeleton.Text width="70%" height={14} />
+        <EtSkeleton.Text width="40%" height={12} />
+      </View>
+    </View>
+  ))}
+</EtSkeleton.Group>
+
+// Skeleton -> content (EtView dissolves the skeleton, no hard cut)
+<EtView loading={isLoading} skeleton={<MySectionSkeleton />}>
+  <MySection data={data} />
+</EtView>
+
+// Standalone atom (still fine; auto-shimmers off the shared clock)
+<EtSkeleton width="60%" height={16} />
+```
+
+## Integration standard
+
+1. **Always transition through `EtView` / `EtScrollView`** — never `isLoading ?
+   <Skeleton/> : <Content/>` directly. The container owns the dissolve, so it
+   fires reliably regardless of the surrounding structure. Do NOT add your own
+   `Animated.View` / `FadeIn` / `FadeOut` wrappers or absolute overlays.
+2. **Encapsulate loading inside the smart component.** A component that owns its
+   UI should take a `loading` prop and render its own `EtView`/`skeleton`
+   internally, so parents stay clean (`<MySection loading={isLoading} ... />`).
+   Keep the `EtView` at the feature level only when wrapping an unowned kit
+   component you cannot push into (e.g. `EtSection.Chips`).
+3. **One `EtSkeleton.Group` per section/list body** — not per element.
+4. **Shape + height match** the real content; share a height constant between a
+   skeleton row and its real row so the swap never jumps.
+5. **Keep the scroll owner mounted.** For a FlashList body, wrap the whole body
+   (list + its skeleton) in a single `EtView` rather than feeding the list its own
+   loading state — the skeleton overlay fades over the mounted list.
+6. **Skeleton definitions live in a per-feature `loaders/` folder.** Keep the
+   `*-skeleton.tsx` filenames; the smart component imports its skeleton from
+   `../loaders/...` so feature files stay free of placeholder markup.
+7. Prefer row slots `EtListItemV2.Skeleton` / `EtAssetItem.Skeleton` for list rows.
+
+## Props (`EtSkeleton`)
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `width` | `number \| string` | `'100%'` | Width of the shape |
+| `height` | `number` | `20` | Height of the shape |
+| `variant` | `'text' \| 'circular' \| 'rectangular' \| 'rounded'` | `'text'` | Shape / default radius |
+| `borderRadius` | `number` | varies | Explicit radius override |
+| `animation` | `'shimmer' \| 'none' \| ...` | `'shimmer'` | `'none'` renders a static shape; any other value shimmers |
+| `visible` | `boolean` | `true` | When false renders `children` |
+| `children` | `ReactNode` | - | Content shown when `visible` is false |
+| `style` | `ViewStyle` | - | Style override |
+| `duration` / `delay` / `performanceMode` / `priority` | - | - | **Deprecated no-ops** (kept for backward compatibility; the shared clock makes them unnecessary) |
+
+## Performance notes
+
+- One shimmer loop for the whole app, regardless of skeleton count.
+- Pulse animates only opacity; no layout-affecting properties.
+- No global animation cap — every skeleton always shimmers, in sync.

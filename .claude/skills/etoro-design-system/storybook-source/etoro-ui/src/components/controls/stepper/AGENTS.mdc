@@ -1,0 +1,84 @@
+---
+description: Agent guide for EtStepper - numeric stepper with minus/plus circular buttons, sizing presets, bounds clamping, and subtle value animation
+alwaysApply: false
+---
+
+# EtStepper Component
+
+## Purpose & Scope
+
+`EtStepper` is a numeric stepper for the design system. It renders two circular buttons (minus/plus) and a centrally aligned value. It supports sizing presets, bounds, custom steps, disabled state, optional haptic feedback, and a lightweight value animation.
+
+**Does NOT handle:**
+
+- Arbitrary formatting or localization of the value (parent should format before passing)
+- Long-press/press-and-hold acceleration
+- Haptics (add externally if needed)
+
+## Entry Points & Props
+
+### `EtStepper`
+
+```tsx
+<EtStepper
+  value: number                 // required, current value
+  onChange: (value: number) => void // required, called with next value
+  min?: number                  // default: -Infinity
+  max?: number                  // default: +Infinity
+  step?: number                 // default: 1, coerced to 1 if <=0/NaN
+  disabled?: boolean            // default: false
+  size?: 'xs' | 'sm' | 'md' | 'lg' // default: 'md', adjusts button/value sizing
+  haptics?: boolean             // default: true, light impact on press
+/>
+```
+
+Sizing presets (button diameter / font-size / line-height / value width / gap):
+
+- `xs`: 40 / 28 / 28 / 48 / 4
+- `sm`: 46 / 40 / 40 / 56 / 6
+- `md`: 52 / 50 / 50 / 64 / 8
+- `lg`: 60 / 60 / 60 / 72 / 10
+
+## Usage Patterns
+
+- Basic bounded stepper:
+
+```tsx
+<EtStepper value={qty} onChange={setQty} min={0} max={10} />
+```
+
+- Disabled display:
+
+```tsx
+<EtStepper value={5} onChange={() => {}} disabled />
+```
+
+- Smaller footprint:
+
+```tsx
+<EtStepper value={1} onChange={setVal} size="xs" />
+```
+
+## Behavior Details
+
+- Buttons clamp to `min`/`max`; clicks beyond bounds are ignored.
+- `step` is normalized to `1` when non-positive or non-finite.
+- Value animates subtly after input settles (debounced ~160ms); first render has no animation.
+- Accessibility: container uses `adjustable` role with `accessibilityValue` and buttons expose `button` role with `disabled` state.
+
+## Anti-patterns
+
+- ❌ Relying on the component to format numbers (format before passing).
+- ❌ Expecting press-and-hold to repeat (not implemented).
+- ❌ Styling colors externally; colors come from theme tokens.
+
+## Dependencies & Internals
+
+- Uses `useEtoroTheme` for colors.
+- Subcomponent `StepperButton` in `subcomponents/stepper-button.tsx` renders the circular buttons.
+- Animated value uses React Native `Animated` with easing and debouncing for smoothness.
+
+## Related
+
+- `EtButton`, `EtIconButton` for general actions.
+- Storybook stories show all sizes and disabled/clamped states.

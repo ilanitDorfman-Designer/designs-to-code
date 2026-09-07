@@ -1,0 +1,260 @@
+---
+description: Agent guide for EtList - generic, virtualized list primitive with a compound API (Header, Column, Skeleton, Empty, Error, Footer). Use it for any vertically scrolling list that needs a pinned column-header row, sortable columns, virtualization, and built-in skeleton/empty/error states.
+alwaysApply: false
+---
+
+# EtList
+
+## When to use `EtList` vs `EtTable`
+
+- Use **`EtList`** when each row is one opaque UI element — an `EtAssetItem`, `EtPositionCard`, user card, etc. — and the columns above are just a labeled, optionally sortable header. No horizontal scroll, no fixed column, no per-cell formatting. The body is "a stack of self-rendering rows".
+- Use **`EtTable`** (`libs/etoro-ui/src/components/tables/table/`) when rows are composed of cells driven by a column descriptor (`columns: EtTableColumn[]` + `renderColumn(item, column)`), or when you need horizontal column scrolling, a fixed first column, or built-in cell formatters (currency, change%, etc.). The body is "a 2D cell grid".
+
+Concretely:
+
+| | `EtTable.Column` | `EtList.Column` |
+|---|---|---|
+| What it is | A vertical strip of cells driven by a column descriptor | A single label cell in the header row only |
+| Body row composition | `renderColumn(item, column)` per cell | `renderItem({ item })` returns one opaque element |
+| Horizontal scroll | Yes | No |
+| Fixed-column | Yes | No |
+
+If both could plausibly fit, prefer `EtList` — its API surface is smaller and its mental model ("a list of opaque rows with a labeled header") is closer to what most feature screens actually want.
+
+## Purpose
+
+Generic, virtualized list primitive for the eToro design system. Built with a compound component pattern so consumers compose a list from opinionated subcomponents (`Header`, `Column`, `Skeleton`, `Empty`, `Error`, `Footer`) instead of passing a large structured props blob.
+
+`EtList` is the **only** UI-kit primitive that owns:
+
+- list virtualization (via `@shopify/flash-list`)
+- pinned-at-top column headers (rendered as a sibling above the list)
+- sortable column cells
+- the four-way render-path switch (loading / error / empty / data)
+
+It is intentionally generic — it does not know about asset rows, instrument types, or any feature-level data shape. For asset rows, compose `EtAssetItem` inside `renderItem`. For people rows, build `EtUserItem` (TBD) and compose it inside `renderItem`.
+
+For drag-to-reorder or swipe-to-reveal actions, do **not** add them to `EtList`. Wrap the per-row component (e.g. `EtAssetItem`) with `EtSwipeableRow`, or use a feature-level draggable component (e.g. `draggable-watchlist`).
+
+## Architecture
+
+```text
+et-list.tsx (root) → provides ListContext, four render paths driven by `data.length` + `isLoading` + `error`
+├── EtList.Header   → pinned-at-top header row; renders `EtList.Column` children
+├── EtList.Column   → header cell with optional sortable + sort-direction indicator
+├── EtList.Skeleton → initial-loading placeholder rows (renders only when data is empty + isLoading)
+├── EtList.Empty    → empty-state slot (renders only when data is empty + not loading + no error)
+├── EtList.Error    → initial-load error slot (renders only when data is empty + error is non-null)
+└── EtList.Footer   → inline footer rendered as the FlashList's ListFooterComponent (scrolls into view)
+```
+
+### Folder Layout
+
+```text
+list/
+├── api/
+│   ├── index.ts
+│   └── types.ts                 // EtListProps, slot prop types, SlotType, ListSortDirection, ListColumnAlign
+├── context/
+│   ├── list-context.tsx         // ListContext (isEmpty) + useListContext
+│   └── index.ts
+├── hooks/
+│   ├── use-list-children.ts     // classifies children by __SLOT_TYPE
+│   └── index.ts
+├── subcomponents/
+│   ├── list-header.tsx
+│   ├── list-column.tsx
+│   ├── list-skeleton.tsx
+│   ├── list-empty.tsx
+│   ├── list-error.tsx
+│   ├── list-footer.tsx
+│   └── index.ts
+├── et-list.tsx                  // memoized compound root, Object.assign-attaches subcomponents
+├── et-list.test.tsx
+├── AGENTS.mdc
+└── index.ts                     // exports EtList + public types
+```
+
+### Slot Detection
+
+Slots are identified at runtime via a static `__SLOT_TYPE` property on each subcomponent (not `displayName`). Static properties survive minification, unlike `displayName` which is a debugging aid only.
+
+```tsx
+ListHeader.__SLOT_TYPE = 'header';
+ListColumn.__SLOT_TYPE = 'column';
+ListSkeleton.__SLOT_TYPE = 'skeleton';
+ListEmpty.__SLOT_TYPE = 'empty';
+ListError.__SLOT_TYPE = 'error';
+ListFooter.__SLOT_TYPE = 'footer';
+```
+
+The `useListChildren` hook returns the first matching child for each slot. Multiple children for the same slot are warned about in `__DEV__`.
+
+`Column` is not collected by the root — it lives inside `Header` and is iterated naturally by `Header`'s children.
+
+### Render Paths
+
+The root chooses exactly one body to render below the (always-rendered) header, derived from props:
+
+| Condition                              | Body rendered                         |
+| -------------------------------------- | ------------------------------------- |
+| `isLoading && data.length === 0`       | `Skeleton` slot                       |
+| `error && data.length === 0`           | `Error` slot                          |
+| `data.length === 0`                    | `Empty` slot                          |
+| otherwise                              | `FlashList` with `Footer` slot inside |
+
+`Header` is always rendered (when provided) — even during `Skeleton`. This matches the spec for table-like lists where the column-header row is real content from the moment the screen opens.
+
+### Sticky Header
+
+`Header` is rendered as a sibling above the FlashList in a flex container. Because it is not part of the scroll surface, it stays pinned at the top automatically — no FlashList `stickyHeaderIndices` trickery required.
+
+This keeps the implementation small and orthogonal to FlashList internals.
+
+## API
+
+### Props (root)
+
+| Prop                    | Type                                              | Default | Description                                                                                                    |
+| ----------------------- | ------------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `children`              | `EtListChildren`                                  | -       | Compound subcomponents (Header, Skeleton, Empty, Error, Footer)                                                |
+| `data`                  | `ReadonlyArray<T>`                                | -       | Items to render. Active render path is derived from `data.length`                                              |
+| `keyExtractor`          | `(item: T, index: number) => string`              | -       | Stable per-item key. Required for virtualization                                                               |
+| `renderItem`            | `(info: ListRenderItemInfo<T>) => ReactElement`   | -       | Per-item renderer. Returned node must be a single React element                                                |
+| `isLoading`             | `boolean`                                         | `false` | Initial-loading flag. Renders `Skeleton` when `data` is empty                                                  |
+| `error`                 | `Error \| null`                                   | `null`  | Initial-load error. Renders `Error` when `data` is empty                                                       |
+| `onEndReached`          | `() => void`                                      | -       | Called when the user scrolls within `onEndReachedThreshold` of the bottom                                      |
+| `onEndReachedThreshold` | `number`                                          | `0.5`   | Distance from the bottom (as a fraction of viewport) at which `onEndReached` fires                             |
+| `style`                 | `StyleProp<ViewStyle>`                            | -       | Container style override                                                                                       |
+| `testID`                | `string`                                          | -       | Test ID for testing                                                                                            |
+| `accessibilityLabel`    | `string`                                          | -       | Accessibility label for the list region                                                                        |
+
+### Subcomponents
+
+| Subcomponent      | Purpose                                                                                              | Required props |
+| ----------------- | ---------------------------------------------------------------------------------------------------- | -------------- |
+| `EtList.Header`   | Pinned column-header row. Renders `EtList.Column` children                                           | `children`     |
+| `EtList.Column`   | Single header cell with optional sortable behaviour and a sort-direction indicator                   | `id`, `children` |
+| `EtList.Skeleton` | Initial-loading placeholder. Optionally clones a row template `rows` times                           | none           |
+| `EtList.Empty`    | Empty-state body                                                                                     | `children`     |
+| `EtList.Error`    | Initial-load error body                                                                              | `children`     |
+| `EtList.Footer`   | Inline footer rendered as the FlashList's `ListFooterComponent`                                      | `children`     |
+
+`Column` accepts:
+
+- `align: 'start' | 'center' | 'end'` (default `'start'`) — content alignment within the cell.
+- `flex: number` (default `1`) — flex weight relative to siblings.
+- `sortable: boolean` (default `false`) — when true, the cell is pressable and shows a sort indicator.
+- `sortDirection: 'asc' | 'desc' | null` — pass `null` (or `undefined`) when this column is inactive.
+- `onSortChange: (next: 'asc' | 'desc' | null) => void` — invoked on tap with the next direction. `null` means "the user reset this column".
+- `getNextSortDirection?: (current: 'asc' | 'desc' | null) => 'asc' | 'desc' | null` — optional override for the default tap cycle (see below).
+
+#### Sort tap cycle (tri-state default)
+
+Sort state is consumer-owned — the column is purely presentational. The cycle the column emits to `onSortChange` defaults to **three states**:
+
+| Current `sortDirection` | Tap emits |
+|---|---|
+| `null` / `undefined` (inactive) | `'asc'` |
+| `'asc'` | `'desc'` |
+| `'desc'` | `null` (column becomes inactive) |
+
+The consumer is expected to map `null` back to whatever the data source's natural order is (e.g. the BFF's default sort) so the third tap gives the user a "remove my sort" affordance. The chevron returns to `'angles-up-down'` whenever `sortDirection` is `null`.
+
+#### Overriding the cycle
+
+Pass `getNextSortDirection` when a column needs a different cycle — for example a two-state cycle that never resets, a desc-first column, or any consumer-specific order. Compose with the exported `defaultSortCycle` helper when only a slice of the default behavior needs to change.
+
+```tsx
+import { defaultSortCycle, EtList } from 'etoro-ui';
+
+// Two-state cycle (skip the null reset):
+const twoState = (current) => (current === 'asc' ? 'desc' : 'asc');
+
+<EtList.Column
+  id="market"
+  sortable
+  sortDirection={sort}
+  onSortChange={setSort}
+  getNextSortDirection={twoState}
+>
+  Market
+</EtList.Column>;
+```
+
+## Usage Examples
+
+### Basic asset list with sortable column and infinite scroll
+
+```tsx
+<EtList<Asset>
+  data={items}
+  keyExtractor={(item) => String(item.id)}
+  renderItem={({ item }) => <AssetRow item={item} />}
+  isLoading={isInitialLoading}
+  error={error}
+  onEndReached={loadNextBatch}
+>
+  <EtList.Header>
+    <EtList.Column id="market" sortable sortDirection={sort} onSortChange={setSort}>
+      Market
+    </EtList.Column>
+    <EtList.Column id="buy" align="end">Buy</EtList.Column>
+    <EtList.Column id="sell" align="end">Sell</EtList.Column>
+  </EtList.Header>
+
+  <EtList.Skeleton rows={8} />
+  <EtList.Empty>No assets available</EtList.Empty>
+  <EtList.Error>Something went wrong</EtList.Error>
+
+  <EtList.Footer>
+    {batchStatus === 'loading' && <RowSkeleton />}
+    {batchStatus === 'error' && <InlineErrorBanner />}
+  </EtList.Footer>
+</EtList>
+```
+
+### Custom skeleton row template
+
+```tsx
+<EtList<Asset> {...listProps} isLoading data={[]}>
+  <EtList.Header>{/* ... */}</EtList.Header>
+  <EtList.Skeleton rows={8}>
+    <CustomAssetRowSkeleton />
+  </EtList.Skeleton>
+</EtList>
+```
+
+The template is cloned `rows` times. Use `EtAssetItem.Skeleton` inside an `EtAssetItem` wrapper for asset rows.
+
+### Empty state with custom illustration
+
+```tsx
+<EtList<Asset> {...listProps} data={[]}>
+  <EtList.Empty>
+    <EmptyIllustration />
+    <EtText variant="body-base-medium">No matching assets</EtText>
+  </EtList.Empty>
+</EtList>
+```
+
+## Anti-Patterns
+
+- **Do NOT** use `displayName` for slot detection — use `__SLOT_TYPE` static property. `displayName` is for DevTools only and is stripped by minifiers.
+- **Do NOT** add drag-drop, swipe, or section logic to `EtList`. Those are feature-level concerns. Wrap rows with `EtSwipeableRow` or use a feature-level component for drag.
+- **Do NOT** add data-fetching, streaming, or analytics hooks inside `EtList`. The component is purely presentational and consumer-driven.
+- **Do NOT** format or transform `data` inside `EtList`. Consumers pass already-shaped items.
+- **Do NOT** put `EtList.Column` outside of `EtList.Header`. The header iterates its children naturally; columns rendered elsewhere are silently ignored.
+- **Do NOT** introduce new sort *direction* values (e.g. `'unsorted'`, `'mixed'`). The type is `'asc' | 'desc'`; use `null`/`undefined` for the inactive state. If you need a different tap *cycle* (extra states, different order), pass `getNextSortDirection` — don't widen `ListSortDirection`.
+- **Do NOT** wrap `EtList` in a `ScrollView`. A virtualized list inside a ScrollView is broken. Use `EtScreen.View` (or any non-scrolling container) as the parent.
+- **Do NOT** rely on the FlashList's `stickyHeaderIndices` for the column header. The header is intentionally a sibling above the list; do not try to inject it into `data`.
+
+## Dependencies
+
+- `@shopify/flash-list` — used by the root for virtualization
+- `EtIconV2` — used by `EtList.Column` for the sort indicator (`angle-up` / `angle-down` / `angles-up-down`)
+- `EtSkeleton` — used by `EtList.Skeleton` for the default placeholder
+- `EtText` — typography for default `Column` labels and string `Empty`/`Error` children
+- `useEtoroTheme` — header background/divider colors and column label color
+- Spacing constants: `X1..X10` from `core/styles/spacing`
+- No additional third-party dependencies.

@@ -1,0 +1,547 @@
+---
+description: Agent guide for EtPhoneInput - phone number input with country flag prefix section, dial code, number field, error message, and external composition via Provider pattern
+alwaysApply: false
+---
+
+# EtPhoneInput Component
+
+## Purpose & Scope
+
+This is the dumb version of the phone input component. For the smart version which includes the dropdown logic use <PhoneInput> instead.
+`EtPhoneInput` is a phone number input component for the eToro design system. It provides a two-part input layout with:
+
+- **Prefix section (left)**: Country flag (via `EtCountryFlag`) + dial code + dropdown chevron. Fixed width (130px). Tappable to trigger country selection.
+- **Number section (right)**: Text input field for the phone number digits. Fixed width (193px).
+- **Built-in states**: default (empty), focused, filled, error, disabled
+- **Error message**: Automatically rendered below the input row when `error` is provided
+- **Uncontrolled by default**: Uses `defaultValue` instead of `value` for better performance (consistent with `Input` v2)
+- **Optional controlled mode**: Pass `value` for caller-driven text and (optionally) `selection` + `onSelectionChange` for caller-driven cursor — required when an on-screen custom keyboard synthesises keystrokes (see "Cursor-aware editing" below)
+
+**Does NOT handle:**
+
+- Country selection logic (the parent handles it via `onPrefixPress` callback)
+- Phone number validation (handle in parent, pass `error` prop for display)
+- Phone number formatting/masking (handle in parent via `onChangeText`)
+- Form submission logic (handle in parent)
+
+## Visual Design
+
+The component renders two rounded boxes side by side:
+
+```text
+┌─────────────┐  ┌──────────────────────┐
+│ 🇬🇧 +44  ▾  │  │ Number               │
+└─────────────┘  └──────────────────────┘
+  Error Validation (optional)
+```
+
+Prefix box: auto-width (content-sized, ~130px). Number box: flex: 1 (fills remaining row space, 68px height).
+
+### States (from Figma)
+
+| State             | Prefix text color     | Number text color     | Border color           | Cursor | Error |
+| ----------------- | --------------------- | --------------------- | ---------------------- | ------ | ----- |
+| Default (empty)   | `textTertiaryNeutral` | `textPrimaryNeutral`  | `dividerSecondary`     | No     | No    |
+| Focused (typing)  | `textPrimaryNeutral`  | `textPrimaryNeutral`  | `textSecondaryNeutral` | Green  | No    |
+| Inactive (filled) | `textPrimaryNeutral`  | `textPrimaryNeutral`  | `dividerSecondary`     | No     | No    |
+| Error (filled)    | `textPrimaryNeutral`  | `textPrimaryNeutral`  | `dividerSecondary`     | No     | Yes   |
+| Disabled          | `textTertiaryNeutral` | `textTertiaryNeutral` | `dividerSecondary`     | No     | No    |
+
+### Design Tokens
+
+| Token                  | Value   | Usage                                                                |
+| ---------------------- | ------- | -------------------------------------------------------------------- |
+| `X1` (4px)             | Spacing | Gap between input row and error, gap between flagAndText and chevron |
+| `X2` (8px)             | Spacing | Gap between prefix and number box                                    |
+| `X3` (12px)            | Radius  | Border radius of both boxes                                          |
+| `X4` (16px)            | Spacing | Right padding of prefix box (asymmetric)                             |
+| `X5` (20px)            | Spacing | Left padding of prefix box, horizontal padding of number box         |
+| 6px                    | Spacing | Gap between flag and prefix text                                     |
+| 13px                   | Spacing | Vertical padding of both boxes                                       |
+| ~130px                 | Size    | Auto-width of prefix box (content-sized)                             |
+| `flex: 1`              | Size    | Number box fills remaining row space (no fixed width)                |
+| 68px                   | Size    | Height of both input boxes                                           |
+| 25px                   | Size    | Flag width (height auto-calculated)                                  |
+| 20px                   | Size    | Chevron icon size                                                    |
+| `bgNeutralPrimary`     | Color   | Background of both boxes                                             |
+| `dividerSecondary`     | Color   | Default / inactive border color (#808080)                            |
+| `textSecondaryNeutral` | Color   | Focused border color (#666)                                          |
+| `textTertiaryNeutral`  | Color   | Placeholder, empty prefix text (#808080), disabled text (#b2b2b2)    |
+| `textPrimaryNeutral`   | Color   | Active / filled text color (#1a1a1a)                                 |
+| `statusPositive`       | Color   | Cursor color (focused state, green)                                  |
+| `statusNegative`       | Color   | Error message text color (red)                                       |
+
+### Typography
+
+| Usage        | Font                | Size | Weight | Line Height | Letter Spacing |
+| ------------ | ------------------- | ---- | ------ | ----------- | -------------- |
+| Prefix code  | `Num M/Medium`      | 18   | 500    | 24          | 0              |
+| Phone number | `Num M/Medium`      | 18   | 500    | 24          | 0              |
+| Placeholder  | `Num M/Medium`      | 18   | 500    | 24          | 0              |
+| Error text   | `Body/Tiny/Regular` | 12   | 400    | 16          | 0.25           |
+
+## Entry Points & Contracts
+
+### `EtPhoneInput` (main component)
+
+```tsx
+<EtPhoneInput
+  prefix: string                    // Required - dial code (e.g., "+44", "+1", "+972")
+  isoCode: string                   // Required - ISO country code (e.g., "GB", "US", "IL")
+  placeholder: string               // Required - placeholder text (e.g., "Number")
+  defaultValue?: string             // Initial phone number (uncontrolled mode)
+  value?: string                    // Controlled phone number — switches the input into controlled mode
+  selection?: { start: number; end?: number } // Controlled caret/selection — pair with `value` for cursor-aware editing
+  showVirtualKeyboard?: boolean     // When false, suppresses the native keyboard (e.g. when using a custom on-screen keypad). Default: true
+  error?: string | null             // Error message (renders below input)
+  disabled?: boolean                // Disables the number input (default: false)
+  prefixDisabled?: boolean          // Disables the prefix section (default: false)
+  autoFocus?: boolean               // Auto-focus number input on mount (default: false)
+  onChangeText?: (value: string) => void    // Phone number change callback
+  onSelectionChange?: (selection: { start: number; end: number }) => void  // Caret / selection moved (tap, drag, native key nav)
+  onFocus?: () => void              // Number input focused
+  onBlur?: () => void               // Number input blurred
+  onSubmitEditing?: (value: string) => void // Enter/Return pressed
+  onPrefixPress?: () => void        // Prefix section pressed (open country picker)
+  style?: StyleProp<ViewStyle>      // Container style override
+  testID?: string                   // Test identifier
+/>
+```
+
+### `EtPhoneInput.Provider` (for external composition)
+
+```tsx
+<EtPhoneInput.Provider
+  prefix: string                    // Required - dial code (e.g., "+44", "+1", "+972")
+  isoCode: string                   // Required - ISO country code (e.g., "GB", "US", "IL")
+  placeholder: string               // Required - placeholder text (e.g., "Number")
+  defaultValue?: string             // Initial phone number (uncontrolled mode)
+  error?: string | null             // Error message (passed to ErrorText via context)
+  disabled?: boolean                // Disables the number input (default: false)
+  prefixDisabled?: boolean          // Disables the prefix section (default: false)
+  autoFocus?: boolean               // Auto-focus number input on mount (default: false)
+  onChangeText?: (value: string) => void    // Phone number change callback
+  onFocus?: () => void              // Number input focused
+  onBlur?: () => void               // Number input blurred
+  onSubmitEditing?: (value: string) => void // Enter/Return pressed
+  onPrefixPress?: () => void        // Prefix section pressed (open country picker)
+  testID?: string                   // Test identifier (passed to subcomponents)
+  children: ReactNode               // Subcomponents or custom layout
+>
+  {children}
+</EtPhoneInput.Provider>
+```
+
+Note: `EtPhoneInput.Provider` does NOT accept a `style` prop - apply styles to your custom layout wrapper when using external composition. The `testID` is passed to subcomponents automatically (e.g., `${testID}-prefix`, `${testID}-number`).
+
+### Types
+
+```typescript
+export interface EtPhoneInputProps {
+  /** Dial code including '+' sign (e.g., "+44") */
+  prefix: string;
+
+  /** ISO country code for the flag (e.g., "IL", "US", "GB") */
+  isoCode: string;
+
+  /** Placeholder text for the number field */
+  placeholder: string;
+
+  /** Initial phone number value (uncontrolled mode) */
+  defaultValue?: string;
+
+  /** Error message to display below input */
+  error?: string | null;
+
+  /** Disables the number input field */
+  disabled?: boolean;
+
+  /** Disables the prefix section */
+  prefixDisabled?: boolean;
+
+  /** Auto-focus number field on mount */
+  autoFocus?: boolean;
+
+  /** Called when phone number text changes */
+  onChangeText?: (value: string) => void;
+
+  /** Called when number field gains focus */
+  onFocus?: () => void;
+
+  /** Called when number field loses focus */
+  onBlur?: () => void;
+
+  /** Called when Enter/Return key is pressed, returns current value */
+  onSubmitEditing?: (value: string) => void;
+
+  /** Called when prefix section is pressed */
+  onPrefixPress?: () => void;
+
+  /** Container style override */
+  style?: StyleProp<ViewStyle>;
+
+  /** Test identifier */
+  testID?: string;
+}
+```
+
+## Usage Patterns
+
+### Basic phone input (simplest)
+
+```tsx
+<EtPhoneInput prefix="+44" isoCode="GB" placeholder="Number" onChangeText={setPhoneNumber} onPrefixPress={openCountryPicker} />
+```
+
+### With default value (prefilled)
+
+```tsx
+<EtPhoneInput
+  prefix="+1"
+  isoCode="US"
+  placeholder="Number"
+  defaultValue="2332332330"
+  onChangeText={setPhoneNumber}
+  onPrefixPress={openCountryPicker}
+/>
+```
+
+### With error state
+
+```tsx
+<EtPhoneInput
+  prefix="+972"
+  isoCode="IL"
+  placeholder="Number"
+  defaultValue="12345"
+  error="Invalid phone number"
+  onChangeText={setPhoneNumber}
+  onPrefixPress={openCountryPicker}
+/>
+```
+
+### Disabled state
+
+```tsx
+<EtPhoneInput prefix="+44" isoCode="GB" placeholder="Number" defaultValue="233233233" disabled prefixDisabled />
+```
+
+### With all callbacks
+
+```tsx
+<EtPhoneInput
+  prefix="+44"
+  isoCode="GB"
+  placeholder="Number"
+  autoFocus
+  onChangeText={handlePhoneNumberChange}
+  onFocus={handleFocus}
+  onBlur={handleBlur}
+  onSubmitEditing={handleSubmit}
+  onPrefixPress={handleOpenCountryPicker}
+/>
+```
+
+### Cursor-aware editing with a custom keyboard (controlled mode)
+
+When the parent drives keystrokes from an on-screen keypad (e.g. `EtKeyboard.Keys`), the
+native soft keyboard is suppressed via `showVirtualKeyboard={false}`. The parent must
+then own both the text and the caret so synthesised keys land at the user's cursor — not
+appended blindly to the end. Pair `value` + `selection` + `onSelectionChange`:
+
+```tsx
+const [value, setValue] = useState('');
+const [selection, setSelection] = useState({ start: 0, end: 0 });
+
+const handleKey = (digit: string) => {
+  setValue((prev) => prev.slice(0, selection.start) + digit + prev.slice(selection.end));
+  setSelection({ start: selection.start + 1, end: selection.start + 1 });
+};
+
+<EtPhoneInput
+  prefix="+972"
+  isoCode="IL"
+  placeholder="Number"
+  value={value}
+  selection={selection}
+  onSelectionChange={setSelection}    // sync caret on tap / drag
+  showVirtualKeyboard={false}         // suppress native keyboard
+  onChangeText={setValue}
+  onPrefixPress={openCountryPicker}
+/>;
+```
+
+**Why this matters:** without controlled `selection`, the native iOS / Android `TextInput`
+manages a caret of its own that the parent cannot read in time to splice the next keystroke.
+The result is the legacy "always append to end" bug (PA-188). Both `value` and `selection`
+must be updated **in the same handler** so React's automatic batching keeps them in sync.
+
+### External composition with custom layout
+
+```tsx
+<EtPhoneInput.Provider
+  prefix="+44"
+  isoCode="GB"
+  placeholder="Number"
+  error="Invalid phone number"
+  onChangeText={setPhoneNumber}
+  onPrefixPress={openCountryPicker}
+>
+  <View style={styles.customRow}>
+    <EtPhoneInput.PrefixSection />
+    <EtPhoneInput.NumberField />
+  </View>
+  <EtPhoneInput.ErrorText />
+</EtPhoneInput.Provider>
+```
+
+### External composition with custom elements
+
+```tsx
+<EtPhoneInput.Provider prefix="+972" isoCode="IL" placeholder="Number" onChangeText={setPhoneNumber} onPrefixPress={openCountryPicker}>
+  <View style={styles.verticalLayout}>
+    <Text style={styles.label}>Phone Number</Text>
+    <View style={styles.inputRow}>
+      <EtPhoneInput.PrefixSection />
+      <EtPhoneInput.NumberField />
+    </View>
+    <EtPhoneInput.ErrorText />
+  </View>
+</EtPhoneInput.Provider>
+```
+
+## Anti-patterns
+
+### ❌ Using numeric value instead of string
+
+```tsx
+// BAD - phone numbers can have leading zeros
+<EtPhoneInput
+  prefix="+44"
+  isoCode="GB"
+  placeholder="Number"
+  defaultValue={233233233} // number type
+  onChangeText={(val) => setPhone(Number(val))} // converting to number
+/>
+```
+
+**Fix:** Always use `string` for phone values. Phone numbers are not mathematical values and may contain leading zeros.
+
+### ❌ Handling country selection inside EtPhoneInput
+
+```tsx
+// BAD - country selection logic doesn't belong here
+<EtPhoneInput
+  countries={countriesList}  // not a prop
+  onCountrySelect={...}     // not a prop
+/>
+```
+
+**Fix:** Use `onPrefixPress` to open a country picker externally. EtPhoneInput is a presentational input, not a country selector.
+
+### ❌ Manually styling text colors
+
+```tsx
+// BAD - bypasses design system
+<EtPhoneInput
+  prefix="+44"
+  isoCode="GB"
+  placeholder="Number"
+  style={{ color: 'red' }} // won't work, colors are theme-driven
+/>
+```
+
+**Fix:** Use `error` prop for error states. Colors come from theme automatically.
+
+### ❌ Using controlled mode unnecessarily
+
+```tsx
+// BAD - controlled mode adds re-render overhead for no reason
+<EtPhoneInput
+  prefix="+44"
+  isoCode="GB"
+  placeholder="Number"
+  value={phoneNumber}             // controlled
+  onChangeText={setPhoneNumber}
+/>
+```
+
+**Fix:** Prefer `defaultValue` for initial value and sync via `onChangeText` (uncontrolled mode). Only opt into controlled mode (`value` prop) when the parent must drive the text **externally** — e.g. when a custom on-screen keypad synthesises keystrokes (see "Cursor-aware editing with a custom keyboard"). Mixing controlled `value` without that need adds re-render overhead.
+
+### ❌ Passing `selection` without `value`
+
+```tsx
+// BAD - selection without value is incoherent: native keyboard already manages the caret
+<EtPhoneInput
+  prefix="+44"
+  isoCode="GB"
+  placeholder="Number"
+  defaultValue="123"
+  selection={{ start: 0, end: 0 }}  // ignored / fights the native caret
+/>
+```
+
+**Fix:** Only pass `selection` together with `value` (controlled mode) and an `onSelectionChange` handler. With `defaultValue` (uncontrolled), let RN manage the caret.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for styling
+- `usePhoneInputState` - manages focus state, value tracking, and event handlers
+- `usePhoneInputConfig` - computes derived state (hasValue, hasError) and theme-aware colors
+- `PhoneInputContext` - provides shared state/props to subcomponents via Context API
+- `EtCountryFlag` (from `components/country-flag`) - renders country flag SVG by ISO code
+- `ChevronDown` (from `core/icons/chevron-down`) - dropdown arrow SVG icon. **Note:** Rendered directly as SVG to ensure reliable theming and accessibility. This is an approved exception to the EtoroIcon wrapper pattern due to the component's internal architecture requirements.
+- `EtText` - underlying text component for prefix text and error message rendering
+- Design tokens from `core/styles/spacing` (`HALF`, `X1`, `X2`, `X3`, `X4`, `X5`)
+
+### External Dependencies
+
+- `react-native` - `TextInput`, `View`, `Pressable`, `Text`, `StyleSheet`
+- `react-native-svg` - used internally by `ChevronDown` icon
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`)
+- Typography:
+  - Prefix code & phone number: `Num M/Medium` (18px, weight 500, lineHeight 24)
+  - Error text: `body-tiny-regular` variant via `EtText`
+- Spacing uses design tokens (`X1`, `X2`, `X4`, `X5`) and custom values (6px, 13px)
+- Border radius: 12px
+- Prefix box: fixed 130×68px
+- Number box: fixed 193×68px
+
+### Storybook Theme
+
+Stories wrap components with `NavigationIndependentTree` + `NavigationContainer` using `eToroLightColors` to provide the full eToro design system theme. This is required because the Storybook app does not include the eToro theme by default.
+
+## Patterns & Pitfalls
+
+### External Composition Pattern
+
+The component supports both simple usage and advanced external composition patterns:
+
+```tsx
+import { EtPhoneInput } from 'etoro-ui';
+
+// Pattern 1: Standard usage (most common, backward compatible)
+<EtPhoneInput prefix="+44" isoCode="GB" placeholder="Number" />
+
+// Pattern 2: External composition with Provider (advanced, flexible layouts)
+<EtPhoneInput.Provider
+  prefix="+44"
+  isoCode="GB"
+  placeholder="Number"
+  error="Invalid"
+  onChangeText={handleChange}
+  onPrefixPress={openCountryPicker}
+>
+  <View style={myCustomLayout}>
+    <EtPhoneInput.PrefixSection />
+    <EtPhoneInput.NumberField />
+  </View>
+  <EtPhoneInput.ErrorText />
+</EtPhoneInput.Provider>
+```
+
+The external composition pattern allows you to:
+
+- Customize the layout and styling of subcomponents
+- Compose subcomponents in any order or arrangement
+- Add custom elements between subcomponents
+- Create specialized variants for specific use cases
+
+Subcomponents (`PrefixSection`, `NumberField`, `ErrorText`) consume shared state via `PhoneInputContext` provided by `EtPhoneInput.Provider`.
+
+### Context-based internal architecture
+
+Subcomponents (`PrefixSection`, `NumberField`) consume shared state via `PhoneInputContext`. This eliminates prop drilling and keeps the component composition clean. The context is internal—consumers don't interact with it directly.
+
+### Logic-free main component
+
+All derived state (`hasValue`, `hasError`) and styling logic is delegated to hooks:
+
+- `usePhoneInputState` - manages focus, value tracking, event handlers
+- `usePhoneInputConfig` - computes derived flags and theme-aware colors
+
+This keeps `EtPhoneInputBase` purely compositional with no business logic.
+
+### Uncontrolled by default, controlled-on-demand
+
+Consistent with `Input` v2, the component defaults to **uncontrolled** mode via `defaultValue` — the parent syncs via `onChangeText` and the native `TextInput` owns the text and caret. This avoids unnecessary re-renders on every keystroke.
+
+**Controlled mode** (`value` prop) is supported and required only when the parent needs to drive the text externally (e.g. mounting a custom on-screen keypad alongside `showVirtualKeyboard={false}`). When using controlled mode in that scenario, also pair with `selection` + `onSelectionChange` so synthesised keystrokes can be inserted at the user's caret position rather than blindly appended (regression-tested in `phone-form-input/use-custom-keyboard-controller.spec.ts`).
+
+### Prefix section is presentational
+
+The prefix section displays the country flag (via `EtCountryFlag` using `isoCode`) + `prefix` text + dropdown chevron. When tapped, it calls `onPrefixPress`. The parent is responsible for opening a country picker and updating `prefix` / `isoCode` accordingly.
+
+### Chevron icon
+
+The dropdown chevron is rendered using `ChevronDown` SVG component directly from `core/icons/chevron-down`, NOT through the `EtoroIcon` wrapper. This approach ensures reliable SVG rendering with explicit color control.
+
+### Keyboard type
+
+The number input automatically uses `phone-pad` keyboard type (numeric keyboard optimized for phone number entry).
+
+### Error message auto-rendering
+
+When `error` is provided (non-null, non-empty string), the error message automatically renders below the input row in the `statusNegative` color (red). No need for a separate error component.
+
+### Disabled states are independent
+
+`disabled` controls only the number input field. `prefixDisabled` controls only the prefix section. They can be set independently (e.g., prefix is disabled while number is editable, or vice versa).
+
+### Flag rendering
+
+The flag is rendered using `EtCountryFlag` with `size={25}` (matching the Figma design). The component handles aspect ratio and fallback to a placeholder flag for unrecognized ISO codes automatically.
+
+### Number input keyboard behavior
+
+- `returnKeyType` defaults to `"done"`
+- Pressing Enter/Return triggers `onSubmitEditing` with the current phone number value
+- `keyboardType` is always `"phone-pad"`
+
+## Suggested File Structure
+
+```text
+phone-input/
+├── api/
+│   ├── index.ts                    # Public API exports
+│   └── types.ts                    # EtPhoneInputProps type definition
+├── contexts/
+│   ├── index.ts                    # Context exports
+│   └── phone-input.context.tsx    # PhoneInputContext for subcomponents
+├── hooks/
+│   ├── index.ts
+│   ├── use-phone-input-config.ts   # Theme colors, derived state (hasValue, hasError)
+│   └── use-phone-input-state.ts    # Focus state, value management
+├── subcomponents/
+│   ├── index.ts
+│   ├── prefix-section.tsx          # Flag + dial code + chevron (uses context)
+│   ├── number-field.tsx            # TextInput for phone number (uses context)
+│   └── error-text.tsx              # Error message display
+├── et-phone-input.tsx              # Main component (composition + context provider)
+├── et-phone-input.test.tsx         # Tests
+├── index.ts                        # Public exports
+└── AGENTS.mdc                       # This file
+```
+
+### Storybook Stories Location
+
+```text
+.rnstorybook/stories/components/input/phone-input/
+├── et-phone-input.stories.tsx        # Interactive stories (states, variations)
+└── et-phone-input.intro.stories.tsx  # Introduction / overview story
+```
+
+## Related Context
+
+- `Input v2 (input-v2/et-input.tsx)` - Similar pattern, split context architecture reference
+- `EtCountryFlag (components/country-flag)` - Renders country flag by ISO code
+- `EtText (et-text.tsx)` - Used for error text rendering
+- `ChevronDown (core/icons/chevron-down.tsx)` - Dropdown arrow SVG icon
+- `core/styles/spacing` - Spacing tokens (X1, X2, X5)
+- `useEtoroTheme` - Theme colors provider
+- `core/styles/colors.ts` - Theme definitions (`eToroLightColors`, `eToroDarkColors`)

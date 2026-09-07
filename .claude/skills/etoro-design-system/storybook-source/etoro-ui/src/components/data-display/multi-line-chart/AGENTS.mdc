@@ -1,0 +1,92 @@
+# EtMultiLineChart
+
+The UI kit's compare chart: multiple line series rendered on one unified y-domain so the lines are visually comparable. Built for the User/SP page "compare performance" design (Figma DS — React, general chart node) and consumed by feature compare flows (e.g. the compare bottom sheet).
+
+## Usage
+
+```tsx
+const selectedValue = useSharedValue(0);
+const { colors } = useEtoroTheme();
+
+<EtMultiLineChart
+  series={[
+    { data: primarySeries, color: colors.verdictPositive600 }, // primary — drives the cursor
+    { data: benchmarkSeries, color: colors.accentB700 },
+    { data: peerSeries, color: colors.accentD700 },
+    { data: secondPeerSeries, color: colors.accentF700 },
+  ]}
+  selectedValue={selectedValue}
+  yAxisTickCount={4}
+  yAxisTickFormat={(value) => `${Math.round(value)}%`}
+  onCursorDataChange={(cursorData) => setHeader(cursorData)}
+/>
+```
+
+## Props
+
+| Prop                 | Type                                  | Default                  | Required | Description                                                       |
+| -------------------- | ------------------------------------- | ------------------------ | -------- | ----------------------------------------------------------------- |
+| `series`             | `MultiLineChartSeries[]`              | -                        | ✅       | Line series; first entry is the primary (cursor + draw-in). DS design uses up to 4 |
+| `selectedValue`      | `SharedValue<number>`                 | -                        | ✅       | Reanimated value tracking the primary series at the cursor        |
+| `width`              | `number`                              | window width             | ❌       | Chart width                                                       |
+| `height`             | `number`                              | `150`                    | ❌       | Chart height                                                      |
+| `marginVertical`     | `number`                              | `10`                     | ❌       | Vertical spacing above/below the lines                            |
+| `isInteractive`      | `boolean`                             | `true`                   | ❌       | Whether cursor interaction is enabled                             |
+| `showGridlines`      | `boolean`                             | `true`                   | ❌       | Horizontal gridline at each y-axis tick (needs `yAxisLabels`/`yAxisTickCount`) |
+| `gridlineColor`      | `string`                              | `carbonSecondaryDivider` | ❌       | Override the gridline color                                       |
+| `yAxisLabels`        | `string[]`                            | -                        | ❌       | Manual y-axis labels (overrides `yAxisTickCount`)                 |
+| `yAxisTickCount`     | `number`                              | -                        | ❌       | Auto-computed tick count from the unified domain                  |
+| `yAxisTickFormat`    | `(value: number) => string`           | `String`                 | ❌       | Formatter for auto-computed ticks                                 |
+| `yAxisLabelsHidden`  | `boolean`                             | `false`                  | ❌       | Hide label chips (keeps gridlines)                                |
+| `yAxisEnd`           | `number`                              | `30`                     | ❌       | Label position from the end edge                                  |
+| `yAxisDistribution`  | `'space-around' \| 'space-between'`   | `'space-around'`         | ❌       | Tick distribution (labels + gridlines)                            |
+| `cursorColor`        | `string`                              | primary series color     | ❌       | Primary dot color                                                 |
+| `needleColor`        | `string`                              | `carbon500`              | ❌       | Vertical needle color (neutral by default — dots carry the colour) |
+| `surfaceColor`       | `string`                              | `backgroundBase`         | ❌       | Surface color used by the scrub dim overlay                       |
+| `redrawKey`          | `string \| number`                    | -                        | ❌       | Bump to redraw (see EtLineChart)                                  |
+| `animateOnRedraw`    | `boolean`                             | `true`                   | ❌       | Animate vs snap on `redrawKey` change                             |
+| `onFocusModeChange`  | `(isFocused: boolean) => void`        | -                        | ❌       | Gesture focus mode callback                                       |
+| `onCursorDataChange` | `(data: CursorData \| null) => void`  | -                        | ❌       | Primary-series cursor data during scrub                           |
+
+```ts
+interface MultiLineChartSeries {
+  data: ChartDataApiEquity[]; // { timestamp: string; equity: number; pnL?: number }
+  color: string; // Stroke color (design uses Category/Accent tokens: accentB700, accentD700, accentF700…)
+}
+```
+
+## Behavior
+
+### Unified Y-Domain
+
+`computeUnifiedYDomain` (shared with EtLineChart's utils) computes one min/max across every series so all lines use the same yScale. Auto-computed y-axis ticks derive from this unified domain.
+
+### Stroke-Only Rendering
+
+Per the DS multi-line design there is **no area gradient and no left-edge fade mask** — every series is a plain stroke. Secondary series render as static paths beneath the primary; only the primary line plays the draw-in animation.
+
+> Implementation note: dynamically mapped `<Path>` children must NOT be placed inside a Skia `<Mask>` — Skia silently drops/mangles them (verified on simulator). This component avoids masks entirely.
+
+### Cursor
+
+While scrubbing, the vertical needle passes through a dot on **every** series at the cursor x — the primary dot comes from the shared line-chart `Cursor` (gesture-driven `cy`), and each secondary series gets a `SeriesCursorDot` whose `cy` is derived from that series' path via `getYForX`. Dots are tinted with their series color; the primary dot defaults to the primary series color (`cursorColor`). The needle stays neutral (`carbon500`, override via `needleColor`) — tinting it would imply it belongs to one particular series.
+
+Emitted values stay primary-series driven: `selectedValue` and `onCursorDataChange` reflect `series[0]` only. Per-series value emission (multi-value header) is not part of v1.
+
+### Gridlines
+
+One full-width line per y-axis tick, painted beneath all series. Positions come from `computeYAxisTickPositions`, shared with `YAxisLabels`, so gridlines and label chips always align in both distributions. Defaults to the theme-aware `carbonSecondaryDivider` token (Figma `var(--primary-divider)`).
+
+### Reuse
+
+Composes EtLineChart's building blocks instead of duplicating them: `LineChartProvider` + context, `Cursor`, `YAxisLabels`, `useChartGesture`, `useAnimateGraph`, and the pure geometry utils (`computeChartGeometry` with a `yDomain` override).
+
+## Theme Tokens
+
+| Slot            | Token                    |
+| --------------- | ------------------------ |
+| Gridlines       | `carbonSecondaryDivider` |
+| Needle          | `carbon500` (override via `needleColor`) |
+| Primary dot     | primary series color (override via `cursorColor`) |
+| Scrub overlay   | `backgroundBase`         |
+| Series (design) | `accentB700` (purple), `accentD700` (teal), `accentF700` (yellow), `accentG700` (orange) |

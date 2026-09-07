@@ -1,0 +1,205 @@
+---
+description: Agent guide for EtRiskScore - circular risk score indicator displaying 1-10 values inside colored arc segments with multi and single display variants
+alwaysApply: false
+---
+
+# EtRiskScore Component
+
+## Purpose & Scope
+
+`EtRiskScore` is a circular risk score indicator for the eToro design system. It displays a numeric risk value (1–10) centered inside a ring of colored arc segments, conveying risk level at a glance.
+
+**Supports:**
+
+- **10 score values**: 1–10 with per-level colors from green (low risk) to red (high risk)
+- **4 sizes**: `'xs'` (20px), `'sm'` (24px), `'md'` (30px), `'lg'` (35px)
+- **2 display variants**: `multi` (progressive fill) and `single` (only the matching segment is colored)
+- **Themed inactive color**: Adapts to light/dark mode automatically
+- **SVG rendering**: Uses `react-native-svg` for crisp, scalable arcs
+
+**Does NOT handle:**
+
+- Interactive states (not pressable)
+- Tooltips or expanded detail views
+- Animation / transitions between score values
+
+## Entry Points & Contracts
+
+### `EtRiskScore` (main component)
+
+```tsx
+<EtRiskScore
+  value: RiskScoreValue          // required — 1 to 10
+  size?: RiskScoreSize           // default: 'md'
+  variant?: RiskScoreVariant     // default: 'multi'
+  style?: StyleProp<ViewStyle>
+  testID?: string
+  accessibilityLabel?: string
+/>
+```
+
+### Types
+
+| Type               | Values                                            |
+| ------------------ | ------------------------------------------------- |
+| `RiskScoreValue`   | `1 \| 2 \| 3 \| 4 \| 5 \| 6 \| 7 \| 8 \| 9 \| 10` |
+| `RiskScoreSize`    | `'xs' \| 'sm' \| 'md' \| 'lg'`                    |
+| `RiskScoreVariant` | `'multi' \| 'single'`                             |
+
+### Size Mapping
+
+| Size | Pixels | EtText Variant | Font size | Font weight |
+| ---- | ------ | -------------- | --------- | ----------- |
+| `xs` | 20     | `num-xxs`      | 10        | regular     |
+| `sm` | 24     | `num-xs`       | 12        | regular     |
+| `md` | 30     | `num-s`        | 14        | regular     |
+| `lg` | 35     | `num-sm`       | 16        | medium      |
+
+## Architecture
+
+This component is a **self-contained visual indicator** with no compound components.
+The pattern is simpler than compound components because there's nothing for consumers to compose inside the ring — just a value.
+
+### File Structure
+
+```text
+risk-score/
+├── api/
+│   ├── index.ts           # Re-exports types
+│   └── types.ts           # EtRiskScoreProps, value/size/variant types
+├── hooks/
+│   ├── index.ts           # Re-exports hook
+│   └── use-risk-score-config.ts  # Derives sizes, colors, geometry
+├── utils/
+│   ├── index.ts           # Re-exports utilities
+│   └── risk-score-segments.ts    # Pure functions for SVG math & colors
+├── et-risk-score.tsx      # Main component (composition only)
+├── et-risk-score.test.tsx # Tests
+├── index.ts               # Public exports
+└── AGENTS.mdc              # This file
+```
+
+### Data Flow
+
+1. **Props** → `useRiskScoreConfig` hook resolves size config, computes radius/circumference, picks theme-aware inactive color and score text color.
+2. **Segments** are generated in a `useMemo` inside the component: for each of the 10 arcs, segment color is determined by `getSegmentColor()` and SVG dash parameters by `getSegmentDashArray` / `getSegmentDashOffset`.
+3. **Render** outputs a `View` wrapping an SVG (10 `<Circle>` elements for arcs) and a centered `<EtText>` (with a `num-*` variant) for the score number.
+
+## Usage Patterns
+
+### Basic usage (default size md, multi variant)
+
+```tsx
+<EtRiskScore value={7} />
+```
+
+### All four sizes
+
+```tsx
+<EtRiskScore value={5} size="xs" />
+<EtRiskScore value={5} size="sm" />
+<EtRiskScore value={5} size="md" />
+<EtRiskScore value={5} size="lg" />
+```
+
+### Single variant (only the score segment is colored)
+
+```tsx
+<EtRiskScore value={7} variant="single" />
+```
+
+### Row of all scores
+
+```tsx
+import { X2 } from 'etoro-ui/core/styles/spacing';
+
+<View style={{ flexDirection: 'row', gap: X2 }}>
+  {([1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const).map((score) => (
+    <EtRiskScore key={score} value={score} size="lg" />
+  ))}
+</View>;
+```
+
+## Anti-patterns
+
+### ❌ Wrapping in Pressable without context
+
+```tsx
+// BAD — EtRiskScore is purely informational, not interactive
+<Pressable onPress={handlePress}>
+  <EtRiskScore value={3} />
+</Pressable>
+```
+
+**Fix:** If you need a tappable risk indicator, compose it inside a proper button/list-item component.
+
+### ❌ Overriding the score text color via style
+
+```tsx
+// BAD — text color is derived from the risk-score color palette
+<EtRiskScore value={7} style={{ color: 'white' }} />
+```
+
+**Fix:** The text color is automatically set based on the `value`. Don't override it.
+
+### ❌ Using non-standard sizes
+
+```tsx
+// BAD — only 'xs', 'sm', 'md', 'lg' are supported
+<EtRiskScore value={5} size={'xl' as any} />
+```
+
+**Fix:** Use one of the four supported sizes.
+
+## Segment Geometry
+
+- **10 arc segments** arranged in a 240° arc (not a full circle)
+- Arc starts at 8 o'clock and ends at 4 o'clock, with a 120° open gap at the bottom
+- 12 o'clock is the exact midpoint between segment 5 and segment 6
+- Each segment: ~13.2° of arc with 12° gaps between them
+- `strokeLinecap="round"` gives rounded segment ends
+- Inactive segments use a semi-transparent color that adapts to light/dark theme
+- All active segments share the **same color** — the color of the score value (not individual colors per segment)
+
+## Color Palette
+
+Colors are sourced from theme tokens `risk1`–`risk10` (resolving `core/styles/colors/primitives/risk-score.ts`):
+
+| Score | Color        | Hex       |
+| ----- | ------------ | --------- |
+| 1     | Dark green   | `#008C17` |
+| 2     | Green        | `#00A61C` |
+| 3     | Light green  | `#61C200` |
+| 4     | Yellow-green | `#A8D200` |
+| 5     | Yellow       | `#E5DC00` |
+| 6     | Gold         | `#FBC400` |
+| 7     | Orange       | `#FFA318` |
+| 8     | Red-orange   | `#FF6E1D` |
+| 9     | Red          | `#E20D0D` |
+| 10    | Dark red     | `#BB0000` |
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` — theme hook for risk color tokens and dividerTertiary
+- `EtText` — design-system text component (used with `num-*` variants for the score number)
+- Spacing constants are NOT used (all dimensions are SVG-specific)
+
+### External Dependencies
+
+- `react-native` — `View`, `StyleSheet`
+- `react-native-svg` — `Svg`, `Circle`
+
+## Accessibility
+
+- `accessibilityRole="text"` on the container
+- Default `accessibilityLabel`: `"Risk score {value} out of 10"`
+- Custom `accessibilityLabel` can be provided
+- `testID` for testing
+
+## Related Context
+
+- `EtBadge (status/badge/)` — similar status indicator with different visual pattern
+- `EtProgressV2 (status/progress-v2/)` — another status component with arc/progress
+- Color primitives in `core/styles/colors/primitives/risk-score.ts`

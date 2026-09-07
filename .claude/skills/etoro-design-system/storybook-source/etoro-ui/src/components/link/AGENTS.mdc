@@ -1,0 +1,308 @@
+---
+description: Agent guide for EtLink - link-style button component with primary/info/negative variants, compound Label/Icon subcomponents, scale animation, and haptic feedback
+alwaysApply: false
+---
+
+# EtLink Component
+
+## Purpose & Scope
+
+`EtLink` is a link-style button component for the eToro design system. It provides a text-based link appearance without background or border:
+
+- **Multiple variants**: primary (green), info (gray), negative (red)
+- **Multiple sizes**: small, medium, large
+- **Icon positions**: none, leading, trailing (auto-detected from children order)
+- **Compound component pattern**: `EtLink.Label` and `EtLink.Icon` subcomponents, or shorthand single string child
+- **Built-in states**: disabled, pressed (with scale animation)
+- **Haptic feedback**: enabled by default
+
+## File Structure
+
+```
+link/
+├── api/
+│   ├── index.ts
+│   └── types.ts              # Type definitions
+├── hooks/
+│   ├── index.ts
+│   └── use-link-animation.ts  # Scale animation hook
+├── subcomponents/
+│   ├── index.ts
+│   ├── link-label.tsx
+│   └── link-icon.tsx
+├── tests/
+│   └── et-link.test.tsx  # Component tests
+├── utils/
+│   ├── context.tsx           # React context
+│   └── styles.ts             # Variant styles
+├── et-link.tsx        # Main component
+├── index.ts
+└── AGENTS.mdc
+```
+
+**Does NOT handle:**
+
+- Navigation logic (use with router/navigation handlers)
+- Form submission logic (handle in parent)
+- Buttons with background/border (use `EtButton` instead)
+- Icon-only buttons (use `EtButton` with a single `EtButton.Icon` child instead)
+
+## Entry Points & Contracts
+
+### `EtLink` (main component)
+
+```tsx
+<EtLink
+  variant?: LinkVariant    // default: 'primary'
+  size?: LinkSize          // default: 'medium'
+  disabled?: boolean             // default: false
+  haptics?: boolean              // default: true
+  onPress?: (event) => void
+  style?: StyleProp<ViewStyle>
+  // ...other PressableProps
+>
+  {children}
+</EtLink>
+```
+
+**Children constraints (enforced at runtime):**
+
+- `string` - auto-wrapped in `EtLink.Label`
+- `<EtLink.Label>` - text content
+- `<EtLink.Icon>` - icon content
+- Any other children will log an error in development mode
+
+### `EtLink.Label`
+
+```tsx
+<EtLink.Label
+  variant?: TextVariant      // auto-sized based on link size
+  style?: StyleProp<TextStyle>
+  numberOfLines?: number     // default: 1
+>
+  {string}
+</EtLink.Label>
+```
+
+### `EtLink.Icon`
+
+```tsx
+<EtLink.Icon
+  name: IconName             // required - icon from icon library
+  appearance?: {
+    size?: number            // auto-sized based on link size
+    color?: string           // auto-colored based on variant
+  }
+/>
+```
+
+### Types
+
+| Type               | Values                                  |
+| ------------------ | --------------------------------------- |
+| `LinkVariant`      | `'primary'` \| `'info'` \| `'negative'` |
+| `LinkSize`         | `'small'` \| `'medium'` \| `'large'`    |
+| `LinkIconPosition` | `'none'` \| `'leading'` \| `'trailing'` |
+
+**Note:** `LinkIconPosition` is auto-detected based on children order:
+
+- No icon = `'none'`
+- Icon as first child = `'leading'`
+- Icon after label = `'trailing'`
+
+## Usage Patterns
+
+### String shorthand (simplest)
+
+```tsx
+<EtLink onPress={handlePress}>Learn more</EtLink>
+```
+
+### Label with trailing icon
+
+```tsx
+<EtLink onPress={handlePress}>
+  <EtLink.Label>View details</EtLink.Label>
+  <EtLink.Icon name="chevronRight" />
+</EtLink>
+```
+
+### Icon with leading position (order matters!)
+
+```tsx
+<EtLink onPress={handlePress} variant="info">
+  <EtLink.Icon name="share" />
+  <EtLink.Label>Open in browser</EtLink.Label>
+</EtLink>
+```
+
+### Negative/Destructive action
+
+```tsx
+<EtLink variant="negative" onPress={handleDelete}>
+  Remove item
+</EtLink>
+```
+
+### Inline with text
+
+```tsx
+<View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center' }}>
+  <EtText>By continuing, you agree to our </EtText>
+  <EtLink size="medium" onPress={handleTerms}>
+    Terms of Service
+  </EtLink>
+  <EtText>.</EtText>
+</View>
+```
+
+### Disabled state
+
+```tsx
+<EtLink disabled onPress={handlePress}>
+  Unavailable
+</EtLink>
+```
+
+## Anti-patterns
+
+### ❌ Passing arbitrary components as children
+
+```tsx
+// BAD - will throw runtime error
+<EtLink>
+  <View><Text>Custom content</Text></View>
+</EtLink>
+
+// BAD - don't use EtText directly, will throw runtime error
+<EtLink>
+  <EtText>Label</EtText>
+</EtLink>
+```
+
+**Fix:** Use only `string`, `EtLink.Label`, or `EtLink.Icon` as children.
+
+### ❌ Using EtLink for primary actions
+
+```tsx
+// BAD - use EtButton for primary actions
+<EtLink>Submit</EtLink>
+```
+
+**Fix:** Use `EtButton` component for primary/prominent actions.
+
+### ❌ Using EtLink for icon-only buttons
+
+```tsx
+// BAD - use EtButton with EtButton.Icon instead
+<EtLink>
+  <EtLink.Icon name="close" />
+</EtLink>
+```
+
+**Fix:** Use `EtButton` with a single `EtButton.Icon` child for icon-only buttons.
+
+### ❌ Manually styling colors
+
+```tsx
+// BAD - bypasses design system
+<EtLink>
+  <EtLink.Label style={{ color: 'blue' }}>Text</EtLink.Label>
+</EtLink>
+```
+
+**Fix:** Use `variant` prop to control appearance.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for variant styling
+- `useLinkAnimation` - provides scale animation on press
+- `EtText` - underlying text component for `LinkLabel`
+- `EtoroIcon` - underlying icon component for `LinkIcon`
+- `LinkContext` - React context for passing state to subcomponents
+
+### External Dependencies
+
+- `expo-haptics` - haptic feedback on press
+- `react-native` - `Pressable`, `StyleSheet`
+- `react-native-reanimated` - scale animation on press
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`) using V2 tokens:
+  - Primary: `primary600` (default) → `primary500` (pressed)
+  - Negative: `verdictNegative600` (default) → `verdictNegative500` (pressed)
+  - Info: `carbon900` (default) → `carbon800` (pressed)
+  - Disabled (all variants): `carbon300`
+- Typography variants from `TextVariant` system
+- Icon sizes based on link size (16, 20, 24)
+
+## Patterns & Pitfalls
+
+### Disabled blocks press
+
+When `disabled={true}`, the link:
+
+- Ignores `onPress` callbacks
+- Shows disabled text color
+- Has `accessibilityState={{ disabled: true }}`
+
+### Haptic feedback
+
+By default, haptic feedback is enabled. Disable only for rapid-fire actions:
+
+```tsx
+// OK - rapid toggle doesn't need haptics
+<EtLink haptics={false} onPress={handleQuickToggle}>
+  Toggle
+</EtLink>
+```
+
+### Pressed state
+
+The link provides visual feedback when pressed:
+
+- **Scale animation**: Scales down to 0.95 on press, springs back to 1 on release
+- **Color change**: Text changes to hover color variant
+- Animation disabled when `disabled={true}`
+
+## Testing
+
+Tests are located in `tests/et-link.test.tsx` and cover:
+
+- Style utilities (`ICON_SIZES`, `getVariantStyles`)
+- Subcomponent validation
+- All variants and sizes rendering
+- Press events and haptic feedback
+- Disabled state behavior
+- Children validation (valid/invalid)
+- Accessibility (link role, states)
+- Animation hook integration
+- Edge cases and performance
+
+Run tests with:
+
+```bash
+npm test -- --testPathPattern=link
+```
+
+## Related Context
+
+- `EtButton (et-button.tsx)` - For buttons with background/border
+- `EtButton` with `EtButton.Icon` - For icon-only buttons (preferred pattern)
+- `EtText (et-text.tsx)` - EtText component used internally
+- `EtoroIcon (et-icon.tsx)` - EtoroIcon component used internally
+
+## Storybook
+
+Stories are located in `.rnstorybook/stories/components/link/`:
+
+- `et-link.intro.stories.tsx` - Introduction and overview
+- `et-link.stories.tsx` - Interactive examples including:
+  - Variant × Size matrix
+  - API usage patterns
+  - States (normal, disabled)
+  - Press animation demo
+  - Inline usage example

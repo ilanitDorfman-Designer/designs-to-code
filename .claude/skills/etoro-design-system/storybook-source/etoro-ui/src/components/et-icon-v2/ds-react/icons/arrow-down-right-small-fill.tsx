@@ -1,0 +1,15 @@
+import { Path, Svg } from 'react-native-svg';
+
+import type { DsReactLocalIconProps } from '../ds-react-local-icon-props';
+
+/** DS — React `arrow-down-right-small-fill` (generated from Figma SVG export). */
+export function DsReactIconArrowDownRightSmallFill({ size, color }: DsReactLocalIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        d="M19 20C19.5523 20 20 19.5523 20 19V11C20 10.4477 19.5523 10 19 10C18.4477 10 18 10.4477 18 11V16.5858L5.70711 4.29289C5.31658 3.90237 4.68342 3.90237 4.29289 4.29289C3.90237 4.68342 3.90237 5.31658 4.29289 5.70711L16.5858 18H11C10.4477 18 10 18.4477 10 19C10 19.5523 10.4477 20 11 20H19Z"
+        fill={color}
+      />
+    </Svg>
+  );
+}

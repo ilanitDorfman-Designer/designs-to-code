@@ -1,0 +1,241 @@
+---
+description: Agent guide for EtButton - compositional button with primary/info/negative variants, filled/subtle/ghost styles, four sizes, compound Label/Icon subcomponents, loading and disabled states
+alwaysApply: false
+---
+
+# EtButton Component
+
+## Purpose & Scope
+
+`EtButton` is a compositional button component for the eToro design system. It provides a flexible, accessible button with:
+
+- **Multiple variants**: primary, info, negative colors with filled, subtle (more transparent bg), and ghost (text-only) styles
+- **Multiple sizes**: tiny, small, medium, large
+- **Compound component pattern**: `EtButton.Label` and `EtButton.Icon` subcomponents, or shorthand single string child
+- **Built-in states**: loading, disabled
+- **Haptic feedback**: enabled by default
+
+**Does NOT handle:**
+
+- Navigation logic (use with router/navigation handlers)
+- Form submission logic (handle in parent)
+- Icon-only buttons (use `EtIconButton` instead)
+- Link-style buttons without padding (use `EtLink` instead)
+
+## Entry Points & Contracts
+
+### `EtButton` (main component)
+
+```tsx
+<EtButton
+  variant?: ButtonVariant    // default: 'primary-filled'
+  size?: ButtonSize          // default: 'medium'
+  disabled?: boolean         // default: false
+  loading?: boolean          // default: false
+  haptics?: boolean          // default: true
+  stretch?: boolean          // default: false — full width of container
+  forceColorScheme?: ButtonColorScheme  // pin colors to a fixed palette; ignores active theme
+  onPress?: (event) => void
+  style?: StyleProp<ViewStyle>
+  // ...other PressableProps
+>
+  {children}
+</EtButton>
+```
+
+**Children constraints (enforced at runtime):**
+
+- `string` - auto-wrapped in `EtButton.Label`
+- `<EtButton.Label>` - text content
+- `<EtButton.Icon>` - icon content
+- Any other children will throw an error
+
+### `EtButton.Label`
+
+```tsx
+<EtButton.Label
+  variant?: TextVariant      // auto-sized based on button size
+  style?: StyleProp<TextStyle>
+  numberOfLines?: number     // default: 1
+>
+  {string}
+</EtButton.Label>
+```
+
+### `EtButton.Icon`
+
+```tsx
+<EtButton.Icon
+  name: IconName             // required - icon from icon library
+  appearance?: {
+    size?: number            // auto-sized based on button size
+    color?: string           // auto-colored based on variant
+  }
+/>
+```
+
+### Types
+
+| Type                | Values                                                                                                                                                                                    |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ButtonVariant`     | `'primary-filled'` \| `'info-filled'` \| `'negative-filled'` \| `'primary-subtle'` \| `'info-subtle'` \| `'negative-subtle'` \| `'primary-ghost'` \| `'info-ghost'` \| `'negative-ghost'` |
+| `ButtonSize`        | `'tiny'` \| `'small'` \| `'medium'` \| `'large'`                                                                                                                                          |
+| `ButtonColorScheme` | `'light'` \| `'dark'`                                                                                                                                                                     |
+
+## Usage Patterns
+
+### String shorthand (simplest)
+
+```tsx
+<EtButton onPress={handlePress}>Click me</EtButton>
+```
+
+### Label with trailing icon
+
+```tsx
+<EtButton onPress={handlePress}>
+  <EtButton.Label>Continue</EtButton.Label>
+  <EtButton.Icon name="chevronRight" />
+</EtButton>
+```
+
+### Icon with leading position (order matters!)
+
+```tsx
+<EtButton onPress={handlePress}>
+  <EtButton.Icon name="plus" />
+  <EtButton.Label>Add Item</EtButton.Label>
+</EtButton>
+```
+
+### Negative/Destructive action
+
+```tsx
+<EtButton variant="negative-filled" onPress={handleDelete}>
+  Delete Account
+</EtButton>
+```
+
+### Loading state
+
+```tsx
+<EtButton loading={isSubmitting} onPress={handleSubmit}>
+  Submit
+</EtButton>
+```
+
+### Disabled state
+
+```tsx
+<EtButton disabled={!isValid} onPress={handleSubmit}>
+  Submit
+</EtButton>
+```
+
+### Pinned color scheme (theme-independent surfaces)
+
+Use `forceColorScheme` when the button sits on a surface that always renders dark
+(or light) regardless of the user's active theme — e.g. a dark promo card shown while
+the app is in light mode. The whole button (background, label, icon, pressed states)
+resolves from the fixed palette.
+
+```tsx
+// Always-dark upgrade CTA on a dark promo card, even in light mode
+<EtButton variant="info-filled" size="small" forceColorScheme="dark" stretch onPress={goToPaywall}>
+  Upgrade to Signature
+</EtButton>
+```
+
+Prefer this over hand-rolling a `Pressable` + `Text` with frozen colors — it keeps
+sizing, typography, pressed states, and accessibility consistent with the design system.
+
+## Anti-patterns
+
+### ❌ Passing arbitrary components as children
+
+```tsx
+// BAD - will throw runtime error
+<EtButton>
+  <View><Text>Custom content</Text></View>
+</EtButton>
+
+// BAD - don't use EtText directly, will throw runtime error
+<EtButton>
+  <EtText>Label</EtText>
+</EtButton>
+```
+
+**Fix:** Use only `string`, `EtButton.Label`, or `EtButton.Icon` as children.
+
+### ❌ Using EtButton for icon-only buttons
+
+```tsx
+// BAD - use EtIconButton instead
+<EtButton>
+  <EtButton.Icon name="close" />
+</EtButton>
+```
+
+**Fix:** Use `EtIconButton` component for icon-only buttons.
+
+### ❌ Manually styling colors/sizes
+
+```tsx
+// BAD - bypasses design system
+<EtButton>
+  <EtButton.Label style={{ color: 'red', fontSize: 20 }}>Text</EtButton.Label>
+</EtButton>
+```
+
+**Fix:** Use `variant` prop to control appearance.
+
+### ❌ Disabling haptics inconsistently
+
+Only disable haptics when explicitly required (e.g., rapid-fire actions):
+
+```tsx
+// OK - rapid toggle doesn't need haptics
+<EtButton haptics={false} onPress={handleQuickToggle}>
+  Toggle
+</EtButton>
+```
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useEtoroTheme` - provides theme colors for variant styling
+- `EtText` - underlying text component for `ButtonLabel`
+- `EtoroIcon` - underlying icon component for `ButtonIcon`
+- `ButtonContext` - React context for passing state to subcomponents
+
+### External Dependencies
+
+- `expo-haptics` - haptic feedback on press
+- `react-native` - `Pressable`, `View`, `StyleSheet`
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`) by default, or from a fixed palette (`eToroLightColors` / `eToroDarkColors`) when `forceColorScheme` is set
+- Spacing uses design tokens (`X2`, `X5`, `X9` from `core/styles/spacing`)
+- Typography variants from `TextVariant` system
+
+## Patterns & Pitfalls
+
+### Loading state replaces content
+
+When `loading={true}` and there's a single child, the button shows a spinner icon while preserving button width. The original content is hidden.
+
+### Disabled blocks both press and loading
+
+When `disabled={true}` or `loading={true}`, the button:
+
+- Ignores `onPress` callbacks
+- Shows disabled styling
+- Has `accessibilityState={{ disabled: true }}`
+
+## Related Context
+
+- `EtText (et-text.tsx)` - EtText component used internally
+- `EtoroIcon  (et-icon.tsx)` - EtoroIcon component used internally
+- `EtIconButton  (et-icon-button.tsx)` - icon-only circular button. No theme color references of its own; it is a thin `Pressable` wrapper around `EtoroIcon`, so V2 color-token migration ships transitively via the foundation icon hook.

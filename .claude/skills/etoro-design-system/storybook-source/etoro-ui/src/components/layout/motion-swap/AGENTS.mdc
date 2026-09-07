@@ -1,0 +1,66 @@
+---
+description: EtMotionSwap — permanently-mounted two-layer crossfade primitive. Use when switching between two mutually-exclusive views without unmounting either.
+---
+
+# EtMotionSwap
+
+A dumb, props-driven component that crossfades between two **always-mounted** layers using only `opacity` and `translateX` / `translateY` — no mount/unmount, 100% UI thread.
+
+## When to use
+
+Use `EtMotionSwap` when:
+- You want a smooth directional swap between two views (e.g. amount-mode hero, sub-line figures).
+- Both layers are cheap to keep mounted (counters, text rows).
+- You want zero JS-thread involvement in the animation.
+
+Do **not** use when the two layers have significantly different heights — the container is sized to `first` in normal flow, and `second` is absolutely positioned inside it. Both layers should be the same height (or the same flex height in context).
+
+## API
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `showSecond` | `boolean` | — | `true` → second layer visible, first exits |
+| `axis` | `'x' \| 'y'` | — | Direction of the slide (x = left/right, y = up/down) |
+| `distance` | `number` | `14` | px travelled by entering/exiting layer |
+| `opacityOnly` | `boolean` | `false` | Fade in place only — no directional translate |
+| `rasterizeLayers` | `boolean` | `false` | Snapshot each layer to a hardware texture before fading |
+| `first` | `ReactNode` | — | Default/primary content |
+| `second` | `ReactNode` | — | Alternate content |
+| `timingConfig` | `WithTimingConfig` | `{ duration: 220 }` | Timing override |
+| `style` | `StyleProp<ViewStyle>` | — | Container style |
+| `testID` | `string` | — | Test identifier |
+
+## Animation mechanics
+
+A single `progress` shared value (0 → 1) drives interpolated properties on the UI thread:
+
+- `first`: `opacity` 1→0; optional `translate[axis]` 0→`-distance` (skipped when `opacityOnly`)
+- `second`: `opacity` 0→1; optional `translate[axis]` `+distance`→0 (skipped when `opacityOnly`)
+
+Animation starts in `useLayoutEffect` so the fade begins on the same frame as `showSecond` changes.
+
+Reversing (`showSecond` false→true then back) mirrors automatically.
+
+## Layout strategy
+
+`first` renders in normal flow to anchor the container size. `second` sits in `StyleSheet.absoluteFill` centered with `alignItems/justifyContent: center`. This works without measurement when both layers have the same height.
+
+## Usage examples
+
+```tsx
+// Horizontal hero swap
+<EtMotionSwap
+  axis="x"
+  showSecond={amountMode === 'units'}
+  first={<ExecutionAmountDisplay rawAmountStr={dollarsStr} />}
+  second={<ExecutionAmountDisplay rawAmountStr={unitsStr} />}
+/>
+
+// Vertical sub-line figure swap
+<EtMotionSwap
+  axis="y"
+  showSecond={amountMode === 'dollars'}
+  first={<AmountSublineFigure {...unitsProps} />}
+  second={<AmountSublineFigure {...dollarsProps} />}
+/>
+```

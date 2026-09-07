@@ -1,0 +1,590 @@
+---
+description: Usage guide for the etoro-ui form wrappers — EtFormInput, EtFormCheckbox, EtFormRadio, EtFormRadioGroup, EtFormChip, EtFormChipGroup, EtFormToggleSwitch, EtFormToggleSwitchGroup, EtFormErrorMessage. Explains when and how to use them with React Hook Form.
+alwaysApply: false
+---
+
+# Form Wrappers (`etoro-ui/form`)
+
+RHF-enabled wrappers that connect React Hook Form field state to UI controls.
+underlying `etoro-ui` dumb controls (`EtInput`, `EtCheckbox`, `EtRadioGroup`, `EtChip`, `EtToggleSwitch`, etc.).
+
+Import everything from the dedicated sub-path:
+
+```tsx
+import { useForm, FormField, EtFormInput, EtFormCheckbox, EtFormRadioGroup, EtFormErrorMessage } from 'etoro-ui/form';
+```
+
+---
+
+## `FormField` — Generic Form Field (Recommended)
+
+Works with **any** controlled component via a render callback. No per-component wrapper needed.
+
+```tsx
+import { FormField, useForm } from 'etoro-ui/form';
+```
+
+### Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `name` | `FieldPath<T>` | required | RHF field name (supports dotted paths) |
+| `control` | `Control<T>` | required | RHF control from `useForm()` |
+| `rules` | `RegisterOptions` | - | RHF validation rules (or use a resolver on `useForm`) |
+| `children` | `(field, error) => ReactNode` | required | Render callback |
+| `showError` | `boolean` | `true` | Auto-render error text below children |
+| `renderError` | `(error: FieldError) => ReactNode` | - | Custom error renderer |
+| `style` | `StyleProp<ViewStyle>` | - | Style on the wrapper View |
+
+### Basic — text input
+
+```tsx
+<FormField name="email" control={control} rules={{ required: 'Email is required' }}>
+  {(field) => (
+    <EtInput defaultValue={field.value} variant="contained">
+      <EtInput.Label>Email</EtInput.Label>
+      <EtInput.Field onChangeText={field.onChange} />
+    </EtInput>
+  )}
+</FormField>
+```
+
+### Country selector
+
+```tsx
+<FormField name="countryId" control={control}>
+  {(field) => (
+    <CountrySelect
+      label="Country"
+      selectedCountryId={field.value}
+      onCountrySelected={(country) => field.onChange(country.countryId)}
+      variant="available"
+    />
+  )}
+</FormField>
+```
+
+### Checkbox
+
+```tsx
+<FormField name="terms" control={control} rules={{ validate: v => v || 'Required' }} showError={false}>
+  {(field, error) => (
+    <EtCheckbox value={error && !field.value ? 'error' : field.value} onChange={field.onChange}>
+      <EtCheckbox.Label>I accept the terms</EtCheckbox.Label>
+    </EtCheckbox>
+  )}
+</FormField>
+```
+
+### Custom error renderer
+
+```tsx
+<FormField
+  name="email"
+  control={control}
+  renderError={(err) => <CustomErrorBanner message={err.message} />}
+>
+  {(field) => <EtInput defaultValue={field.value}>...</EtInput>}
+</FormField>
+import {
+  useForm, FormProvider,
+  EtFormInput, EtFormCheckbox, EtFormRadio, EtFormRadioGroup,
+  EtFormChip, EtFormChipGroup,
+  EtFormToggleSwitch, EtFormToggleSwitchGroup,
+  EtFormErrorMessage
+} from 'etoro-ui/form';
+```
+
+### No auto error (handle via `error` arg)
+
+```tsx
+<FormField name="country" control={control} showError={false}>
+  {(field, error) => (
+    <CountrySelect
+      label={error ? 'Country (required)' : 'Country'}
+      selectedCountryId={field.value}
+      onCountrySelected={(c) => field.onChange(c.countryId)}
+    />
+  )}
+</FormField>
+```
+
+### With BFF validation resolver (no `rules` needed)
+
+Use `bffValidationResolver` at the `useForm` level instead of per-field `rules`:
+
+```tsx
+import { bffValidationResolver } from '@etoro/features/onboarding/kyc/core/utils';
+
+const FIELD_MAP = {
+  address: 'addressInfo.address',
+  city: 'addressInfo.city',
+  countryId: 'addressInfo.countryId',
+};
+
+const resolver = useMemo(
+  () => bffValidationResolver(resolvedData?.validation, FIELD_MAP, t),
+  [resolvedData?.validation, t],
+);
+
+const form = useForm({ defaultValues, resolver, mode: 'onChange' });
+
+// No rules needed — BFF drives validation:
+<FormField name="address" control={form.control}>
+  {(field) => <EtInput defaultValue={field.value}>...</EtInput>}
+</FormField>
+```
+
+### When to use `FormField` vs component-specific wrappers
+
+| Use `FormField` when | Use `EtFormInput`/`EtFormCheckbox` when |
+|---|---|
+| Custom components (CountrySelect, tile groups) | Standard EtInput text fields with full context bypass |
+| Any third-party or feature-level component | You need `EtFormInput.Field` auto-binding (ref, onBlur) |
+| Rapid prototyping / new screens | Existing code already uses the compound wrapper |
+
+---
+
+## Compound Wrappers (component-specific)
+
+### Single-Value Wrappers
+- `EtFormInput` - Text input fields
+- `EtFormCheckbox` - Boolean checkbox
+- `EtFormRadio` - Boolean radio indicator (display-only)
+- `EtFormRadioGroup` - Single-select radio group
+- `EtFormChip` - Boolean chip selection
+- `EtFormToggleSwitch` - Boolean toggle switch
+
+### Multi-Select Group Wrappers (string[] fields)
+- `EtFormChipGroup` - Multi-select chip group
+- `EtFormToggleSwitchGroup` - Multi-select toggle switches
+
+### Shared Error Display
+- `EtFormErrorMessage` - Aggregates errors from multiple fields
+
+---
+
+### `EtFormInput`
+
+Wraps `EtInput` for text input. Binds `useController` via context.
+
+**Sub-components:**
+
+| Sub-component | Purpose |
+|---|---|
+| `EtFormInput` (root) | Calls `useController`, provides context. Required: `name`, `control`. Optional: `rules`, `hideError` |
+| `EtFormInput.Control` | Renders `EtInput` shell with error injected from context |
+| `EtFormInput.Label` | Re-export of `EtInput.Label` |
+| `EtFormInput.Field` | Text input auto-bound to RHF (`onChangeText`, `onBlur`, `ref`) |
+| `EtFormInput.ErrorMessage` | Inline error text. Returns null when no error |
+| `EtFormInput.TextAdornment` | Re-export of `EtInput.TextAdornment` |
+| `EtFormInput.IconAdornment` | Re-export of `EtInput.IconAdornment` |
+
+**Basic usage (inline error):**
+
+```tsx
+const { control } = useForm({ defaultValues: { email: '' }, mode: 'onBlur' });
+
+<EtFormInput
+  name="email"
+  control={control}
+  rules={{ required: 'Email is required' }}
+>
+  <EtFormInput.Control>
+    <EtFormInput.Label required>Email</EtFormInput.Label>
+    <EtFormInput.Field placeholder="name@example.com" keyboardType="email-address" />
+  </EtFormInput.Control>
+  <EtFormInput.ErrorMessage />
+</EtFormInput>
+```
+
+**External shared error (`hideError`):**
+
+Use `hideError` when the error is displayed via `EtFormErrorMessage` instead of inline:
+
+```tsx
+<EtFormInput name="email" control={control} rules={{ required: 'Required' }} hideError>
+  <EtFormInput.Control>
+    <EtFormInput.Label>Email</EtFormInput.Label>
+    <EtFormInput.Field />
+  </EtFormInput.Control>
+</EtFormInput>
+```
+
+**With custom `onChange`/`onBlur` side-effects:**
+
+Both the RHF handler and the custom callback run. RHF always runs first.
+
+```tsx
+<EtFormInput.Field
+  onChangeText={(text) => console.log('side-effect', text)}
+  onBlur={(e) => console.log('blurred')}
+/>
+```
+
+---
+
+### `EtFormCheckbox`
+
+Wraps `EtCheckbox` for boolean fields.
+
+**Sub-components:**
+
+| Sub-component | Purpose |
+|---|---|
+| `EtFormCheckbox` (root) | Calls `useController`, provides context |
+| `EtFormCheckbox.Control` | Renders `EtCheckbox` bound to context value/onChange |
+| `EtFormCheckbox.Label` | Re-export of `EtCheckbox.Label` |
+| `EtFormCheckbox.ErrorMessage` | Inline error text |
+
+**Usage:**
+
+```tsx
+<EtFormCheckbox
+  name="terms"
+  control={control}
+  rules={{ validate: (v) => Boolean(v) || 'You must accept the terms' }}
+>
+  <EtFormCheckbox.Control>
+    <EtFormCheckbox.Label>I accept the terms</EtFormCheckbox.Label>
+  </EtFormCheckbox.Control>
+  <EtFormCheckbox.ErrorMessage />
+</EtFormCheckbox>
+```
+
+**With custom `onChange` side-effect:**
+
+```tsx
+<EtFormCheckbox.Control onChange={(checked) => track('terms_toggled', { checked })}>
+  <EtFormCheckbox.Label>I accept the terms</EtFormCheckbox.Label>
+</EtFormCheckbox.Control>
+```
+
+---
+
+### `EtFormRadioGroup`
+
+Wraps `EtRadioGroup` for single-selection string fields.
+
+**Sub-components:**
+
+| Sub-component | Purpose |
+|---|---|
+| `EtFormRadioGroup` (root) | Calls `useController`, provides context |
+| `EtFormRadioGroup.Control` | Renders `EtRadioGroup` bound to context |
+| `EtFormRadioGroup.Option` | Re-export of `EtRadioGroup.Option` |
+| `EtFormRadioGroup.ErrorMessage` | Inline error text |
+
+**Usage:**
+
+```tsx
+<EtFormRadioGroup
+  name="gender"
+  control={control}
+  rules={{ required: 'Select an option' }}
+>
+  <EtFormRadioGroup.Control>
+    <EtFormRadioGroup.Option value="male">Male</EtFormRadioGroup.Option>
+    <EtFormRadioGroup.Option value="female">Female</EtFormRadioGroup.Option>
+  </EtFormRadioGroup.Control>
+  <EtFormRadioGroup.ErrorMessage />
+</EtFormRadioGroup>
+```
+
+---
+
+### `EtFormRadio`
+
+Wraps `RadioIndicator` for boolean radio fields (display-only indicator).
+
+**Sub-components:**
+
+| Sub-component | Purpose |
+|---|---|
+| `EtFormRadio` (root) | Calls `useController`, provides context |
+| `EtFormRadio.Control` | Renders `RadioIndicator` bound to context (display-only) |
+| `EtFormRadio.ErrorMessage` | Inline error text |
+
+**Usage:**
+
+```tsx
+<EtFormRadio
+  name="selected"
+  control={control}
+  rules={{ validate: (v) => Boolean(v) || 'Must be selected' }}
+>
+  <EtFormRadio.Control disabled={false} />
+  <EtFormRadio.ErrorMessage />
+</EtFormRadio>
+```
+
+**Note:** `EtFormRadio` renders a display-only indicator. Wire row-level selection separately (e.g., parent `Pressable`).
+
+---
+
+### `EtFormChip`
+
+Wraps `EtChip` for boolean chip selection fields.
+
+**Sub-components:**
+
+| Sub-component | Purpose |
+|---|---|
+| `EtFormChip` (root) | Calls `useController`, provides context |
+| `EtFormChip.Control` | Renders `EtChip` bound to context selected/onChange |
+| `EtFormChip.Label` | Re-export of `EtChip.Label` |
+| `EtFormChip.Icon` | Re-export of `EtChip.Icon` |
+| `EtFormChip.ErrorMessage` | Inline error text |
+
+**Usage:**
+
+```tsx
+<EtFormChip
+  name="premium"
+  control={control}
+  rules={{ validate: v => v || 'Must select premium' }}
+>
+  <EtFormChip.Control>
+    <EtFormChip.Icon name="star" />
+    <EtFormChip.Label>Premium</EtFormChip.Label>
+  </EtFormChip.Control>
+  <EtFormChip.ErrorMessage />
+</EtFormChip>
+```
+
+**With custom `onSelectionChange` side-effect:**
+
+```tsx
+<EtFormChip.Control onSelectionChange={(selected) => track('chip_toggled', { selected })}>
+  <EtFormChip.Label>Premium</EtFormChip.Label>
+</EtFormChip.Control>
+```
+
+---
+
+### `EtFormToggleSwitch`
+
+Wraps `EtToggleSwitch` for boolean on/off fields.
+
+**Sub-components:**
+
+| Sub-component | Purpose |
+|---|---|
+| `EtFormToggleSwitch` (root) | Calls `useController`, provides context |
+| `EtFormToggleSwitch.Control` | Renders `EtToggleSwitch` bound to context value/onChange |
+| `EtFormToggleSwitch.ErrorMessage` | Inline error text |
+
+**Usage:**
+
+```tsx
+<EtFormToggleSwitch
+  name="notifications"
+  control={control}
+>
+  <EtFormToggleSwitch.Control size="small" haptics={true} />
+  <EtFormToggleSwitch.ErrorMessage />
+</EtFormToggleSwitch>
+```
+
+**With custom `onValueChange` side-effect:**
+
+```tsx
+<EtFormToggleSwitch.Control
+  onValueChange={(value) => console.log('toggled', value)}
+  size="small"
+/>
+```
+
+---
+
+### `EtFormChipGroup`
+
+Wraps `EtChipsGroupV2` for multi-select chip groups (manages `string[]` field).
+
+**Sub-components:**
+
+| Sub-component | Purpose |
+|---|---|
+| `EtFormChipGroup` (root) | Calls `useController`, provides context |
+| `EtFormChipGroup.Control` | Renders `EtChipsGroupV2` bound to context value/onChange |
+| `EtFormChipGroup.ErrorMessage` | Inline error text |
+
+**Usage:**
+
+```tsx
+import { EtFormChipGroup, ChipsGroupItem } from 'etoro-ui/form';
+
+const interests: ChipsGroupItem[] = [
+  { id: 'stocks', label: 'Stocks', icon: 'barChart' },
+  { id: 'crypto', label: 'Crypto', icon: 'btc' },
+  { id: 'etf', label: 'ETFs' },
+];
+
+<EtFormChipGroup
+  name="interests"
+  control={control}
+  rules={{ validate: v => v?.length > 0 || 'Pick at least one' }}
+>
+  <EtFormChipGroup.Control
+    items={interests}
+    layout="wrap"
+    haptics={false}
+  />
+  <EtFormChipGroup.ErrorMessage />
+</EtFormChipGroup>
+```
+
+**Field value:** `string[]` (array of selected chip IDs)
+
+---
+
+### `EtFormToggleSwitchGroup`
+
+Wraps multiple toggle switches for multi-select array fields (manages `string[]` field).
+
+**Sub-components:**
+
+| Sub-component | Purpose |
+|---|---|
+| `EtFormToggleSwitchGroup` (root) | Calls `useController`, provides context |
+| `EtFormToggleSwitchGroup.Control` | Container for toggle switch options |
+| `EtFormToggleSwitchGroup.Option` | Individual toggle switch row with label |
+| `EtFormToggleSwitchGroup.ErrorMessage` | Inline error text |
+
+**Usage:**
+
+```tsx
+<EtFormToggleSwitchGroup
+  name="qualifications"
+  control={control}
+  rules={{ validate: v => v?.length > 0 || 'Select at least one' }}
+>
+  <EtFormToggleSwitchGroup.Control>
+    <EtFormToggleSwitchGroup.Option value="cert">
+      Certificate
+    </EtFormToggleSwitchGroup.Option>
+    <EtFormToggleSwitchGroup.Option value="degree">
+      Degree
+    </EtFormToggleSwitchGroup.Option>
+    <EtFormToggleSwitchGroup.Option value="experience">
+      Professional Experience
+    </EtFormToggleSwitchGroup.Option>
+  </EtFormToggleSwitchGroup.Control>
+  <EtFormToggleSwitchGroup.ErrorMessage />
+</EtFormToggleSwitchGroup>
+```
+
+**Field value:** `string[]` (array of selected values)
+
+**With custom `onPress` override:**
+
+```tsx
+<EtFormToggleSwitchGroup.Option
+  value="special"
+  onPress={() => {
+    // Custom behavior (e.g., for "None of these" option)
+  }}
+>
+  None of these apply
+</EtFormToggleSwitchGroup.Option>
+```
+
+---
+
+### `EtFormErrorMessage`
+
+Aggregates errors from **multiple fields** into a shared display block.
+Requires `<FormProvider>` as an ancestor (uses `useFormContext` internally).
+
+**Sub-components:**
+
+| Sub-component | Purpose |
+|---|---|
+| `EtFormErrorMessage` (root) | Reads errors for listed `names` from `FormProvider` context |
+| `EtFormErrorMessage.Text` | Renders errors. `mode="first"` (default) shows only first; `mode="all"` shows all |
+
+**When to use:**
+- Multiple controls (e.g., two checkboxes) share one error display block
+- You want to suppress inline errors on individual controls and centralise them
+
+**Usage:**
+
+```tsx
+<FormProvider {...methods}>
+  <EtFormErrorMessage names={['agree', 'notification']}>
+    <EtFormCheckbox
+      name="agree"
+      control={control}
+      rules={{ validate: (v) => Boolean(v) || 'You must agree to terms' }}
+    >
+      <EtFormCheckbox.Control>
+        <EtFormCheckbox.Label>I agree to terms</EtFormCheckbox.Label>
+      </EtFormCheckbox.Control>
+    </EtFormCheckbox>
+
+    <EtFormCheckbox
+      name="notification"
+      control={control}
+      rules={{ validate: (v) => Boolean(v) || 'Enable notifications to proceed' }}
+    >
+      <EtFormCheckbox.Control>
+        <EtFormCheckbox.Label>Enable notifications</EtFormCheckbox.Label>
+      </EtFormCheckbox.Control>
+    </EtFormCheckbox>
+
+    <EtFormErrorMessage.Text mode="first" />
+  </EtFormErrorMessage>
+</FormProvider>
+```
+
+**Custom render:**
+
+```tsx
+<EtFormErrorMessage.Text
+  render={({ errors }) => (
+    <View>{errors.map((e) => <Text key={e.name}>{e.message}</Text>)}</View>
+  )}
+/>
+```
+
+---
+
+## Choosing Between Inline and Shared Error Display
+
+| Scenario | Pattern |
+|---|---|
+| Single field with its own error | Use `<EtFormInput.ErrorMessage />` / `<EtFormCheckbox.ErrorMessage />` inline |
+| Multiple fields sharing one error block | Use `<EtFormErrorMessage names={[...]}><EtFormErrorMessage.Text /></EtFormErrorMessage>` with `<FormProvider>` |
+| Inline control, but error shown elsewhere | Pass `hideError` to `EtFormInput`, omit `ErrorMessage` sub-component on individual controls |
+
+---
+
+## Type-Safe Field Names
+
+All wrappers are generic over your form's value type, so `name` is type-checked:
+
+```tsx
+type MyForm = { email: string; age: number };
+const { control } = useForm<MyForm>();
+
+<EtFormInput name="email" control={control} />   // ✅ string field
+<EtFormInput name="age" control={control} />     // ❌ age is not a string field
+<EtFormInput name="phone" control={control} />   // ❌ unknown field
+```
+
+---
+
+## Re-exported RHF Utilities
+
+The sub-path re-exports the most commonly needed RHF symbols — no separate
+`react-hook-form` import needed in feature code:
+
+```tsx
+import {
+  useForm, useFormContext, useController, useWatch, useFieldArray,
+  FormProvider, Controller,
+  // Types:
+  type Control, type FieldError, type FieldErrors,
+  type SubmitHandler, type SubmitErrorHandler, type UseFormReturn,
+} from 'etoro-ui/form';
+```

@@ -1,0 +1,228 @@
+---
+description: Agent guide for EtLoader - circular loading indicator with indeterminate spinning and determinate progress states, multiple preset sizes, and custom colors
+alwaysApply: false
+---
+
+# EtLoader Component
+
+## Purpose & Scope
+
+`EtLoader` is a circular loading indicator component for the eToro design system. It provides a flexible, accessible loader with:
+
+- **Two states**: indeterminate (spinning) and determinate (progress bar)
+- **Multiple preset sizes**: tiny (12px), xs (16px), small (20px), medium (24px), large (30px), xl (36px)
+- **Custom colors**: Configurable track and progress colors
+- **Smooth animations**: Uses react-native-reanimated for performant rotation
+- **Accessibility**: Built-in progressbar role with proper accessibility values
+
+**Does NOT handle:**
+
+- Loading state logic (manage in parent component)
+- Overlay/backdrop (wrap with modal or overlay component)
+- Text labels (compose with EtText externally)
+
+## Entry Points & Contracts
+
+### `EtLoader` (main component)
+
+```tsx
+<EtLoader
+  size?: LoaderSize           // default: 'medium'
+  state?: LoaderState         // default: 'indeterminate'
+  progress?: number           // 0-1, for determinate state
+  trackColor?: string         // background circle color
+  progressColor?: string      // progress arc color
+  duration?: number           // animation duration in ms, default: 1000
+  style?: ViewStyle
+  testID?: string
+  accessibilityLabel?: string // default: 'Loading'
+/>
+```
+
+### Types
+
+| Type          | Values                                                               |
+| ------------- | -------------------------------------------------------------------- |
+| `LoaderSize`  | `'tiny'` \| `'xs'` \| `'small'` \| `'medium'` \| `'large'` \| `'xl'` |
+| `LoaderState` | `'indeterminate'` \| `'determinate'`                                 |
+
+### Size Configuration
+
+| Size   | Pixels | Stroke Width |
+| ------ | ------ | ------------ |
+| tiny   | 12px   | 1.5px        |
+| xs     | 16px   | 1.6px        |
+| small  | 20px   | 2px          |
+| medium | 24px   | 2.8px        |
+| large  | 30px   | 3.5px        |
+| xl     | 36px   | 4.2px        |
+
+## Usage Patterns
+
+### Basic indeterminate loader (default)
+
+```tsx
+<EtLoader />
+```
+
+### Different sizes
+
+```tsx
+<EtLoader size="tiny" />
+<EtLoader size="small" />
+<EtLoader size="large" />
+<EtLoader size="xl" />
+```
+
+### Determinate progress
+
+```tsx
+const [progress, setProgress] = useState(0);
+
+<EtLoader state="determinate" progress={progress} />;
+```
+
+### Custom colors
+
+```tsx
+<EtLoader trackColor="#E3F2FD" progressColor="#1976D2" />
+```
+
+### Custom animation speed
+
+```tsx
+<EtLoader duration={500} />  // Fast
+<EtLoader duration={2000} /> // Slow
+```
+
+### Inline with text
+
+```tsx
+<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+  <EtLoader size="tiny" />
+  <EtText>Loading...</EtText>
+</View>
+```
+
+## Anti-patterns
+
+### ❌ Using determinate state without progress
+
+```tsx
+// BAD - shows empty circle
+<EtLoader state="determinate" />
+```
+
+**Fix:** Always provide a `progress` value (0-1) with determinate state.
+
+### ❌ Progress value out of range
+
+```tsx
+// BAD - progress should be 0-1
+<EtLoader state="determinate" progress={75} />
+```
+
+**Fix:** Use normalized value: `progress={0.75}` (clamped internally but pass correct value).
+
+### ❌ Manually animating progress without state change
+
+```tsx
+// BAD - mixes indeterminate animation with progress
+<EtLoader progress={animatedValue} />
+```
+
+**Fix:** Set `state="determinate"` when using progress values.
+
+## Dependencies & Edges
+
+### Internal Dependencies
+
+- `useLoaderConfig` - hook that processes props into configuration values
+- `getArcPath` - utility for generating SVG arc paths
+- `useEtoroTheme` - provides theme colors for default styling
+
+### External Dependencies
+
+- `react-native-reanimated` - rotation animation for indeterminate state
+- `react-native-svg` - SVG rendering for circles and arcs
+- `react-native` - `View`, `StyleSheet`
+
+### Design System Integration
+
+- Colors come from theme (`useEtoroTheme().colors`):
+  - Track: `textTransparentNeutral` (fallback: `#F2F2F2`)
+  - Progress: `textSecondaryNeutral` (fallback: `#666666`)
+- Custom colors can override theme defaults
+
+## Patterns & Pitfalls
+
+### SVG Arc Implementation
+
+The loader uses SVG `Path` elements with arc commands instead of dashed circles. This approach:
+
+- Properly supports `strokeLinecap="round"` for rounded edges
+- Avoids rendering artifacts at high progress values
+- Uses `Circle` element for 100% progress to avoid linecap overlap
+
+### Progress Rendering
+
+| Progress Value | Rendered Element | Notes                         |
+| -------------- | ---------------- | ----------------------------- |
+| 0              | Nothing          | No arc visible                |
+| 0 < p < 1      | Path (arc)       | Partial arc with rounded ends |
+| 1 (100%)       | Circle           | Full circle, no rounded caps  |
+
+### Indeterminate Animation
+
+- Uses 25% arc that rotates continuously
+- Animation is linear and loops infinitely
+- Rotation resets when switching to determinate state
+
+### Accessibility
+
+Built-in accessibility support:
+
+- `accessibilityRole="progressbar"`
+- `accessibilityLabel="Loading"` (customizable)
+- `accessibilityValue`:
+  - Indeterminate: `{ text: 'Loading' }`
+  - Determinate: `{ min: 0, max: 100, now: <percentage> }`
+
+### Memoization
+
+The component is wrapped with `React.memo` for performance. The `useLoaderConfig` hook uses `useMemo` internally to avoid unnecessary recalculations.
+
+## File Structure
+
+```text
+loader/
+├── api/
+│   ├── index.ts          # Barrel export
+│   └── types.ts          # EtLoaderProps, LoaderSize, LoaderState
+├── hooks/
+│   ├── index.ts          # Barrel export
+│   └── use-loader-config.ts  # Props processing hook
+├── utils/
+│   ├── index.ts          # Barrel export
+│   └── get-arc-path.ts   # SVG arc path generator
+├── et-loader.tsx         # Main component
+├── et-loader.test.tsx    # Unit tests
+└── index.ts              # Public export
+```
+
+## Related Context
+
+- `EtText (et-text.tsx)` - compose with loader for loading labels
+- `EtButton (button/)` - has built-in loading state, uses internal loader
+- `Storybook stories` - see `.rnstorybook/stories/components/status/loader/`
+
+## Design System Integration
+
+V1 -> V2 mapping for the progress ring in [`hooks/use-loader-config.ts`](hooks/use-loader-config.ts):
+
+| Slot | V1 token | V2 token |
+| --- | --- | --- |
+| Track (unfilled portion) | `textTransparentNeutral` | `carbon100` |
+| Progress (filled portion) | `textSecondaryNeutral` | `carbon500` |
+
+`customTrackColor` / `customProgressColor` consumer overrides take precedence; the theme tokens are only the default. Figma fallback hex literals (`#F2F2F2`, `#666666`) remain unchanged.

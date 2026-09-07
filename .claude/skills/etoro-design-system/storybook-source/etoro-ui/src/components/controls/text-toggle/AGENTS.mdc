@@ -1,0 +1,220 @@
+---
+description: Agent guide for EtTextToggle - text-based segmented control with smooth sliding indicator animation, filled/outline variants, and full-width support for time frame selectors
+alwaysApply: false
+---
+
+# EtTextToggle Component - Agent Guide
+
+## Overview
+
+`EtTextToggle` is a text-based segmented control with smooth sliding animation. It uses a compound component pattern with `EtTextToggle.Option` subcomponents for flexible composition.
+
+**Location:** `/libs/etoro-ui/src/components/controls/text-toggle/`
+
+## Key Features
+
+- **Compound Component Pattern**: Flexible composition with Option subcomponents
+- **Smooth Animation**: Spring-based sliding indicator animation
+- **Two Sizes**: 'small' and 'large' presets
+- **Two Variants**: 'filled' (default) and 'outline' styles
+- **Full Width Support**: Option to span full container width
+- **Haptic Feedback**: Optional haptic feedback on selection
+- **Individual Option Disabling**: Disable specific options or entire toggle
+- **RTL Ready**: The indicator's anchor is pinned to the physical left edge in both directions (`right: 0` in RTL swaps back to physical left under `doLeftAndRightSwapInRTL`), so the animation math stays plain physical `onLayout.x` with no direction handling.
+
+## Usage
+
+```tsx
+import { EtTextToggle } from 'etoro-ui';
+
+// Basic usage
+const [selectedId, setSelectedId] = useState('option1');
+
+<EtTextToggle
+  selectedId={selectedId}
+  onSelectionChange={setSelectedId}
+>
+  <EtTextToggle.Option id="option1" label="Option 1" />
+  <EtTextToggle.Option id="option2" label="Option 2" />
+  <EtTextToggle.Option id="option3" label="Option 3" />
+</EtTextToggle>
+
+// Time frame selector (small, full width)
+<EtTextToggle
+  selectedId={selected}
+  onSelectionChange={setSelected}
+  size="small"
+  fullWidth
+>
+  <EtTextToggle.Option id="1d" label="1D" />
+  <EtTextToggle.Option id="1w" label="1W" />
+  <EtTextToggle.Option id="1m" label="1M" />
+  <EtTextToggle.Option id="3m" label="3M" />
+  <EtTextToggle.Option id="1y" label="1Y" />
+</EtTextToggle>
+
+// Outline variant (transparent background with border)
+<EtTextToggle
+  selectedId={selected}
+  onSelectionChange={setSelected}
+  variant="outline"
+  size="large"
+  fullWidth
+>
+  <EtTextToggle.Option id="option1" label="Option 1" />
+  <EtTextToggle.Option id="option2" label="Option 2" />
+</EtTextToggle>
+
+// With custom styling per option
+const [selectedId, setSelectedId] = useState('buy');
+const { colors } = useTheme(); // or import colors from your design tokens
+
+const isBuySelected = selectedId === 'buy';
+const isSellSelected = selectedId === 'sell';
+
+<EtTextToggle selectedId={selectedId} onSelectionChange={setSelectedId}>
+  <EtTextToggle.Option
+    id="buy"
+    label="Buy"
+    textStyle={{ color: isBuySelected ? colors.actionBrandText : undefined }}
+  />
+  <EtTextToggle.Option
+    id="sell"
+    label="Sell"
+    textStyle={{ color: isSellSelected ? colors.actionBrandVarText : undefined }}
+  />
+</EtTextToggle>
+```
+
+## Props Reference
+
+### EtTextToggleProps (Root)
+
+| Prop                | Type                    | Default    | Description                                                                                            |
+| ------------------- | ----------------------- | ---------- | ------------------------------------------------------------------------------------------------------ |
+| `children`          | `ReactNode`             | -          | EtTextToggle.Option components                                                                         |
+| `selectedId`        | `string`                | -          | Currently selected option ID                                                                           |
+| `onSelectionChange` | `(id: string) => void`  | -          | Callback when selection changes                                                                        |
+| `size`              | `'small' \| 'large'`    | `'large'`  | Size variant                                                                                           |
+| `variant`           | `'filled' \| 'outline'` | `'filled'` | Visual variant: filled has semi-transparent background, outline has transparent background with border |
+| `fullWidth`         | `boolean`               | `false`    | Take full container width                                                                              |
+| `disabled`          | `boolean`               | `false`    | Disable entire toggle                                                                                  |
+| `haptics`           | `boolean`               | `true`     | Enable haptic feedback                                                                                 |
+| `style`             | `StyleProp<ViewStyle>`  | -          | Container style overrides                                                                              |
+| `testID`            | `string`                | -          | Test identifier                                                                                        |
+
+### TextToggleOptionProps (Option)
+
+| Prop        | Type                   | Default | Description                  |
+| ----------- | ---------------------- | ------- | ---------------------------- |
+| `id`        | `string`               | -       | Unique identifier (required) |
+| `label`     | `string`               | -       | Display text (required)      |
+| `disabled`  | `boolean`              | `false` | Disable this option          |
+| `style`     | `StyleProp<ViewStyle>` | -       | Option container style       |
+| `textStyle` | `StyleProp<TextStyle>` | -       | Option text style            |
+| `testID`    | `string`               | -       | Test identifier              |
+
+## File Structure
+
+```
+text-toggle/
+├── et-text-toggle.tsx        # Root + compound assembly
+├── et-text-toggle.test.tsx   # Tests
+├── index.ts                  # Exports
+├── AGENTS.mdc                 # This file
+├── api/
+│   ├── types.ts              # TypeScript interfaces
+│   ├── context.tsx           # Context provider
+│   └── index.ts
+├── components/
+│   ├── toggle-option.tsx     # Option subcomponent
+│   ├── sliding-indicator.tsx # Animated indicator
+│   └── index.ts
+├── hooks/
+│   ├── use-toggle-animation.ts # Animation logic
+│   └── index.ts
+└── utils/
+    ├── size-config.ts        # Size presets
+    └── index.ts
+```
+
+## Architecture Notes
+
+1. **Context Flow**: `TextToggleProvider` manages selection state and option registration
+2. **Option Registration**: Options register themselves on mount for index tracking
+3. **Animation**: `useToggleAnimation` hook handles smooth sliding indicator
+4. **Direct Children**: Options are rendered as direct children in JSX order
+
+## Design System Integration
+
+Colors come from theme (`useEtoroTheme().colors`) — V2 tokens, per Figma `48459:49167`:
+
+| Slot                         | V2 token                                      |
+| ---------------------------- | --------------------------------------------- |
+| Selected option text         | `carbon900`                                   |
+| Unselected option text       | `carbon500`                                   |
+| Disabled option text         | `carbon600`                                   |
+| Filled track background      | `carbon900` at ~3% opacity (`${carbon900}08`) |
+| Outline track border         | `carbonPrimaryDivider`                        |
+| Sliding indicator background | `carbonPrimaryDivider`                        |
+| Sliding indicator shadow     | `carbonStatic900`                             |
+
+> **Note for consumers:** the `textStyle` example below still shows the legacy V1 tokens `actionBrandText` / `actionBrandVarText`. As part of the broader V2 rollout these should be migrated to `primary600` / `verdictNegative600` in calling code.
+
+## Size Presets
+
+| Size    | Height | Border Radius | Min Width |
+| ------- | ------ | ------------- | --------- |
+| `small` | 36px   | 18px          | 44px      |
+| `large` | 48px   | 24px          | 60px      |
+
+## Liquid Glass (iOS 26+)
+
+`EtTextToggle` automatically adapts to the Liquid Glass design on iOS 26+ when the glass effect module is registered at app startup. No provider or extra wrapper is needed.
+
+### Behavior When Liquid Glass Is Active
+
+- **Container**: Uses `EtGlassView` with `glassEffectStyle="clear"` as the outer container instead of the opaque filled/outline background.
+- **Sliding Indicator**: The `SlidingIndicator` renders as an `EtGlassView` with `glassEffectStyle="regular"` instead of the opaque pill with shadow.
+- **Options**: Text styling and interaction remain unchanged.
+
+### Behavior When Liquid Glass Is Unavailable
+
+- Rendering is identical to the standard filled/outline design. No visual change.
+
+### Glass Resolution Priority
+
+The toggle resolves its Liquid Glass state from three sources (highest priority first):
+
+1. **Explicit prop**: `liquidGlass={false}` disables glass; `liquidGlass={true}` forces glass mode.
+2. **Parent context**: If rendered inside a `LiquidGlassContext.Provider` (e.g., within `EtTopbar`), inherits the context value.
+3. **Platform auto-detection**: Calls `useLiquidGlass()` to check if the platform supports glass (iOS 26+ with registered module).
+
+### Opting Out
+
+To explicitly disable Liquid Glass for a specific toggle:
+
+```tsx
+<EtTextToggle liquidGlass={false} selectedId={id} onSelectionChange={setId}>
+  <EtTextToggle.Option id="a" label="Label A" />
+  <EtTextToggle.Option id="b" label="Label B" />
+</EtTextToggle>
+```
+
+## Do's and Don'ts
+
+### Do:
+
+- Use at least 2 options (minimum requirement)
+- Use `fullWidth` for evenly distributed options
+- Use `size="small"` for compact layouts like time frame selectors
+- Apply custom colors via `textStyle` prop on options
+- Use controlled state pattern (selectedId + onSelectionChange)
+
+### Don't:
+
+- Don't use fewer than 2 options
+- Don't nest EtTextToggle components
+- Don't use Option outside of EtTextToggle (context required)
+- Don't mix controlled and uncontrolled patterns
+- Don't set `opacity < 1` on the toggle or its parents when Liquid Glass is active

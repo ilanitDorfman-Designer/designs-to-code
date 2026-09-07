@@ -1,0 +1,228 @@
+---
+description: Agent guide for EtUserInfo - compound component for rendering user identity blocks with avatar, title, and subtitle in horizontal or vertical layouts
+alwaysApply: false
+---
+
+# EtUserInfo Component
+
+## Purpose & Scope
+
+`EtUserInfo` is a compound UI component for rendering a user identity block with:
+
+- Avatar (always square for users)
+- Primary text (`Title`)
+- Secondary text (`Subtitle`)
+
+It supports two layouts:
+
+- `horizontal`: avatar on the left, title/subtitle stacked on the right
+- `vertical`: avatar, then title, then subtitle in a column
+
+This component is intentionally presentational. It does not manage fetching, navigation, selection state, or business logic.
+
+## Relationship to EtUserProfileHeader.UserInfo
+
+`EtUserProfileHeader.UserInfo` (in `layout/headers/user-profile/subcomponents/user-info.tsx`) is a **different component**:
+
+- **EtUserProfileHeader.UserInfo**: Context-driven, part of the user profile header layout. Consumes `UserProfileContext`, slots: Avatar, Name, UserName, Copiers. Use only within `<EtUserProfileHeader>`.
+- **EtUserInfo**: Data-driven, standalone data display. Accepts `EtUserData` prop, slots: Avatar, Title, Subtitle. Use for user identity blocks anywhere (lists, cards, etc.).
+
+For new user identity blocks outside the profile header, prefer `EtUserInfo`.
+
+## Entry Points & Contracts
+
+### `EtUserInfo` (main component)
+
+```tsx
+<EtUserInfo
+  data={{
+    avatar?: {
+      source: string,                  // required when using EtUserInfo.Avatar
+      size?: 'small' | 'medium' | 'large', // default: 'medium'
+      alt?: string,
+    },
+    title?: string,                         // used when Title has no children
+    subtitle?: string,                     // used when Subtitle has no children
+  }}
+  layout?: 'horizontal' | 'vertical'       // default: 'horizontal'
+  ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip'  // default: 'tail'
+  maxWidth?: number                        // horizontal layout only; constrains text block
+  shrink?: boolean                         // default: false — horizontal layout only; lets the text block shrink beside fixed-width siblings
+  style?: StyleProp<ViewStyle>
+  testID?: string
+>
+  {children}
+</EtUserInfo>
+```
+
+- `layout`, `ellipsizeMode`, `maxWidth`, and `shrink` are **root-level props**.
+- `data.title` and `data.subtitle` are optional; when set, `<EtUserInfo.Title />` and `<EtUserInfo.Subtitle />` can be used with no children to render that text.
+- User avatars are always square (shapeOverride); `data.avatar.shape` is ignored.
+
+`children` are expected to be compound subcomponents:
+
+- `<EtUserInfo.Avatar />`
+- `<EtUserInfo.Title>...</EtUserInfo.Title>`
+- `<EtUserInfo.Subtitle>...</EtUserInfo.Subtitle>`
+
+### `EtUserInfo.Avatar`
+
+```tsx
+<EtUserInfo.Avatar style={avatarStyle}>
+  {/* optional EtAvatar.Badge / overlays */}
+</EtUserInfo.Avatar>
+```
+
+- Reads `avatar` config from context (no direct avatar props).
+- Renders `null` when `avatar.source` is missing/empty.
+- Always renders square avatar (shapeOverride).
+- Forwards `children` into `InfoAvatar` / `EtAvatar` (e.g. trader crown via `EtAvatar.Badge`).
+
+### `shrink`
+
+When the row sits next to siblings that must keep their intrinsic width (e.g. rates on a card footer), pass `shrink`:
+
+```tsx
+<EtUserInfo data={user} shrink>
+  <EtUserInfo.Avatar />
+  <EtUserInfo.Title />
+  <EtUserInfo.Subtitle />
+</EtUserInfo>
+```
+
+### `EtUserInfo.Title`
+
+```tsx
+<EtUserInfo.Title>{ReactNode}</EtUserInfo.Title>
+```
+
+- Delegates to internal `InfoText` with `value={data.title}`, `variant="label-primary-semibold"`, and theme color.
+- **No children and no `data.title`**: renders `null`.
+- **No children but `data.title` is set**: renders `EtText` with `data.title`, `numberOfLines={1}`, and `ellipsizeMode` from context.
+- **Has children**: renders a horizontal row wrapper for custom composition.
+
+### `EtUserInfo.Subtitle`
+
+```tsx
+<EtUserInfo.Subtitle>{ReactNode}</EtUserInfo.Subtitle>
+```
+
+- Delegates to internal `InfoText` with `value={data.subtitle}` and `variant="label-tertiary-regular"`.
+- **No children and no `data.subtitle`**: renders `null`.
+- **No children but `data.subtitle` is set**: renders `EtText` with `data.subtitle`, `numberOfLines={1}`, and `ellipsizeMode` from context.
+- **Has children**: renders a horizontal row wrapper for custom composition.
+
+## Internal Architecture
+
+### 1) Data normalization (`useDefaults`)
+
+`useDefaults({ data, layout, ellipsizeMode, maxWidth })` resolves defaults and returns a memoized context value of type `EtUserDefaults`:
+
+- `layout`: defaults to `'horizontal'`
+- `ellipsizeMode`: defaults to `'tail'`
+- `maxWidth`: passed through only when layout is horizontal; set to `undefined` in vertical layout
+- `data`: spread from input; `data.avatar` is normalized when present
+
+### 2) Child slot extraction (`useSlots`)
+
+`useSlots(children)` scans children by `displayName` and extracts slots:
+
+- `EtUserInfo.Avatar`
+- `EtUserInfo.Title`
+- `EtUserInfo.Subtitle`
+
+### 3) Context boundary
+
+`EtUserInfo` provides `EtUserInfoContext`, and subcomponents read it via `useEtUserInfoContext()`.
+
+- Using subcomponents outside `EtUserInfo` throws runtime errors.
+
+### 4) Layout rendering
+
+- `horizontal`: renders `avatar` + text block (`title` + `subtitle`), with optional `maxWidth` style on text block.
+- `vertical`: renders `avatar`, `title`, `subtitle` sequentially.
+- Root container uses design-system spacing (`X2`, `X3`) and `alignSelf: 'flex-start'`.
+
+## Usage Patterns
+
+### Data-driven title and subtitle (empty slots)
+
+```tsx
+<EtUserInfo
+  data={{
+    avatar: {
+      source: user.avatarUrl,
+      size: 'medium',
+      alt: user.name,
+    },
+    title: user.name,
+    subtitle: `@${user.username}`,
+  }}
+  layout="horizontal"
+>
+  <EtUserInfo.Avatar />
+  <EtUserInfo.Title />
+  <EtUserInfo.Subtitle />
+</EtUserInfo>
+```
+
+### Vertical user card
+
+```tsx
+<EtUserInfo
+  data={{
+    avatar: { source: user.avatarUrl, size: 'large' },
+    title: user.name,
+    subtitle: user.bio,
+  }}
+  layout="vertical"
+>
+  <EtUserInfo.Avatar />
+  <EtUserInfo.Title />
+  <EtUserInfo.Subtitle />
+</EtUserInfo>
+```
+
+## Anti-patterns
+
+### ❌ Using subcomponents outside root provider
+
+```tsx
+// BAD - throws at runtime
+<EtUserInfo.Title>Jane Doe</EtUserInfo.Title>
+```
+
+Fix: Always render subcomponents inside `<EtUserInfo>...</EtUserInfo>`.
+
+### ❌ Missing avatar source
+
+```tsx
+// BAD - EtUserInfo.Avatar renders null when source is missing or empty
+<EtUserInfo data={{ title: 'Jane Doe' }}>
+  <EtUserInfo.Avatar />
+</EtUserInfo>
+```
+
+Fix: Provide `data.avatar.source` whenever an avatar is required.
+
+## File Map
+
+```text
+user-info/
+├── api/
+│   ├── index.ts
+│   └── types.ts
+├── hooks/
+│   ├── et-user-info-context.ts
+│   ├── index.ts
+│   ├── use-et-user-info-defaults.ts
+│   └── use-et-user-info-slots.ts
+├── subcomponents/
+│   ├── et-user-info-avatar.tsx
+│   ├── et-user-info-subtitle.tsx
+│   ├── et-user-info-title.tsx
+│   └── index.ts
+├── et-user-info.tsx
+├── AGENTS.mdc
+└── index.ts
+```

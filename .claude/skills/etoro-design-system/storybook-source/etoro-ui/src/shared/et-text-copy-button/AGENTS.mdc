@@ -1,0 +1,71 @@
+---
+description: This file explains the EtTextCopyButton app-level component and usage guidance
+alwaysApply: false
+---
+
+# EtTextCopyButton Component
+
+`EtTextCopyButton` is an app-level compound component used to copy text with visual and haptic feedback.
+
+## Purpose
+
+- Copy arbitrary text to clipboard (via optional `onCopy` or internal `ClipboardService` when `onCopy` is not provided)
+- Show success state (check icon) for a configurable duration
+- Optionally emit callbacks for success (`afterCopy`) and failure (`onError`)
+
+## Public API
+
+### `EtTextCopyButton` (root)
+
+- Required:
+  - `textToCopy: string`
+  - `children: ReactNode`
+- Optional:
+  - `onCopy?: (text: string) => Promise<boolean>` - custom copy implementation; if not provided, the component handles clipboard copy by itself
+  - `afterCopy?: () => void` - called after successful copy
+  - `onError?: (error: string) => void` - called on copy/callback failure
+  - `successDuration?: number` (default `2000`)
+  - `haptics?: boolean` (default `true`)
+  - `style?: StyleProp<ViewStyle>`
+  - `testID?: string`
+  - `accessibilityLabel?: string`
+
+### `EtTextCopyButton.Icon`
+
+- Shows `copy` icon by default
+- Shows `checked` icon when copied
+
+### `EtTextCopyButton.Text`
+
+- Text wrapper with theme-aware color
+
+## Behavior
+
+1. Press triggers copy: if `onCopy` is provided, calls `onCopy(textToCopy)`; otherwise uses `ClipboardService.copy(textToCopy)` internally.
+2. If success:
+   - optional haptic feedback
+   - `isCopied = true` (check icon)
+   - calls `afterCopy?.()`
+   - resets success state after `successDuration`
+3. If failed/throws:
+   - calls `onError?.(message)`
+   - keeps non-success state
+
+## Recommended Usage
+
+```tsx
+<EtTextCopyButton
+  textToCopy={accountNumber}
+  afterCopy={() => track('copy_success')}
+  onError={(message) => track('copy_failure', { message })}
+>
+  <EtTextCopyButton.Icon />
+  <EtTextCopyButton.Text>{accountNumber}</EtTextCopyButton.Text>
+</EtTextCopyButton>
+```
+
+## Notes
+
+- When `onCopy` is not provided, clipboard is handled internally via `ClipboardService` (platform-agnostic adapter, requires `EtoroDiCtx` or root DI context)
+- Keep analytics/toasts in `afterCopy`/`onError`
+- Supports string shorthand children (`<EtTextCopyButton>value</EtTextCopyButton>`)

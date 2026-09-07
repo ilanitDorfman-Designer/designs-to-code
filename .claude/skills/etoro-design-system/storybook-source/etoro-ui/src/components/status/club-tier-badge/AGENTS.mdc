@@ -1,0 +1,67 @@
+---
+description: Agent guide for EtClubTierBadge - the metallic two-coin medal that visualizes an eToro Club tier (bronze → diamond, plus the base etorian green), with an animated sparkle overlay for diamond
+alwaysApply: false
+---
+
+# EtClubTierBadge Component
+
+## Purpose & Scope
+
+`EtClubTierBadge` is a presentational medal icon: two overlapping coins with a
+per-tier metallic gradient, used to visualize a member's eToro Club tier.
+
+It is intentionally **dumb / props-driven**:
+
+- It renders a `tier` you pass in — it does NOT know about the BFF, player
+  levels, or business mapping. Resolving `playerLevelId → ClubTier` is the
+  caller's responsibility (e.g. `getClubTier` in the app layer).
+- Colors are brand-fixed gradients per tier, not theme tokens — the medal looks
+  the same in light and dark mode.
+
+If you need the small "Club" text pill (membership/gating marker), use
+`EtClubBadge` instead — that is a different component.
+
+## Entry Point & Contract
+
+```tsx
+import { EtClubTierBadge } from 'etoro-ui';
+
+<EtClubTierBadge
+  tier="diamond"   // 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond' | 'etorian'
+  size={44}        // px, default 30; artwork scales from a 30×30 viewBox
+  testID="club-badge"
+/>
+```
+
+| Prop     | Type       | Default | Notes                                                      |
+| -------- | ---------- | ------- | ---------------------------------------------------------- |
+| `tier`   | `ClubTier` | —       | Selects the gradient (and sparkle overlay for `diamond`)  |
+| `size`   | `number`   | `30`    | Width/height in px                                        |
+| `testID` | `string`   | —       | Forwarded to the outer wrapper `<View>`                   |
+
+## Tiers
+
+| Tier       | Gradient (from → to) | Notes                              |
+| ---------- | -------------------- | ---------------------------------- |
+| `bronze`   | `#FFD6C0 → #B97652`  | Metallic, from Figma export        |
+| `silver`   | `#E3E7F0 → #939BAF`  | Metallic, from Figma export        |
+| `gold`     | `#FFDA8A → #AF6C26`  | Metallic, from Figma export        |
+| `platinum` | `#DCEAFF → #6E86C0`  | Cool blue-silver                   |
+| `diamond`  | `#FFFFFF → #DCE6F2`  | Near-white + animated sparkles     |
+| `etorian`  | `#6EFF8B → #0EB12E`  | eToro brand green (base club tier) |
+
+## Animation (diamond only)
+
+The `diamond` tier overlays three sparkles that fade + scale in/out on an
+infinite loop, staggered (1 → 3 → 2) so they twinkle out of phase. Built on
+`react-native-reanimated`. Other tiers render no animation.
+
+## Anti-patterns
+
+- ❌ Passing a `playerLevelId` number — map it to a `ClubTier` first.
+- ❌ Overriding the gradient via `style` — tier colors are part of the brand.
+
+## Dependencies
+
+- `react-native-svg` — coins (`Circle` + `LinearGradient`) and sparkle path
+- `react-native-reanimated` — diamond sparkle loop

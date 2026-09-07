@@ -1,0 +1,62 @@
+---
+description: Deprecated compound numeric keyboard component with header, keys, and actions slots.
+---
+
+# EtKeyboard Component
+
+> **Deprecated.** `EtKeyboard` is the legacy classic keypad, kept only for existing consumers
+> (deposit, wallet, CVV, 2FA/OTP, phone). For all new numeric-input flows use the premium,
+> value-managed **`EtNumericKeypad`** (`libs/etoro-ui/src/components/input/numeric-keypad/`), which
+> owns value state, `min`/`max`, decimal precision, and rejection callbacks. Do not add new
+> `EtKeyboard` consumers.
+
+## Purpose
+
+`EtKeyboard` is a UI-kit compound component for numeric input flows that need a custom keypad.
+
+It is designed to support:
+
+- Flexible top and bottom slots via `EtKeyboard.Header` and `EtKeyboard.Actions`
+- A built-in keypad via `EtKeyboard.Keys`
+- Event callbacks for numeric key presses and delete (backspace) action
+
+## API
+
+### Root
+
+```tsx
+<EtKeyboard>
+  <EtKeyboard.Header>{/* any content */}</EtKeyboard.Header>
+  <EtKeyboard.Keys onKeyPress={handleKeyPress} onClear={handleClear} />
+  <EtKeyboard.Actions>{/* any content */}</EtKeyboard.Actions>
+</EtKeyboard>
+```
+
+### `EtKeyboard.Header`
+
+- Accepts any React content
+- Applies spacing below itself before keys
+
+### `EtKeyboard.Keys`
+
+- Renders a 4-row × 3-column keypad (`1 2 3` / `4 5 6` / `7 8 9` / `. 0 C`)
+- `onKeyPress` emits pressed value for numeric and dot keys
+- `onClear` is called when `C` is pressed — intended for delete-last-character (backspace); consumer controls the exact behaviour
+- `onClearAll` (optional) is called when `C` is **long-pressed** (~500 ms default) — intended for a "wipe / clear-all" gesture. When omitted, no long-press handler is attached and C behaves as a plain delete. Triggering long-press suppresses the subsequent `onPress` per React Native `Pressable` semantics
+- `haptics` (default `true`) — fires `Haptics.impactAsync(Light)` on every key press, and `Haptics.impactAsync(Medium)` on a long-press clear-all; pass `haptics={false}` to opt out
+
+### `EtKeyboard.Actions`
+
+- Accepts any React content
+- Applies spacing above itself after keys
+
+## Notes
+
+- `EtKeyboard` does not hold input value state; parent controls the value.
+- `EtKeyboard.Keys` can be used independently when slot wrappers are not needed.
+
+## Dependencies
+
+### External
+
+- `expo-haptics` — haptic feedback on key press

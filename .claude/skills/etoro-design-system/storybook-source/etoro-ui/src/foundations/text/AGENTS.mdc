@@ -1,0 +1,68 @@
+---
+description: Agent guide for the EtText foundation - design system text primitive with variant-driven typography (display, heading, body, label, caption, num) and tier-based color tokens.
+alwaysApply: false
+---
+
+# EtText
+
+## Purpose
+
+Single text primitive for the eToro design system. All app text rendering should go through `EtText` so typography (size, weight, line height, letter spacing, color) stays in lockstep with the design tokens defined in [`utils/variant-config.ts`](libs/etoro-ui/src/foundations/text/utils/variant-config.ts).
+
+## Architecture
+
+```text
+et-text.tsx (forwardRef + React.memo)
+├── api/types.ts                    → EtTextProps surface (variant, weight, shrinkToFit, animation entering/exiting)
+├── hooks/use-text-styles.ts        → resolves VariantConfig → StyleSheet { fontSize, color, fontFamily, lineHeight, letterSpacing }
+├── hooks/use-et-shrink-text-model  → optional auto-shrink for numeric/display variants on Android+iOS
+└── utils/
+    ├── variant-config.ts           → VARIANT_CONFIG: typography token table (single source of truth)
+    ├── font-mapping.ts             → FontWeightKey ↔ font family + native fontWeight
+    └── index.ts                    → re-exports
+```
+
+The component reads `colors[config.colorKey]` from `useEtoroTheme()`, so a variant's color tier is defined exactly once — in `variant-config.ts` — and propagates everywhere.
+
+## Variant Tiers
+
+Three text color tiers are used across the 37 variants (see `VARIANT_CONFIG`):
+
+| Tier      | Token       | Variants                                                                                                                                                                                              |
+| --------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Primary   | `carbon900` | `display-hero`, `display-main`, `heading-large`, all `num-*` (xxl, xl, xl-medium, l, l-medium, ml, ml-medium, md, sm, s, s-medium, xs, xxs)                                                           |
+| Secondary | `carbon500` | `heading-base`, `heading-compact`, all `body-base-*`, all `body-secondary-*`, all `label-primary-*` (regular/semibold/bold), all `label-secondary-*` (regular/semibold/bold)                          |
+| Tertiary  | `carbon400` | all `body-tiny-*`, all `label-tertiary-*` (regular/semibold/bold), `caption-regular`, `caption-medium`                                                                                                |
+
+Color overrides via the `style` prop still win (see [`et-text.tsx`](libs/etoro-ui/src/foundations/text/et-text.tsx)) — the variant tier only controls the default.
+
+## Design System Integration
+
+V2 carbon tokens replaced the legacy V1 text tokens in this PR (Figma node `49829:51330` Numbers · `Carbon/Neutral/900: #1B1E21`):
+
+| Tier (legacy V1)       | Hex (light/dark)          | New V2 token | Hex (light/dark)          |
+| ---------------------- | ------------------------- | ------------ | ------------------------- |
+| `textPrimaryNeutral`   | `#1A1A1A` / `#FFFFFF`     | `carbon900`  | `#1B1E21` / `#FFFFFF`     |
+| `textSecondaryNeutral` | `#666666` / `#E5E5E5`     | `carbon500`  | `#999999` / `#CCCCCC`     |
+| `textTertiaryNeutral`  | `#808080` / `#B2B2B2`     | `carbon400`  | `#CCCCCC` / `#999999`     |
+
+Mapping rationale: Primary maps cleanly by hex equivalence to `carbon900`. Secondary/Tertiary follow the Figma-aligned pattern landed in earlier component PRs (e.g. `et-post` post-header meta text → `carbon500`); no Figma reference exists for these tiers in isolation, so the meta-text intent from those PRs is reused here.
+
+## Behavior deltas vs production
+
+- **All `body-*`, `label-primary-*`, `label-secondary-*`, `heading-base`, `heading-compact`** consumers lighten in light mode (`#666666` → `#999999`) — meta-text feel rather than mid-emphasis. Deliberate; matches the Figma direction taken in `et-post` and other recent PRs.
+- **`body-tiny-*`, `label-tertiary-*`, `caption-*`** consumers move to `#CCCCCC` in light mode. This is light enough that any small-but-critical caption usage may need a per-screen override (use `style={{ color: ... }}` on the consumer).
+- Dark-mode shifts are minor and preserve the secondary-lighter-than-tertiary hierarchy.
+- Variant-config semantic restructuring (e.g. moving `body-base-*` from Secondary tier to Primary tier) is **not** part of this PR — only token names were swapped.
+
+## Anti-Patterns
+
+- **Do NOT** raw-import `Text` from `react-native` for app rendering — use `EtText` so typography stays in the design system.
+- **Do NOT** assert on specific hex values in unit tests — assert structurally on the variant or rely on `useEtoroTheme()` mocks.
+- **Do NOT** add new variants or tier reassignments without updating this guide and the consuming Figma reference.
+
+## Dependencies
+
+- `useEtoroTheme` - resolves the carbon tokens from the active theme.
+- `react-native` `Text` (or `Animated.Text` when `entering` / `exiting` is provided).
+- No additional third-party dependencies.
