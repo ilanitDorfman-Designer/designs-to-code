@@ -8,7 +8,7 @@ You write and review eToro product copy strictly from eToro's real Voice & Style
 
 ## Before anything else, read in full
 
-`.claude/skills/etoro-content-writer/SKILL.md` — it lays out the exact order of checks (component type → terminology → risk/high-emotion context → compliance tier → formatting/mechanics → localization-safety → voice/tone gate) and links every reference file you'll need. Follow that order for every piece of copy you write or review; don't skip steps because a request seems simple — one-word button labels fail the terminology check as often as long error messages do.
+`skills/etoro-content-writer/SKILL.md` — it lays out the exact order of checks (component type → terminology → risk/high-emotion context → compliance tier → formatting/mechanics → localization-safety → voice/tone gate) and links every reference file you'll need. Follow that order for every piece of copy you write or review; don't skip steps because a request seems simple — one-word button labels fail the terminology check as often as long error messages do.
 
 ## Your job
 

@@ -33,7 +33,7 @@ If the user just says "design a screen for X," default to producing both a code 
 
 For a **desktop** screen, read [references/desktop-layout.md](references/desktop-layout.md) before building — it has eToro's real breakpoint-by-breakpoint grid spec (nav rail push/overlay behavior, header height, content padding, right-panel behavior) transcribed from Figma's own documentation, plus a separate side-by-side split pattern for auth-style screens. Use those exact values rather than picking round numbers.
 
-If the request is a **desktop conversion of an existing mobile screen**, or **a new mobile screen for a domain that already has a shipped example** (Login, Home, Portfolio, Watchlist today), don't design from a blank slate — [references/screen-patterns.md](references/screen-patterns.md) has real mobile↔desktop screen pairs to pattern-match against first. Prefer delegating this to the `etoro-screen-pattern-agent` subagent (`.claude/agents/etoro-screen-pattern-agent.md`), which is built specifically to compare the pair and apply the derived pattern, rather than skipping straight to building.
+If the request is a **desktop conversion of an existing mobile screen**, or **a new mobile screen for a domain that already has a shipped example** (Login, Home, Portfolio, Watchlist today), don't design from a blank slate — [references/screen-patterns.md](references/screen-patterns.md) has real mobile↔desktop screen pairs to pattern-match against first. Prefer delegating this to the `etoro-screen-pattern-agent` subagent (`agents/etoro-screen-pattern-agent.md`), which is built specifically to compare the pair and apply the derived pattern, rather than skipping straight to building.
 
 ## Step 2: Classify every component you plan to use
 
@@ -81,6 +81,8 @@ For every Tier B component used in the code, add an inline comment or note marki
 
 **Tokens only, never a bare primitive.** `colors/primitives/v2/` is the raw palette that semantic tokens (`colors/tokens/v2/`) are built from — it's not something generated code should reference on its own. A primitive is just a color with no light/dark-mode or semantic meaning attached; a token is a primitive wrapped with that meaning (e.g. "positive," "primary," "surface"). Reach for a token every time; if you can't find a token that fits what you need, say so and ask rather than dropping down to a primitive directly.
 
+**Dark by default, light mode as a real toggle — never a mixed-mode screen.** Every screen this skill builds defaults to Dark mode, matching the real shipped app. Light mode must remain genuinely available as an explicit user-facing toggle (never removed or hardcoded away), but nothing should ever *default* to light or end up there by accident. In code, consume colors through the real theming mechanism — `useEtoroTheme()` (`../storybook-source/etoro-ui/src/core/hooks/use-etoro-theme.tsx`, built on `@react-navigation/native`'s `useTheme()`, returning `{colors, dark}`) and the semantic tokens in [design-tokens.md](references/design-tokens.md) — never a hardcoded light-only or dark-only color value, since that's exactly what silently breaks the toggle later. Before calling any screen done (code or Figma), check every distinct surface — top bar, side menu, cards, inputs, modals — for a mode mismatch; a screen that's mostly dark with one light element (or vice versa) is a real, observed failure mode (see [workflow-code-and-figma.md](references/workflow-code-and-figma.md)'s Figma-side note on this), not a nitpick, and is never acceptable to ship.
+
 **Images: use the real asset pack, never a placeholder.** Whenever a screen needs a raster image — an instrument/crypto logo, an onboarding illustration, a splash/logo asset, a decorative background shape, or a placeholder avatar — pull it from [assets/images/](assets/images/) (catalogued in [references/assets.md](references/assets.md)). Same discipline as never hand-drawing a stand-in for a real component: don't fabricate a placeholder image, source a random stock photo, or use an emoji where a real shipped asset exists. If a screen genuinely needs an image that isn't in the pack, say so in the coverage report (Step 7) rather than inventing one.
 
 ## Step 5: Build the Figma frame (if requested)
@@ -98,6 +100,8 @@ Prototyping (wiring interactions between frames) depends on what the connected F
 ## Step 7: Always close with a coverage report
 
 Tier A/B usage is already visible in the code itself (Tier B components carry their inline `// Tier B: ...` comment from Step 4) — don't repeat that in the summary. The coverage report exists specifically to surface what the code *can't* show on its own: gaps.
+
+Before writing the report, confirm — by screenshot, not by assumption — that every distinct surface on the screen renders in the same mode (Dark by default; see the non-negotiable rule in Step 4/5 above). This check is mandatory on every screen, not just ones that seem visually complex.
 
 End every screen you produce with a short, plain summary covering only:
 - Any requested component that turned out to be Tier C — it wasn't used (or was only referenced as a placeholder) — and why.

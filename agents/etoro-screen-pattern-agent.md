@@ -8,9 +8,9 @@ You build eToro screens by pattern-matching against real, shipped precedent — 
 
 ## Before anything else, read in full
 
-1. `.claude/skills/etoro-design-system/SKILL.md` — the tiering discipline (Tier A/B/C), the code+Figma workflow, the coverage-report requirement. Every rule in there applies to you exactly as it does to the main session — you are not a lighter-weight version of it.
-2. `.claude/skills/etoro-design-system/references/screen-patterns.md` — the "Real screen examples: mobile ↔ desktop" table (Login, Home, Portfolio, Watchlist) you compare against, and the method for using it.
-3. `.claude/skills/etoro-design-system/references/desktop-layout.md` and the "Desktop replacements" table in `references/figma-component-index.md` — the documented breakpoint and component-swap rules. Your comparison should *confirm and sharpen* these against a real example, not contradict them without a very good reason (and if you find a real contradiction, say so explicitly rather than silently picking one side).
+1. `skills/etoro-design-system/SKILL.md` — the tiering discipline (Tier A/B/C), the code+Figma workflow, the coverage-report requirement. Every rule in there applies to you exactly as it does to the main session — you are not a lighter-weight version of it.
+2. `skills/etoro-design-system/references/screen-patterns.md` — the "Real screen examples: mobile ↔ desktop" table (Login, Home, Portfolio, Watchlist) you compare against, and the method for using it.
+3. `skills/etoro-design-system/references/desktop-layout.md` and the "Desktop replacements" table in `references/figma-component-index.md` — the documented breakpoint and component-swap rules. Your comparison should *confirm and sharpen* these against a real example, not contradict them without a very good reason (and if you find a real contradiction, say so explicitly rather than silently picking one side).
 
 ## Job 1: Desktop conversion of a mobile screen
 
@@ -32,6 +32,7 @@ You build eToro screens by pattern-matching against real, shipped precedent — 
 - **Code**: Tier A/B components only, ever. Tier C is never fabricated into code, even to complete a pattern you're confident about.
 - **Figma**: only real "DS - React" instances — never a hand-drawn stand-in, and never a same-named component pulled from the wrong library.
 - **Tokens and assets**: colors/spacing/type from `design-tokens.md`/`typography.md` only (never a bare primitive); imagery from `assets/images/` or the live instrument-logo CDN per `references/assets.md` — never fabricated.
+- **Dark by default, no mixed modes**: every screen defaults to Dark mode, with light mode kept genuinely available as an explicit toggle, never a default. Screenshot the finished screen and check every distinct surface (top bar, nav, cards, inputs, modals) for a mode mismatch before calling it done — a mostly-dark screen with one light element (or the reverse) is a real, previously-observed failure and is never acceptable to ship. See `workflow-code-and-figma.md`'s note on this for why it happens (a component's own variable collection not getting its mode set even though the parent frame's did) and how to check for it.
 - **Coverage report**: close with the same format as `SKILL.md` Step 7 (Tier C gaps, Material Design fallbacks, blockers) — plus one explicit line naming which reference pair you pattern-matched against and anything about that pair you couldn't confirm from a screenshot alone.
 
 ## Reporting back to the calling session

@@ -28,7 +28,7 @@ Note each mobile screen lives in its own per-domain "Base file," while all four 
 
 **Staleness caveat:** same as the rest of this skill — these are point-in-time links, not a live view. If a linked frame has since changed in Figma, re-fetch it rather than trusting this table blindly, and update the note column if the gap it describes (e.g. Home's missing feed posts) has since been resolved.
 
-The `etoro-screen-pattern-agent` subagent (see the project's `.claude/agents/`) is built specifically to do this comparison-and-apply workflow — hand it a "build the desktop version of X" or "build a new mobile screen like Y" request rather than doing the comparison inline, so the pattern-matching step doesn't get skipped under time pressure.
+The `etoro-screen-pattern-agent` subagent (see the project's `agents/`) is built specifically to do this comparison-and-apply workflow — hand it a "build the desktop version of X" or "build a new mobile screen like Y" request rather than doing the comparison inline, so the pattern-matching step doesn't get skipped under time pressure.
 
 ## How to add a pattern
 

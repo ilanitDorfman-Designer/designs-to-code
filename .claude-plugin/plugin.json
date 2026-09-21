@@ -1,0 +1,16 @@
+{
+  "name": "designs-to-code",
+  "version": "0.1.0",
+  "description": "Build eToro mobile/desktop screens strictly from eToro's real design system — the Storybook component library, Figma files, Code Connect mappings, and the real Voice & Style Guide — with Tier A/B/C component-safety tiering and a coverage report on every build.",
+  "author": {
+    "name": "Ilanit Dorfman"
+  },
+  "keywords": [
+    "etoro",
+    "design-system",
+    "figma",
+    "storybook",
+    "ui",
+    "design-to-code"
+  ]
+}

@@ -7,7 +7,7 @@ designed, or an existing mobile Figma design needs a desktop version.
 
 ## The skill that does the real work
 
-The `etoro-design-system` skill lives at [.claude/skills/etoro-design-system/](.claude/skills/etoro-design-system/SKILL.md)
+The `etoro-design-system` skill lives at [skills/etoro-design-system/](skills/etoro-design-system/SKILL.md)
 and auto-triggers whenever you ask to design, mock up, or prototype an eToro screen. It:
 
 1. Clarifies platform (mobile/desktop/both) and output (code, Figma frame, both, or a prototype).
@@ -19,13 +19,13 @@ and auto-triggers whenever you ask to design, mock up, or prototype an eToro scr
 4. Closes with a coverage report: what was Tier C, what fell back to Material Design guidance,
    and what blocks the screen from being production-ready.
 
-It also has a real image asset pack at [.claude/skills/etoro-design-system/assets/images/](.claude/skills/etoro-design-system/assets/images/)
-(catalogued in [references/assets.md](.claude/skills/etoro-design-system/references/assets.md)) — instrument/crypto
+It also has a real image asset pack at [skills/etoro-design-system/assets/images/](skills/etoro-design-system/assets/images/)
+(catalogued in [references/assets.md](skills/etoro-design-system/references/assets.md)) — instrument/crypto
 logos, onboarding illustrations, splash/logo assets, decorative shapes, avatars. Any screen that
 needs a raster image should pull from there, never a fabricated placeholder.
 
 You don't need to invoke it by name — just describe the screen you want. See the skill's own
-[SKILL.md](.claude/skills/etoro-design-system/SKILL.md) for full detail (component tiers, desktop
+[SKILL.md](skills/etoro-design-system/SKILL.md) for full detail (component tiers, desktop
 breakpoint rules, the code+Figma workflow) rather than duplicating it here.
 
 **Housekeeping:** `etoro-design-system skill.zip` at the project root is the original archive
@@ -67,11 +67,11 @@ future session doesn't have to re-search Figma to find the frame again.
 
 ## Writing real UX copy
 
-For any headline, button, error message, empty state, tooltip, or other UI string a screen needs, use the **`etoro-content-writer`** skill (`.claude/skills/etoro-content-writer/SKILL.md`) — transcribed from eToro's real Voice & Style Guide (controlled terminology, risk/high-emotion writing rules, compliance risk tiers, localization-safety rules). Delegate to the **`content-writer`** subagent (`.claude/agents/content-writer.md`) rather than writing placeholder or generic SaaS-style copy — it will also refuse and flag anything that's actually a Compliance matter (legal disclaimers, risk warnings, T&Cs) instead of drafting it.
+For any headline, button, error message, empty state, tooltip, or other UI string a screen needs, use the **`etoro-content-writer`** skill (`skills/etoro-content-writer/SKILL.md`) — transcribed from eToro's real Voice & Style Guide (controlled terminology, risk/high-emotion writing rules, compliance risk tiers, localization-safety rules). Delegate to the **`content-writer`** subagent (`agents/content-writer.md`) rather than writing placeholder or generic SaaS-style copy — it will also refuse and flag anything that's actually a Compliance matter (legal disclaimers, risk warnings, T&Cs) instead of drafting it.
 
 ## Pattern-matching against real shipped screens
 
-For "build the desktop version of X mobile screen" or "build a new mobile screen like Y," this workspace has real, shipped mobile↔desktop Figma pairs (Login, Home, Portfolio, Watchlist) catalogued in [references/screen-patterns.md](.claude/skills/etoro-design-system/references/screen-patterns.md), plus a dedicated subagent — **`etoro-screen-pattern-agent`** (`.claude/agents/etoro-screen-pattern-agent.md`) — built to compare the closest real pair (via `get_screenshot`/`get_design_context` on both nodes) and apply the same layout/component-swap pattern to the new screen, before falling back to a from-scratch build. Delegate to it with the Agent tool rather than doing the comparison inline.
+For "build the desktop version of X mobile screen" or "build a new mobile screen like Y," this workspace has real, shipped mobile↔desktop Figma pairs (Login, Home, Portfolio, Watchlist) catalogued in [references/screen-patterns.md](skills/etoro-design-system/references/screen-patterns.md), plus a dedicated subagent — **`etoro-screen-pattern-agent`** (`agents/etoro-screen-pattern-agent.md`) — built to compare the closest real pair (via `get_screenshot`/`get_design_context` on both nodes) and apply the same layout/component-swap pattern to the new screen, before falling back to a from-scratch build. Delegate to it with the Agent tool rather than doing the comparison inline.
 
 ## Converting an existing mobile design to desktop
 
@@ -80,8 +80,8 @@ For "build the desktop version of X mobile screen" or "build a new mobile screen
 2. Ask for a desktop version. The skill already has eToro's real desktop breakpoint/grid spec
    (nav rail behavior, header height, content padding) and knows which components swap content
    at desktop width vs. get wholesale-replaced by a different Figma component — no need to
-   re-explain that here, it's in [references/desktop-layout.md](.claude/skills/etoro-design-system/references/desktop-layout.md)
-   and [references/figma-component-index.md](.claude/skills/etoro-design-system/references/figma-component-index.md)'s
+   re-explain that here, it's in [references/desktop-layout.md](skills/etoro-design-system/references/desktop-layout.md)
+   and [references/figma-component-index.md](skills/etoro-design-system/references/figma-component-index.md)'s
    "Desktop replacements" table.
 3. Save the output into `designs/<design-name>/desktop/` (code + figma-links.md), same pattern
    as any other design.
