@@ -1,0 +1,28 @@
+{
+  "name": "designs-to-code",
+  "owner": {
+    "name": "Ilanit Dorfman",
+    "url": "https://github.com/ilanitDorfman-Designer"
+  },
+  "metadata": {
+    "description": "eToro design-to-code skills and agents: build mobile/desktop screens strictly from the real Storybook component library, Figma files, and Voice & Style Guide.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "designs-to-code",
+      "source": ".",
+      "description": "Build eToro mobile/desktop screens strictly from eToro's real design system — the Storybook component library, Figma files, Code Connect mappings, and the real Voice & Style Guide — with Tier A/B/C component-safety tiering and a coverage report on every build.",
+      "version": "0.1.0",
+      "category": "frontend",
+      "tags": [
+        "etoro",
+        "design-system",
+        "figma",
+        "storybook",
+        "ui",
+        "design-to-code"
+      ]
+    }
+  ]
+}
