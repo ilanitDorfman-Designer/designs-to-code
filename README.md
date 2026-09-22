@@ -61,7 +61,18 @@ desktop-conversion rules, component-tier discipline).
 - **Tier C components are Figma-only.** A screen that needs one gets a real, placeable Figma
   instance but no code implementation — this shows up as a blocker in that build's coverage
   report, not a silent gap.
-- **Early stage (v0.1.0).** Two skills, two agents, no eval scorecard yet, no eToro-official
-  marketplace listing yet.
+- **Early stage (v0.1.0).** Two skills, two agents.
+- **Requires a connected Figma Dev Mode MCP server.** Placing real component instances in
+  Figma (the `use_figma` half of every build) depends on it — without it, only the code half
+  of a build is possible.
+- **Overlaps in part with `etoro-frontend`'s `figma-to-feature` skill.** Both build an eToro
+  screen from a Figma design against a real component kit with a gap/tier-flagging step.
+  `designs-to-code` differs by using a precomputed Tier A/B/C registry (vs. live per-build gap
+  analysis), producing bidirectional Figma+code output from a bundled Storybook snapshot (vs.
+  code-only, run inside the eToro-Plus monorepo), and bundling an unrelated content-writer
+  skill and a mobile↔desktop pattern-matching agent that `etoro-frontend` doesn't have. If
+  you're choosing between them: `figma-to-feature` for a one-off screen from inside the real
+  monorepo, `designs-to-code` for a portable, repeatable design-review workflow (code + a live
+  editable Figma frame + a coverage report) outside it.
 
 _Internal eToro use only._
